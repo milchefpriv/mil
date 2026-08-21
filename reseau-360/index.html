@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c1321">
+  <meta name="description" content="Réseau 360° — transformez les bonnes mises en relation en affaires.">
+  <title>Réseau 360° — Votre réseau vaut de l’argent</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Réseau 360°, retour en haut">
+        <span class="brand-mark">360°</span>
+        <span class="brand-name">Réseau</span>
+      </a>
+      <div class="access-status"><i aria-hidden="true"></i> Accès privé</div>
+      <a class="header-link" href="#gains">Voir les gains <span aria-hidden="true">↓</span></a>
+    </header>
+
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow">Invitation privée · Réseau d’affaires · Paris</p>
+        <h1>Votre réseau vaut <em>de l’argent.</em></h1>
+        <p class="hero-lead">Cette carte ne vous a pas été remise par hasard. Nous pensons que vous savez reconnaître les bonnes opportunités — et les bonnes personnes.</p>
+        <div class="hero-actions">
+          <a class="button button-accent" href="#gains">Calculer une commission <span aria-hidden="true">↘</span></a>
+          <a class="text-link" href="#opportunites">Voir les 3 activités</a>
+        </div>
+      </div>
+
+      <div class="private-pass" aria-label="Exemple de gain Cercle 63">
+        <div class="pass-top"><span>PASS 360°</span><span>ACCÈS SUR INVITATION</span></div>
+        <div class="pass-core"><p>Une semaine apportée</p><strong>160–320 €</strong><span>pour vous</span></div>
+        <div class="pass-equation">
+          <div><span>Affaire</span><strong>1 600 €</strong></div><b aria-hidden="true">×</b><div><span>Votre taux</span><strong>10–20 %</strong></div>
+        </div>
+        <div class="pass-foot"><span>EXEMPLE · CERCLE 63</span><span>CARTE MEMBRE · 360</span></div>
+      </div>
+    </section>
+
+    <section class="money-ribbon" aria-label="Chiffres clés">
+      <div><strong>350 €</strong><span>une journée louée</span></div>
+      <div><strong>1 600 €</strong><span>une semaine louée</span></div>
+      <div><strong>10 → 20 %</strong><span>votre taux Cercle 63</span></div>
+      <div><strong>160 → 320 €</strong><span>votre gain sur une semaine</span></div>
+    </section>
+
+    <section class="manifesto">
+      <p class="section-index">00 / Pourquoi vous</p>
+      <p class="manifesto-copy">Vous n’êtes pas là pour distribuer des flyers. Vous êtes là pour voir une affaire avant les autres — puis nous laisser la transformer.</p>
+    </section>
+
+    <section class="earnings" id="gains">
+      <div class="section-heading">
+        <p class="section-index">01 / Faites le calcul</p>
+        <div>
+          <h2>Un nom peut devenir<br>une vraie commission.</h2>
+          <p class="heading-copy">Simulez un gain Cercle 63. Vous faites la mise en relation ; nous gérons la qualification, la visite, le devis, le contrat et la facturation.</p>
+        </div>
+      </div>
+
+      <form class="simulator-card" id="commission-simulator" aria-label="Simulateur de commission Cercle 63" autocomplete="off">
+        <div class="simulator-controls">
+          <fieldset class="simulator-block" aria-labelledby="amount-title">
+            <div class="control-head">
+              <span id="amount-title">Montant de l’affaire</span>
+              <output class="amount-output" id="amount-output" for="deal-amount" aria-live="polite">1 600 €</output>
+            </div>
+            <input class="amount-slider" id="deal-amount" type="range" name="amount" min="350" max="10000" step="50" value="1600" aria-describedby="range-caption" autocomplete="off">
+            <div class="range-labels" id="range-caption"><span>350 €</span><span>10 000 €</span></div>
+          </fieldset>
+
+          <fieldset class="simulator-block" aria-labelledby="rate-title">
+            <div class="control-head">
+              <span id="rate-title">Votre taux Cercle 63</span>
+              <output class="rate-output" id="rate-output" aria-live="polite">10 %</output>
+            </div>
+            <div class="rate-buttons">
+              <input class="choice-input" id="rate-10" type="radio" name="rate" value="10" checked><label for="rate-10">10 %</label>
+              <input class="choice-input" id="rate-15" type="radio" name="rate" value="15"><label for="rate-15">15 %</label>
+              <input class="choice-input" id="rate-20" type="radio" name="rate" value="20"><label for="rate-20">20 %</label>
+            </div>
+            <p class="rate-caption">Votre taux progresse de 10 % à 20 %.</p>
+          </fieldset>
+        </div>
+        <div class="simulator-result" aria-live="polite" aria-atomic="true">
+          <span>Votre commission estimée</span>
+          <output class="commission-output" id="commission-output" for="deal-amount rate-10 rate-15 rate-20">160 €</output>
+          <small>après encaissement et réalisation</small>
+        </div>
+      </form>
+
+      <div class="level-grid">
+        <div><span>Point de départ</span><strong>10 %</strong><p>Dès votre inscription au Cercle 63.</p></div>
+        <div><span>Accélérateur réseau</span><strong>+2 %<small>sur votre taux</small></strong><p>Par apporteur recruté avec une vente validée.</p></div>
+        <div><span>Accélérateur gains</span><strong>+1 %<small>sur votre taux</small></strong><p>Par tranche de 100 € de commissions cumulées.</p></div>
+        <div><span>Plafond</span><strong>20 %</strong><p>Votre taux maximal de commission.</p></div>
+      </div>
+    </section>
+
+    <section class="opportunities" id="opportunites">
+      <div class="section-heading">
+        <p class="section-index">02 / Votre terrain de jeu</p>
+        <div>
+          <h2>Trois activités.<br>Plus d’occasions de gagner.</h2>
+          <p class="heading-copy">Un lieu, un buffet, une équipe à équiper : votre quotidien contient déjà des opportunités. Il suffit de savoir les reconnaître.</p>
+        </div>
+      </div>
+
+      <div class="opportunity-list">
+        <article class="opportunity-card orange">
+          <div class="card-topline"><span class="card-number">01</span><span class="card-label">Location événementielle</span></div>
+          <div class="card-title-row"><h3>L’Espace 63</h3><span class="card-arrow" aria-hidden="true">↗</span></div>
+          <p class="card-summary">Un showroom parisien de 40 m² pour les marques, agences et entrepreneurs.</p>
+          <ul class="use-list"><li>350 € / jour</li><li>1 600 € / semaine</li><li>10 à 20 % de commission</li></ul>
+          <div class="card-money"><strong>160 à 320 €</strong><span>pour une semaine apportée</span></div>
+          <a class="card-action" href="https://cercle.lespace63.fr/" target="_blank" rel="noopener noreferrer">Accéder au Cercle 63 <span aria-hidden="true">→</span></a>
+        </article>
+
+        <article class="opportunity-card black">
+          <div class="card-topline"><span class="card-number">02</span><span class="card-label">Traiteur événementiel</span></div>
+          <div class="card-title-row"><h3>MIL</h3><span class="card-arrow" aria-hidden="true">↗</span></div>
+          <p class="card-summary">Cocktails, buffets dînatoires et tables privées pour les événements qui comptent.</p>
+          <ul class="use-list"><li>Dès 22 € / personne</li><li>Premium à 28 € / personne</li><li>Buffet à 38 € / personne</li></ul>
+          <div class="card-money"><strong>1 400 €</strong><span>de prestation Premium pour 50 personnes</span></div>
+          <a class="card-action" href="https://leaf-card.fr/me/mil-758" target="_blank" rel="noopener noreferrer">Voir l’offre MIL <span aria-hidden="true">→</span></a>
+        </article>
+
+        <article class="opportunity-card green">
+          <div class="card-topline"><span class="card-number">03</span><span class="card-label">Cartes NFC professionnelles</span></div>
+          <div class="card-title-row"><h3>LeafCard</h3><span class="card-arrow" aria-hidden="true">↗</span></div>
+          <p class="card-summary">Des cartes NFC en bois et une page digitale, pensées pour les équipes et entreprises.</p>
+          <ul class="use-list"><li>Premium à 50 €</li><li>Sans abonnement</li><li>Commandes de 10 à 100+</li></ul>
+          <div class="card-money"><strong>Volume B2B</strong><span>une seule entreprise peut équiper toute son équipe</span></div>
+          <a class="card-action" href="https://leaf-card.fr/" target="_blank" rel="noopener noreferrer">Voir LeafCard <span aria-hidden="true">→</span></a>
+        </article>
+      </div>
+      <p class="opportunity-note">Les chiffres MIL indiquent la valeur de la prestation, pas une commission garantie. Les modalités MIL et LeafCard sont définies selon chaque affaire.</p>
+    </section>
+
+    <section class="signal-section">
+      <div><p class="section-index">03 / Les signaux qui paient</p><h2>Tendez l’oreille.</h2></div>
+      <div class="signals">
+        <div class="signal-row"><span>« Nous cherchons un lieu à Paris. »</span><strong>L’Espace 63</strong></div>
+        <div class="signal-row"><span>« Il nous faut un cocktail ou un buffet. »</span><strong>MIL</strong></div>
+        <div class="signal-row"><span>« Nous devons équiper toute l’équipe. »</span><strong>LeafCard</strong></div>
+        <div class="signal-row signal-row-multi"><span>« Nous lançons un projet et voulons tout réunir. »</span><strong>Réseau 360°</strong></div>
+      </div>
+    </section>
+
+    <section class="process" id="fonctionnement">
+      <div class="section-heading">
+        <p class="section-index">04 / L’agence travaille pour vous</p>
+        <h2>Vous ouvrez la porte.<br>Nous faisons le reste.</h2>
+      </div>
+      <ol class="process-grid">
+        <li><span>1</span><h3>Repérez</h3><p>Un besoin réel dans votre réseau personnel ou professionnel.</p></li>
+        <li><span>2</span><h3>Introduisez</h3><p>Transmettez le contact, avec son accord, avant qu’un devis soit établi.</p></li>
+        <li><span>3</span><h3>Nous vendons</h3><p>Qualification, proposition, devis et réalisation : l’équipe prend la main.</p></li>
+        <li><span>4</span><h3>Vous gagnez</h3><p>Votre affaire reste rattachée à votre profil selon les modalités de l’activité.</p></li>
+      </ol>
+      <div class="terms-note"><span>Règle claire</span><p>Pour le Cercle 63, la commission est versée uniquement après encaissement et réalisation de la location. Ne promettez ni prix ni disponibilité : L’Espace 63 qualifie le besoin et établit la proposition.</p></div>
+    </section>
+
+    <section class="final-cta">
+      <p class="eyebrow">Votre carte vous ouvre l’accès</p>
+      <h2>Votre première affaire commence par un nom.</h2>
+      <p>Vous pensez déjà à quelqu’un ? Déclarez l’opportunité avant le devis. L’équipe concernée prend ensuite le relais.</p>
+      <div class="final-actions">
+        <a class="button button-accent" href="https://cercle.lespace63.fr/" target="_blank" rel="noopener noreferrer">Déclarer une affaire L’Espace 63 <span aria-hidden="true">↗</span></a>
+        <a class="light-link" href="#opportunites">MIL ou LeafCard</a>
+      </div>
+    </section>
+
+    <footer>
+      <div class="footer-brand"><span>Réseau</span><strong>360°</strong></div>
+      <p>Accès privé · L’Espace 63 · MIL · LeafCard</p>
+      <a href="#top">Retour en haut ↑</a>
+    </footer>
+  </main>
+
+  <script src="./script.js" defer></script>
+</body>
+</html>
