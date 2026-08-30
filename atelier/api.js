@@ -12,6 +12,22 @@ function saveSession(session) {
   else localStorage.removeItem(SESSION_KEY);
 }
 
+function consumeSessionFromUrl() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return;
+  saveSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_in: Number(params.get("expires_in") || 3600),
+    token_type: params.get("token_type") || "bearer",
+  });
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+}
+
+consumeSessionFromUrl();
+
 async function authRequest(path, body) {
   const response = await fetch(`${CONFIG.supabaseUrl}/auth/v1/${path}`, {
     method: "POST",
@@ -30,7 +46,10 @@ export const auth = {
     return authRequest("token?grant_type=password", { email, password });
   },
   async signUp(email, password) {
-    return authRequest("signup", { email, password });
+    const redirectTo = new URL("./", location.href);
+    redirectTo.search = "";
+    redirectTo.hash = "";
+    return authRequest(`signup?redirect_to=${encodeURIComponent(redirectTo.href)}`, { email, password });
   },
   async refresh() {
     const session = readSession();
@@ -109,4 +128,3 @@ export async function updateOrderStatus(id, status) {
     body: JSON.stringify({ status }),
   }, true);
 }
-
