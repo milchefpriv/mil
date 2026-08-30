@@ -45,12 +45,6 @@ export const auth = {
   async signIn(email, password) {
     return authRequest("token?grant_type=password", { email, password });
   },
-  async signUp(email, password) {
-    const redirectTo = new URL("./", location.href);
-    redirectTo.search = "";
-    redirectTo.hash = "";
-    return authRequest(`signup?redirect_to=${encodeURIComponent(redirectTo.href)}`, { email, password });
-  },
   async refresh() {
     const session = readSession();
     if (!session?.refresh_token) throw new Error("Session expirée");
@@ -109,22 +103,6 @@ export async function saveState(payload, publicPayload) {
   return now;
 }
 
-export async function createOrder(order) {
-  return rest("mil_orders", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ id: order.id, payload: order, status: "new" }),
-  });
-}
-
 export async function loadOrders() {
   return rest("mil_orders?select=id,status,payload,created_at&order=created_at.desc", {}, true);
-}
-
-export async function updateOrderStatus(id, status) {
-  return rest(`mil_orders?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ status }),
-  }, true);
 }
