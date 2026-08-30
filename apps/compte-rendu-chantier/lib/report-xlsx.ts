@@ -77,7 +77,7 @@ export async function buildReportXlsxBuffer(data: ReportPdfData) {
           footer: 0.2,
         },
       },
-      views: [{ state: "frozen", ySplit: 10, showGridLines: false }],
+      views: [{ state: "normal", showGridLines: false }],
     },
   );
 
