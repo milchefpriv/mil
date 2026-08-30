@@ -1,6 +1,6 @@
-import { auth, loadPrivateState, loadPublicCatalog, loadOrders, saveState, updateOrderStatus } from "./api.js";
-import { createProduct, normalizeState, stateFromPublicInput, toPublicInput } from "./model.js";
-import * as ui from "./ui.js";
+import { auth, loadPrivateState, loadPublicCatalog, loadOrders, saveState, updateOrderStatus } from "./api.js?v=20260830-2";
+import { createProduct, normalizeState, stateFromPublicInput, toPublicInput } from "./model.js?v=20260830-2";
+import * as ui from "./ui.js?v=20260830-2";
 
 const root = document.querySelector("#app");
 let fallbackInput;
