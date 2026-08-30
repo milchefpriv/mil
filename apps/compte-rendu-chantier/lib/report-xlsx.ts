@@ -37,7 +37,13 @@ function isIosDevice() {
 }
 
 function safeSheetName(value: string) {
-  const clean = value.replace(/[\\/*?:\[\]]/g, " ").trim();
+  // ExcelJS does not escape apostrophes when it writes the sheet name into
+  // print-area / print-title formulas. A project such as "L'appartement"
+  // would therefore produce an invalid workbook that Excel tries to repair.
+  const clean = value
+    .replace(/[\\/*?:\[\]'’\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return (clean || "Compte rendu").slice(0, 31);
 }
 
