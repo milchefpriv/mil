@@ -88,11 +88,14 @@ export async function loadPrivateState() {
 
 export async function saveState(payload, publicPayload) {
   const now = new Date().toISOString();
+  // Orders live in their own small table. Keeping them out of the large
+  // atelier payload prevents the same customer data being downloaded twice.
+  const privatePayload = { ...payload, orders: [] };
   await Promise.all([
     rest(`mil_atelier_state?id=eq.${CONFIG.stateId}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ payload, updated_at: now }),
+      body: JSON.stringify({ payload: privatePayload, updated_at: now }),
     }, true),
     rest(`mil_public_catalog?id=eq.${CONFIG.stateId}`, {
       method: "PATCH",
@@ -104,5 +107,35 @@ export async function saveState(payload, publicPayload) {
 }
 
 export async function loadOrders() {
-  return rest("mil_orders?select=id,status,payload,created_at&order=created_at.desc", {}, true);
+  return rest("mil_orders?select=id,status,payload,created_at&order=created_at.desc&limit=250", {}, true);
+}
+
+export async function savePublicOrder(request) {
+  const createdAt = request?.createdAt || new Date().toISOString();
+  return rest("mil_orders?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({
+      id: request.id,
+      status: "new",
+      payload: { ...request, status: "new", createdAt },
+      created_at: createdAt,
+      updated_at: createdAt,
+    }),
+  });
+}
+
+export async function saveAdminOrder(order) {
+  await savePublicOrder({ ...order, status: "new" });
+  if (order.status && order.status !== "new") {
+    await updateOrderStatus(order.id, order.status);
+  }
+}
+
+export async function updateOrderStatus(id, status) {
+  return rest(`mil_orders?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+  }, true);
 }

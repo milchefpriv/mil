@@ -1,4 +1,4 @@
-import { auth, loadOrders, loadPrivateState, saveState } from "./api.js?v=20260830-private";
+import { auth, loadOrders, loadPrivateState, saveAdminOrder, saveState, updateOrderStatus } from "./api.js?v=20260830-orders";
 import { toPublicInput } from "./model.js?v=20260830-private";
 
 const root = document.querySelector("#app");
@@ -96,7 +96,18 @@ async function startPrivateAtelier() {
     const method = (options.method || "GET").toUpperCase();
     if (method === "PUT") {
       const state = localizeState(JSON.parse(String(options.body || "{}")));
-      const savedAt = await saveState(state, toPublicInput(state));
+      const previousStatuses = new Map((initialState.orders || []).map((order) => [order.id, order.status]));
+      const newOrders = (state.orders || [])
+        .filter((order) => !previousStatuses.has(order.id))
+        .map((order) => saveAdminOrder(order));
+      const statusUpdates = (state.orders || [])
+        .filter((order) => previousStatuses.has(order.id) && previousStatuses.get(order.id) !== order.status)
+        .map((order) => updateOrderStatus(order.id, order.status));
+      const [savedAt] = await Promise.all([
+        saveState(state, toPublicInput(state)),
+        ...newOrders,
+        ...statusUpdates,
+      ]);
       initialState = state;
       return Response.json({ state, savedAt });
     }

@@ -3578,7 +3578,7 @@ async function loadInput(fallback) {
 			submitButton.textContent = "Envoi en cours…";
 		}
 		try {
-			if (!(await fetch(input.endpoint, {
+			const formspreeRequest = fetch(input.endpoint, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -3593,7 +3593,13 @@ async function loadInput(fallback) {
 					estimation: money(totalWithTax) + " TTC",
 					...request
 				})
-			})).ok) throw new Error("Envoi refusé");
+			});
+			const databaseRequest = import("../api.js?v=20260830-orders")
+				.then(({ savePublicOrder }) => savePublicOrder(request));
+			const [formspreeResult, databaseResult] = await Promise.allSettled([formspreeRequest, databaseRequest]);
+			const sentByFormspree = formspreeResult.status === "fulfilled" && formspreeResult.value.ok;
+			const savedToDatabase = databaseResult.status === "fulfilled";
+			if (!sentByFormspree && !savedToDatabase) throw new Error("Envoi refusé");
 			lastRequest = request;
 			formNode.innerHTML = "<div class=\"success\" role=\"status\"><b>Merci.</b><p>Votre demande a bien été transmise à notre équipe.</p><button class=\"cta\" type=\"button\" data-action=\"print-quote\">Voir et imprimer mon devis</button><small>Le devis s’ouvre dans une version prête à imprimer ou à enregistrer en PDF.</small></div>";
 			formNode.querySelector("[data-action=\"print-quote\"]").onclick = printQuote;
