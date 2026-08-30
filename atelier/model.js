@@ -28,7 +28,7 @@ function enrichProduct(product, index, addonIds = []) {
     formulaEligible: true, costUnit: 0, costBasisQty: 1, costBasisUnit: "pièce",
     prepMinutesUnit: 0, fixedMinutes: 0, packCostUnit: 0, targetMargin: 0, yield: 1,
     yieldUnit: "pièce", ingredients: "", steps: "", equipment: "", storage: "",
-    service: "", allergens: "", photo: "", photoPositionX: 50, photoPositionY: 50,
+    service: "", allergens: "", technicalNotes: [], photo: "", photoPositionX: 50, photoPositionY: 50,
     photoZoom: 1, order: index, createdAt: now(), updatedAt: now(),
     quickAdd: { enabled: quick, mode: product.priceMode || "piece", price: product.price || 0, trayServes: product.trayServes || 6 },
     ...product,
@@ -87,7 +87,7 @@ export function stateFromPublicInput(input) {
     tags: input.tags || TAGS,
     products: publicProducts,
     formulas: (input.formulas || []).map(enrichFormula),
-    orders: [],
+    orders: [], quotes: [], quoteDraft: null,
     settings: {
       hourlyCost: 0, vat: Number(input.vat) || 10, deposit: Number(input.deposit) || 40,
       defaultMinimum: 20, balanceDueDays: 25,
@@ -108,6 +108,8 @@ export function normalizeState(state, fallbackInput) {
     ...base, ...clone(state), products,
     formulas: state.formulas.map(enrichFormula),
     orders: Array.isArray(state.orders) ? state.orders : [],
+    quotes: Array.isArray(state.quotes) ? state.quotes : [],
+    quoteDraft: state.quoteDraft && typeof state.quoteDraft === "object" ? state.quoteDraft : null,
     settings: { ...base.settings, ...(state.settings || {}) },
   };
 }
