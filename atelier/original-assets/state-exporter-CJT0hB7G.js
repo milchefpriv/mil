@@ -1,0 +1,1 @@
+import{t as e}from"./downloads-B35OS0KD.js";function t(t){e(`Sauvegarde_Atelier_MiL_`+new Date().toISOString().slice(0,10)+`.json`,JSON.stringify({...t,exportedAt:new Date().toISOString()},null,2),`application/json`)}export{t as exportState};

@@ -1,5 +1,5 @@
 {
-  "logo": "/mil-logo.webp",
+  "logo": "../mil-logo.webp",
   "categories": [
     {
       "id": "salades",
@@ -121,7 +121,25 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-chevre.webp",
+      "photo": "../media/cocktail-chevre.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-guac-crevette",
+      "name": "Guacamole crevette",
+      "description": "Guacamole, crevette grillée",
+      "category": "verrines",
+      "country": "Mexique",
+      "tags": [
+        "glutenfree",
+        "cold",
+        "shellfish"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-guac-crevette.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -140,7 +158,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-taboule.webp",
+      "photo": "../media/cocktail-taboule.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -152,7 +170,6 @@
       "category": "verrines",
       "country": "Thaïlande",
       "tags": [
-        "fish",
         "glutenfree",
         "lactosefree",
         "cold",
@@ -160,7 +177,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-crevette-coco.webp",
+      "photo": "../media/cocktail-crevette-coco.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -178,7 +195,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-vitelotte.webp",
+      "photo": "../media/cocktail-vitelotte.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -196,7 +213,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-aubergine.webp",
+      "photo": "../media/cocktail-aubergine.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -214,7 +231,25 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-halloumi.webp",
+      "photo": "../media/cocktail-halloumi.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-guac-truite",
+      "name": "Guacamole truite fumée",
+      "description": "Guacamole, truite fumée",
+      "category": "verrines",
+      "country": "Mexique",
+      "tags": [
+        "fish",
+        "glutenfree",
+        "cold"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-guac-truite.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -232,7 +267,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-foie.webp",
+      "photo": "../media/cocktail-foie.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -251,7 +286,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-oeufs-truite.webp",
+      "photo": "../media/cocktail-oeufs-truite.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -263,7 +298,6 @@
       "category": "bouchees",
       "country": "France",
       "tags": [
-        "fish",
         "luxury",
         "glutenfree",
         "cold",
@@ -271,7 +305,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-saint-jacques.webp",
+      "photo": "../media/cocktail-saint-jacques.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -289,7 +323,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-verrine-truite.webp",
+      "photo": "../media/cocktail-verrine-truite.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -308,7 +342,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-houmous-butternut.webp",
+      "photo": "../media/cocktail-houmous-butternut.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -317,7 +351,7 @@
       "id": "cocktail-tataki",
       "name": "Tataki de dorade",
       "description": "Citron vert, mangue, granola salé",
-      "category": "verrines",
+      "category": "bouchees",
       "country": "Japon",
       "tags": [
         "fish",
@@ -325,7 +359,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-tataki.webp",
+      "photo": "../media/cocktail-tataki.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -343,9 +377,27 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-stracciatella.webp",
+      "photo": "../media/cocktail-stracciatella.webp",
       "photoPositionX": 50,
-      "photoPositionY": 90,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-truite-yuzu",
+      "name": "Truite crémeuse au yuzu",
+      "description": "Truite fumée, crème légère au yuzu",
+      "category": "bouchees",
+      "country": "Japon",
+      "tags": [
+        "fish",
+        "glutenfree",
+        "cold"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-truite-yuzu.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
       "photoZoom": 1
     },
     {
@@ -361,7 +413,43 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-thon.webp",
+      "photo": "../media/cocktail-thon.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-maki",
+      "name": "Maki de chèvre courgette",
+      "description": "Courgette, chèvre frais, herbes et sésame torréfié",
+      "category": "bouchees",
+      "country": "Japon",
+      "tags": [
+        "vegetarian",
+        "glutenfree",
+        "cold"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-maki.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-agneau-premium",
+      "name": "Boulettes d’agneau kefta grillé",
+      "description": "Houmous banane plantain",
+      "category": "bouchees",
+      "country": "Liban",
+      "tags": [
+        "meat",
+        "hot",
+        "glutenfree"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-agneau-premium.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -375,11 +463,12 @@
       "tags": [
         "meat",
         "hot",
-        "sharing"
+        "sharing",
+        "live"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-cote-boeuf.webp",
+      "photo": "../media/cocktail-cote-boeuf.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -392,11 +481,12 @@
       "country": "France",
       "tags": [
         "meat",
-        "cold"
+        "cold",
+        "live"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-tartare.webp",
+      "photo": "../media/cocktail-tartare.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -409,11 +499,102 @@
       "country": "Pérou",
       "tags": [
         "fish",
-        "cold"
+        "cold",
+        "live"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-ceviche.webp",
+      "photo": "../media/cocktail-ceviche.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-brochettes",
+      "name": "Brochettes agneau & légumes",
+      "description": "Sauce yaourt, menthe, cumin, citron",
+      "category": "live-cooking",
+      "country": "Liban",
+      "tags": [
+        "meat",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-brochettes.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-risotto",
+      "name": "Risotto de frégola",
+      "description": "Champignons noirs, pecorino, parmesan",
+      "category": "live-cooking",
+      "country": "Italie",
+      "tags": [
+        "vegetarian",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-risotto.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-wok",
+      "name": "Wok — khao pad",
+      "description": "Riz sauté, poulet, légumes, citronnelle",
+      "category": "live-cooking",
+      "country": "Thaïlande",
+      "tags": [
+        "meat",
+        "hot",
+        "glutenfree",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-wok.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-crepes",
+      "name": "Crêpes salées",
+      "description": "Accompagnements préparés devant vous",
+      "category": "live-cooking",
+      "country": "France",
+      "tags": [
+        "vegetarian",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-crepes.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-mini-hotdog",
+      "name": "Mini hot-dog",
+      "description": "Saucisse, pain brioché, moutarde douce",
+      "category": "bouchees",
+      "country": "États-Unis",
+      "tags": [
+        "meat",
+        "hot"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-mini-hotdog.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -431,7 +612,44 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-tartelette-morilles.webp",
+      "photo": "../media/cocktail-tartelette-morilles.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-gambas-flambees",
+      "name": "Gambas flambées",
+      "description": "Cognac, purée de patate douce",
+      "category": "live-cooking",
+      "country": "France",
+      "tags": [
+        "hot",
+        "live",
+        "glutenfree",
+        "shellfish"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-gambas-flambees.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-tempura-gambas",
+      "name": "Tempura de gambas maison",
+      "description": "Crème coco, gingembre, citron vert",
+      "category": "live-cooking",
+      "country": "Japon",
+      "tags": [
+        "hot",
+        "live",
+        "shellfish"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-tempura-gambas.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -449,7 +667,79 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-poulet-popcorn.webp",
+      "photo": "../media/cocktail-poulet-popcorn.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-hotdog-live",
+      "name": "Hot-dog minute",
+      "description": "Pain brioché, saucisse, oignons frits, herbes, moutarde",
+      "category": "live-cooking",
+      "country": "États-Unis",
+      "tags": [
+        "meat",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-hotdog-live.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-tacos-mexicains",
+      "name": "Tacos mexicains",
+      "description": "Bœuf ou poulet, guacamole, pickles, chili",
+      "category": "live-cooking",
+      "country": "Mexique",
+      "tags": [
+        "meat",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-tacos-mexicains.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-shawarma",
+      "name": "Sandwich shawarma",
+      "description": "Poulet grillé, chou, hummus patate douce, cornichons, sauce ail",
+      "category": "live-cooking",
+      "country": "Liban",
+      "tags": [
+        "meat",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-shawarma.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-falafel-live",
+      "name": "Falafels frits",
+      "description": "Pois chiches aux herbes, sauce ail et sésame",
+      "category": "live-cooking",
+      "country": "Liban",
+      "tags": [
+        "vegan",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-falafel-live.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -461,7 +751,6 @@
       "category": "live-cooking",
       "country": "États-Unis",
       "tags": [
-        "fish",
         "hot",
         "live",
         "luxury",
@@ -469,7 +758,25 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-lobster-rolls.webp",
+      "photo": "../media/cocktail-lobster-rolls.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1
+    },
+    {
+      "id": "cocktail-croc-monsieur",
+      "name": "Croc-monsieur Maison Croq’",
+      "description": "Pain doré, jambon et fromage fondant",
+      "category": "live-cooking",
+      "country": "France",
+      "tags": [
+        "meat",
+        "hot",
+        "live"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/cocktail-croc-monsieur.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -487,7 +794,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-gigot-agneau.webp",
+      "photo": "../media/cocktail-gigot-agneau.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -506,7 +813,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-chili-geant.webp",
+      "photo": "../media/cocktail-chili-geant.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -526,7 +833,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-paella.webp",
+      "photo": "../media/cocktail-paella.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -544,7 +851,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-boeuf-bourguignon.webp",
+      "photo": "../media/cocktail-boeuf-bourguignon.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -562,7 +869,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-escalope-poulet.webp",
+      "photo": "../media/cocktail-escalope-poulet.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -581,7 +888,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/cocktail-grenailles.webp",
+      "photo": "../media/cocktail-grenailles.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -594,14 +901,19 @@
       "country": "Liban",
       "tags": [
         "vegan",
-        "vegetarian"
+        "vegetarian",
+        "cold",
+        "sharing"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-crudites.webp",
+      "photo": "../media/buffet-crudites.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1
+      "photoZoom": 1,
+      "price": 42,
+      "priceMode": "tray",
+      "trayServes": 6
     },
     {
       "id": "buffet-charcuterie",
@@ -610,14 +922,19 @@
       "category": "plateaux",
       "country": "France",
       "tags": [
-        "meat"
+        "meat",
+        "cold",
+        "sharing"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-charcuterie.webp",
+      "photo": "../media/buffet-charcuterie.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1
+      "photoZoom": 1,
+      "price": 58,
+      "priceMode": "tray",
+      "trayServes": 6
     },
     {
       "id": "buffet-plateau-mexicain",
@@ -628,14 +945,39 @@
       "tags": [
         "vegan",
         "vegetarian",
+        "sharing",
+        "cold"
+      ],
+      "visualMode": "photo",
+      "visualTheme": "category",
+      "photo": "../media/buffet-plateau-mexicain.webp",
+      "photoPositionX": 50,
+      "photoPositionY": 50,
+      "photoZoom": 1,
+      "price": 48,
+      "priceMode": "tray",
+      "trayServes": 6
+    },
+    {
+      "id": "buffet-fromages",
+      "name": "Fromages affinés & condiments",
+      "description": "Trois fromages, fruits secs, chutney et pain.",
+      "category": "plateaux",
+      "country": "France",
+      "tags": [
+        "vegetarian",
+        "cold",
         "sharing"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-plateau-mexicain.webp",
+      "photo": "../media/buffet-fromages.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1
+      "photoZoom": 1,
+      "price": 54,
+      "priceMode": "tray",
+      "trayServes": 6
     },
     {
       "id": "buffet-truite",
@@ -644,14 +986,19 @@
       "category": "plateaux",
       "country": "France",
       "tags": [
-        "fish"
+        "fish",
+        "cold",
+        "sharing"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-truite.webp",
+      "photo": "../media/buffet-truite.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1
+      "photoZoom": 1,
+      "price": 68,
+      "priceMode": "tray",
+      "trayServes": 6
     },
     {
       "id": "buffet-mezze",
@@ -660,14 +1007,19 @@
       "category": "plateaux",
       "country": "Liban",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "cold",
+        "sharing"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-mezze.webp",
+      "photo": "../media/buffet-mezze.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1
+      "photoZoom": 1,
+      "price": 48,
+      "priceMode": "tray",
+      "trayServes": 6
     },
     {
       "id": "buffet-focaccia",
@@ -676,11 +1028,12 @@
       "category": "sandwichs",
       "country": "Italie",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-focaccia.webp",
+      "photo": "../media/buffet-focaccia.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -692,17 +1045,15 @@
       "category": "sandwichs",
       "country": "Maroc",
       "tags": [
-        "meat"
+        "meat",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-navette.webp",
+      "photo": "../media/buffet-navette.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
-      "photoZoom": 1,
-      "price": 20,
-      "priceMode": "tray",
-      "trayServes": 6
+      "photoZoom": 1
     },
     {
       "id": "buffet-pastrami",
@@ -711,11 +1062,12 @@
       "category": "sandwichs",
       "country": "États-Unis",
       "tags": [
-        "meat"
+        "meat",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-pastrami.webp",
+      "photo": "../media/buffet-pastrami.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -727,11 +1079,12 @@
       "category": "sandwichs",
       "country": "France",
       "tags": [
-        "fish"
+        "fish",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-bun-truite.webp",
+      "photo": "../media/buffet-bun-truite.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -743,11 +1096,12 @@
       "category": "sandwichs",
       "country": "Grèce",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-baguette.webp",
+      "photo": "../media/buffet-baguette.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -759,11 +1113,12 @@
       "category": "sandwichs",
       "country": "Italie",
       "tags": [
-        "meat"
+        "meat",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-roastbeef.webp",
+      "photo": "../media/buffet-roastbeef.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -776,11 +1131,12 @@
       "country": "France",
       "tags": [
         "vegan",
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-quinoa.webp",
+      "photo": "../media/buffet-quinoa.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -792,11 +1148,12 @@
       "category": "salades",
       "country": "Italie",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-penne.webp",
+      "photo": "../media/buffet-penne.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -808,11 +1165,12 @@
       "category": "salades",
       "country": "Italie",
       "tags": [
-        "meat"
+        "meat",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-caesar.webp",
+      "photo": "../media/buffet-caesar.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -824,11 +1182,12 @@
       "category": "salades",
       "country": "France",
       "tags": [
-        "fish"
+        "fish",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-lentilles.webp",
+      "photo": "../media/buffet-lentilles.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -841,11 +1200,12 @@
       "country": "France",
       "tags": [
         "vegan",
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-vitelotte.webp",
+      "photo": "../media/buffet-vitelotte.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -862,7 +1222,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-parmentier.webp",
+      "photo": "../media/buffet-parmentier.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -879,7 +1239,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-lasagne.webp",
+      "photo": "../media/buffet-lasagne.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -896,7 +1256,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-poulet.webp",
+      "photo": "../media/buffet-poulet.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -914,7 +1274,7 @@
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-curry.webp",
+      "photo": "../media/buffet-curry.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -926,11 +1286,12 @@
       "category": "desserts",
       "country": "États-Unis",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "ambient"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-brownie.webp",
+      "photo": "../media/buffet-brownie.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -942,11 +1303,12 @@
       "category": "desserts",
       "country": "France",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-tartelette.webp",
+      "photo": "../media/buffet-tartelette.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -959,11 +1321,12 @@
       "country": "France",
       "tags": [
         "vegan",
-        "vegetarian"
+        "vegetarian",
+        "cold"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-fruits.webp",
+      "photo": "../media/buffet-fruits.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
@@ -975,25 +1338,31 @@
       "category": "desserts",
       "country": "États-Unis",
       "tags": [
-        "vegetarian"
+        "vegetarian",
+        "ambient"
       ],
       "visualMode": "photo",
       "visualTheme": "category",
-      "photo": "/media/buffet-cookies.webp",
+      "photo": "../media/buffet-cookies.webp",
       "photoPositionX": 50,
       "photoPositionY": 50,
       "photoZoom": 1
     }
   ],
   "addonIds": [
-    "buffet-navette"
+    "buffet-crudites",
+    "buffet-charcuterie",
+    "buffet-plateau-mexicain",
+    "buffet-fromages",
+    "buffet-truite",
+    "buffet-mezze"
   ],
   "formulas": [
     {
       "id": "la-simple",
       "name": "La Simple",
-      "description": " livrée ou retirée sans personnel de service",
-      "price": 20,
+      "description": "Une base fraîche, généreuse et facile à recevoir, livrée ou retirée sans personnel de service.",
+      "price": 29,
       "minimum": 20,
       "recommended": false,
       "readyEnabled": true,
@@ -1001,76 +1370,60 @@
       "presentations": {
         "ready": {
           "name": "La Simple",
-          "description": " livrée ou retirée sans personnel de service",
-          "price": 20
+          "description": "Une base fraîche, généreuse et facile à recevoir, livrée ou retirée sans personnel de service.",
+          "price": 29
         },
         "custom": {
           "name": "La Simple",
-          "description": " livrée ou retirée sans personnel de service",
-          "price": 20
+          "description": "Une base fraîche, généreuse et facile à recevoir, livrée ou retirée sans personnel de service.",
+          "price": 29
         }
       },
       "rules": [
         {
-          "category": "bouchees",
+          "category": "salades",
           "enabled": true,
-          "choices": 3,
+          "choices": 1,
           "optional": false,
           "products": [
             {
-              "id": "cocktail-vitelotte",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "cocktail-aubergine",
+              "id": "buffet-quinoa",
               "enabled": true,
               "preset": true,
-              "qty": 1,
-              "unit": "pièce",
+              "qty": 120,
+              "unit": "g",
               "surcharge": 0
             },
             {
-              "id": "cocktail-halloumi",
+              "id": "buffet-penne",
               "enabled": true,
               "preset": false,
-              "qty": 1,
-              "unit": "pièce",
+              "qty": 120,
+              "unit": "g",
               "surcharge": 0
             },
             {
-              "id": "cocktail-houmous-butternut",
+              "id": "buffet-caesar",
               "enabled": true,
               "preset": false,
-              "qty": 1,
-              "unit": "pièce",
+              "qty": 120,
+              "unit": "g",
               "surcharge": 0
             },
             {
-              "id": "cocktail-thon",
+              "id": "buffet-lentilles",
               "enabled": true,
               "preset": false,
-              "qty": 1,
-              "unit": "pièce",
+              "qty": 120,
+              "unit": "g",
               "surcharge": 0
             },
             {
-              "id": "cocktail-saint-jacques",
+              "id": "buffet-vitelotte",
               "enabled": true,
               "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "cocktail-foie",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
+              "qty": 120,
+              "unit": "g",
               "surcharge": 0
             }
           ]
@@ -1078,7 +1431,7 @@
         {
           "category": "sandwichs",
           "enabled": true,
-          "choices": 3,
+          "choices": 2,
           "optional": false,
           "products": [
             {
@@ -1091,6 +1444,14 @@
             },
             {
               "id": "buffet-navette",
+              "enabled": true,
+              "preset": true,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-pastrami",
               "enabled": true,
               "preset": false,
               "qty": 0.5,
@@ -1124,235 +1485,19 @@
           ]
         },
         {
-          "category": "desserts",
-          "enabled": true,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-brownie",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-tartelette",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-fruits",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-cookies",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            }
-          ]
-        },
-        {
           "category": "verrines",
           "enabled": true,
-          "choices": 2,
+          "choices": 1,
           "optional": false,
           "products": [
             {
-              "id": "cocktail-taboule",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "cocktail-verrine-truite",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
-            },
-            {
-              "id": "cocktail-stracciatella",
+              "id": "cocktail-guac-crevette",
               "enabled": true,
               "preset": true,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
-            }
-          ]
-        },
-        {
-          "category": "plats-chauds",
-          "enabled": false,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "cocktail-gigot-agneau",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "portion",
-              "surcharge": 0
-            }
-          ]
-        },
-        {
-          "category": "plateaux",
-          "enabled": false,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-crudites",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            }
-          ]
-        },
-        {
-          "category": "salades",
-          "enabled": true,
-          "choices": 2,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-quinoa",
-              "enabled": true,
-              "preset": false,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
             },
-            {
-              "id": "buffet-penne",
-              "enabled": true,
-              "preset": true,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-caesar",
-              "enabled": true,
-              "preset": false,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-lentilles",
-              "enabled": true,
-              "preset": false,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-vitelotte",
-              "enabled": true,
-              "preset": true,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "la-genereuse",
-      "name": "La Généreuse",
-      "description": "Installation, du frais, du chaud et un vrai rythme de dégustation.",
-      "price": 34,
-      "minimum": 20,
-      "recommended": true,
-      "readyEnabled": true,
-      "customEnabled": true,
-      "presentations": {
-        "ready": {
-          "name": "La Généreuse",
-          "description": "Installation, du frais, du chaud et un vrai rythme de dégustation.",
-          "price": 34
-        },
-        "custom": {
-          "name": "La Généreuse",
-          "description": "Installation, du frais, du chaud et un vrai rythme de dégustation.",
-          "price": 36
-        }
-      },
-      "rules": [
-        {
-          "category": "salades",
-          "enabled": true,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-quinoa",
-              "enabled": true,
-              "preset": false,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-penne",
-              "enabled": true,
-              "preset": true,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-caesar",
-              "enabled": true,
-              "preset": false,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-lentilles",
-              "enabled": true,
-              "preset": true,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-vitelotte",
-              "enabled": true,
-              "preset": true,
-              "qty": 120,
-              "unit": "g",
-              "surcharge": 0
-            }
-          ]
-        },
-        {
-          "category": "verrines",
-          "enabled": true,
-          "choices": 2,
-          "optional": false,
-          "products": [
             {
               "id": "cocktail-taboule",
               "enabled": true,
@@ -1370,6 +1515,14 @@
               "surcharge": 0
             },
             {
+              "id": "cocktail-guac-truite",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-verrine-truite",
               "enabled": true,
               "preset": false,
@@ -1384,25 +1537,25 @@
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
-            },
-            {
-              "id": "cocktail-tataki",
-              "enabled": false,
-              "preset": true,
-              "qty": 1,
-              "unit": "pièce",
-              "surcharge": 0
             }
           ]
         },
         {
           "category": "bouchees",
           "enabled": true,
-          "choices": 3,
+          "choices": 1,
           "optional": false,
           "products": [
             {
               "id": "cocktail-chevre",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-vitelotte",
               "enabled": true,
               "preset": false,
               "qty": 1,
@@ -1418,6 +1571,14 @@
               "surcharge": 0
             },
             {
+              "id": "cocktail-halloumi",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-houmous-butternut",
               "enabled": true,
               "preset": false,
@@ -1426,9 +1587,353 @@
               "surcharge": 0
             },
             {
-              "id": "cocktail-foie",
-              "enabled": false,
+              "id": "cocktail-maki",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-agneau-premium",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-mini-hotdog",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            }
+          ]
+        },
+        {
+          "category": "desserts",
+          "enabled": true,
+          "choices": 1,
+          "optional": false,
+          "products": [
+            {
+              "id": "buffet-brownie",
+              "enabled": true,
               "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-tartelette",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-fruits",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-cookies",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "la-genereuse",
+      "name": "La Généreuse",
+      "description": "Un buffet-cocktail complet avec installation, du frais, du chaud et un vrai rythme de dégustation.",
+      "price": 42,
+      "minimum": 20,
+      "recommended": true,
+      "readyEnabled": true,
+      "customEnabled": true,
+      "presentations": {
+        "ready": {
+          "name": "La Généreuse",
+          "description": "Un buffet-cocktail complet avec installation, du frais, du chaud et un vrai rythme de dégustation.",
+          "price": 42
+        },
+        "custom": {
+          "name": "La Généreuse",
+          "description": "Un buffet-cocktail complet avec installation, du frais, du chaud et un vrai rythme de dégustation.",
+          "price": 42
+        }
+      },
+      "rules": [
+        {
+          "category": "salades",
+          "enabled": true,
+          "choices": 1,
+          "optional": false,
+          "products": [
+            {
+              "id": "buffet-quinoa",
+              "enabled": true,
+              "preset": true,
+              "qty": 120,
+              "unit": "g",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-penne",
+              "enabled": true,
+              "preset": false,
+              "qty": 120,
+              "unit": "g",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-caesar",
+              "enabled": true,
+              "preset": false,
+              "qty": 120,
+              "unit": "g",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-lentilles",
+              "enabled": true,
+              "preset": false,
+              "qty": 120,
+              "unit": "g",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-vitelotte",
+              "enabled": true,
+              "preset": false,
+              "qty": 120,
+              "unit": "g",
+              "surcharge": 0
+            }
+          ]
+        },
+        {
+          "category": "sandwichs",
+          "enabled": true,
+          "choices": 2,
+          "optional": false,
+          "products": [
+            {
+              "id": "buffet-focaccia",
+              "enabled": true,
+              "preset": true,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-navette",
+              "enabled": true,
+              "preset": true,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-pastrami",
+              "enabled": true,
+              "preset": false,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-bun-truite",
+              "enabled": true,
+              "preset": false,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-baguette",
+              "enabled": true,
+              "preset": false,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            },
+            {
+              "id": "buffet-roastbeef",
+              "enabled": true,
+              "preset": false,
+              "qty": 0.5,
+              "unit": "unité",
+              "surcharge": 0
+            }
+          ]
+        },
+        {
+          "category": "verrines",
+          "enabled": true,
+          "choices": 2,
+          "optional": false,
+          "products": [
+            {
+              "id": "cocktail-guac-crevette",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-taboule",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-crevette-coco",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-guac-truite",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-verrine-truite",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-stracciatella",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            }
+          ]
+        },
+        {
+          "category": "bouchees",
+          "enabled": true,
+          "choices": 3,
+          "optional": false,
+          "products": [
+            {
+              "id": "cocktail-chevre",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-vitelotte",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-aubergine",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-halloumi",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-oeufs-truite",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-houmous-butternut",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-tataki",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-truite-yuzu",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-thon",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-maki",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-agneau-premium",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-mini-hotdog",
+              "enabled": true,
+              "preset": false,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
@@ -1437,14 +1942,14 @@
         },
         {
           "category": "plats-chauds",
-          "enabled": false,
+          "enabled": true,
           "choices": 1,
           "optional": false,
           "products": [
             {
               "id": "cocktail-chili-geant",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "portion",
               "surcharge": 0
@@ -1508,7 +2013,7 @@
             {
               "id": "buffet-brownie",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
@@ -1526,7 +2031,7 @@
               "enabled": true,
               "preset": false,
               "qty": 1,
-              "unit": "pièce",
+              "unit": "portion",
               "surcharge": 0
             },
             {
@@ -1538,118 +2043,14 @@
               "surcharge": 0
             }
           ]
-        },
-        {
-          "category": "plateaux",
-          "enabled": true,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-crudites",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-charcuterie",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-plateau-mexicain",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-truite",
-              "enabled": true,
-              "preset": true,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-mezze",
-              "enabled": true,
-              "preset": false,
-              "qty": 1,
-              "unit": "plateau",
-              "surcharge": 0
-            }
-          ]
-        },
-        {
-          "category": "sandwichs",
-          "enabled": true,
-          "choices": 1,
-          "optional": false,
-          "products": [
-            {
-              "id": "buffet-focaccia",
-              "enabled": true,
-              "preset": false,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-navette",
-              "enabled": true,
-              "preset": false,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-pastrami",
-              "enabled": true,
-              "preset": false,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-bun-truite",
-              "enabled": true,
-              "preset": true,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-baguette",
-              "enabled": true,
-              "preset": false,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            },
-            {
-              "id": "buffet-roastbeef",
-              "enabled": true,
-              "preset": false,
-              "qty": 0.5,
-              "unit": "unité",
-              "surcharge": 0
-            }
-          ]
         }
       ]
     },
     {
       "id": "la-signature",
       "name": "La Signature",
-      "description": "Pièces de caractère et Live cooking ",
-      "price": 42,
+      "description": "notre expérience la plus complète avec service, pièces de caractère et Live cooking en option.",
+      "price": 58,
       "minimum": 20,
       "recommended": false,
       "readyEnabled": true,
@@ -1657,19 +2058,19 @@
       "presentations": {
         "ready": {
           "name": "La Signature",
-          "description": "Pièces de caractère et Live cooking ",
-          "price": 42
+          "description": "notre expérience la plus complète avec service, pièces de caractère et Live cooking en option.",
+          "price": 58
         },
         "custom": {
           "name": "La Signature",
-          "description": "Pièces de caractère et Live cooking ",
-          "price": 46
+          "description": "notre expérience la plus complète avec service, pièces de caractère et Live cooking en option.",
+          "price": 58
         }
       },
       "rules": [
         {
           "category": "salades",
-          "enabled": false,
+          "enabled": true,
           "choices": 1,
           "optional": false,
           "products": [
@@ -1717,7 +2118,7 @@
         },
         {
           "category": "sandwichs",
-          "enabled": false,
+          "enabled": true,
           "choices": 2,
           "optional": false,
           "products": [
@@ -1778,6 +2179,14 @@
           "optional": false,
           "products": [
             {
+              "id": "cocktail-guac-crevette",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-taboule",
               "enabled": true,
               "preset": true,
@@ -1787,6 +2196,14 @@
             },
             {
               "id": "cocktail-crevette-coco",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-guac-truite",
               "enabled": true,
               "preset": false,
               "qty": 1,
@@ -1818,15 +2235,31 @@
           "optional": false,
           "products": [
             {
+              "id": "cocktail-chevre",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-vitelotte",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
             },
             {
               "id": "cocktail-aubergine",
+              "enabled": true,
+              "preset": true,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-halloumi",
               "enabled": true,
               "preset": false,
               "qty": 1,
@@ -1844,7 +2277,7 @@
             {
               "id": "cocktail-oeufs-truite",
               "enabled": true,
-              "preset": true,
+              "preset": false,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
@@ -1866,6 +2299,54 @@
               "surcharge": 0
             },
             {
+              "id": "cocktail-tataki",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-truite-yuzu",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-thon",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-maki",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-agneau-premium",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-mini-hotdog",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "pièce",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-tartelette-morilles",
               "enabled": true,
               "preset": false,
@@ -1877,14 +2358,14 @@
         },
         {
           "category": "plats-chauds",
-          "enabled": false,
+          "enabled": true,
           "choices": 2,
           "optional": false,
           "products": [
             {
               "id": "cocktail-gigot-agneau",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "portion",
               "surcharge": 0
@@ -1892,7 +2373,7 @@
             {
               "id": "cocktail-chili-geant",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "portion",
               "surcharge": 0
@@ -1965,14 +2446,14 @@
         },
         {
           "category": "desserts",
-          "enabled": false,
+          "enabled": true,
           "choices": 2,
           "optional": false,
           "products": [
             {
               "id": "buffet-brownie",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
@@ -1980,7 +2461,7 @@
             {
               "id": "buffet-tartelette",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "pièce",
               "surcharge": 0
@@ -1990,7 +2471,7 @@
               "enabled": true,
               "preset": false,
               "qty": 1,
-              "unit": "pièce",
+              "unit": "portion",
               "surcharge": 0
             },
             {
@@ -2012,7 +2493,7 @@
             {
               "id": "cocktail-cote-boeuf",
               "enabled": true,
-              "preset": false,
+              "preset": true,
               "qty": 1,
               "unit": "portion",
               "surcharge": 4
@@ -2034,7 +2515,87 @@
               "surcharge": 0
             },
             {
+              "id": "cocktail-brochettes",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-risotto",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-wok",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-crepes",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-gambas-flambees",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 4
+            },
+            {
+              "id": "cocktail-tempura-gambas",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
               "id": "cocktail-poulet-popcorn",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-hotdog-live",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-tacos-mexicains",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-shawarma",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
+            },
+            {
+              "id": "cocktail-falafel-live",
               "enabled": true,
               "preset": false,
               "qty": 1,
@@ -2048,6 +2609,14 @@
               "qty": 1,
               "unit": "portion",
               "surcharge": 8
+            },
+            {
+              "id": "cocktail-croc-monsieur",
+              "enabled": true,
+              "preset": false,
+              "qty": 1,
+              "unit": "portion",
+              "surcharge": 0
             }
           ]
         }
