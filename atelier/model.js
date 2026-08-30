@@ -35,18 +35,31 @@ function enrichProduct(product, index, addonIds = []) {
   };
 }
 
+function formulaProductEntries(products) {
+  if (Array.isArray(products)) {
+    return products.filter((item) => item?.id).map((item) => [item.id, item]);
+  }
+  if (products && typeof products === "object") {
+    return Object.entries(products).map(([id, config]) => [id, { id, ...(config || {}) }]);
+  }
+  return [];
+}
+
 function enrichFormula(formula, index) {
-  const rules = (formula.rules || []).map((rule) => ({
-    category: rule.category,
-    enabled: rule.enabled !== false,
-    choices: Number(rule.choices) || 1,
-    readyChoices: (rule.products || []).filter((item) => item.preset).length,
-    optional: Boolean(rule.optional),
-    products: Object.fromEntries((rule.products || []).map((item) => [item.id, {
-      enabled: item.enabled !== false, preset: Boolean(item.preset), qty: Number(item.qty) || 0,
-      unit: item.unit || "pièce", surcharge: Number(item.surcharge) || 0,
-    }])),
-  }));
+  const rules = (formula.rules || []).map((rule) => {
+    const products = formulaProductEntries(rule.products);
+    return {
+      category: rule.category,
+      enabled: rule.enabled !== false,
+      choices: Number(rule.choices) || 1,
+      readyChoices: Number(rule.readyChoices) || products.filter(([, item]) => item.preset).length,
+      optional: Boolean(rule.optional),
+      products: Object.fromEntries(products.map(([id, item]) => [id, {
+        enabled: item.enabled !== false, preset: Boolean(item.preset), qty: Number(item.qty) || 0,
+        unit: item.unit || "pièce", surcharge: Number(item.surcharge) || 0,
+      }])),
+    };
+  });
   const presentations = formula.presentations || {
     ready: { name: formula.name, description: formula.description, price: formula.price },
     custom: { name: formula.name, description: formula.description, price: formula.price },
