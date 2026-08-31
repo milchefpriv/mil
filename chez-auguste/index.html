@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr" data-auguste-standalone="true">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Le carnet de cuisine autonome de Chez Auguste : recettes, menus, fiches techniques et carte PDF."
+    />
+    <meta name="theme-color" content="#6c1c22" />
+    <title>Chez Auguste — Menu & Cuisine</title>
+    <script type="module" crossorigin src="./assets/app-WnswoXFJ.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-jpDsebLB.js">
+    <link rel="modulepreload" crossorigin href="./assets/pdf-engine-BrU0ZjON.js">
+    <link rel="modulepreload" crossorigin href="./assets/supabase-D_AYc1Jo.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-B0ZntvhZ.js">
+    <link rel="stylesheet" crossorigin href="./assets/app-C0Ln5dFK.css">
+  </head>
+  <body>
+    <script id="auguste-backup-data" type="application/json">{"version":1,"backupId":"","storage":{}}</script>
+    <script>
+      (() => {
+        const allowedKeys = [
+          "auguste-menu-draft",
+          "auguste-last-card",
+          "auguste-custom-recipes",
+          "auguste-saved-menus",
+          "auguste-recipe-economics",
+          "auguste-recipe-content",
+          "auguste-technical-sheets",
+          "auguste-period-selections-v1",
+        ];
+        try {
+          const node = document.getElementById("auguste-backup-data");
+          const payload = JSON.parse(node?.textContent || "{}");
+          const restoredKey = payload.backupId ? `auguste-backup-restored:${payload.backupId}` : "";
+          if (!restoredKey || localStorage.getItem(restoredKey)) return;
+          allowedKeys.forEach((key) => {
+            const value = payload.storage?.[key];
+            if (typeof value === "string") localStorage.setItem(key, value);
+          });
+          localStorage.setItem(restoredKey, new Date().toISOString());
+        } catch (error) {
+          console.warn("La sauvegarde Chez Auguste n’a pas pu être restaurée.", error);
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <noscript>Activez JavaScript pour utiliser le carnet de cuisine Chez Auguste.</noscript>
+  </body>
+</html>
