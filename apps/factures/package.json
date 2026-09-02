@@ -1,0 +1,30 @@
+{
+  "name": "factures-emile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.112.4",
+    "jspdf": "3.0.4",
+    "lucide-react": "1.31.0",
+    "pdfmake": "0.2.20",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sonner": "2.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
+  }
+}
