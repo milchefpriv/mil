@@ -4,7 +4,7 @@ Application web autonome, hébergée par GitHub Pages et synchronisée avec Supa
 
 ## Fonctionnement
 
-- connexion sans mot de passe par lien reçu par e-mail ;
+- connexion à l’espace unique avec un simple mot de passe, sans identifiant ;
 - projets et comptes rendus enregistrés dans Supabase ;
 - synchronisation entre téléphone et ordinateur avec le même compte ;
 - copie locale conservée dans le navigateur en cas de coupure réseau ;

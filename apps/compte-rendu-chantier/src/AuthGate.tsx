@@ -1,16 +1,20 @@
 import type { Session } from "@supabase/supabase-js";
-import { LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import { KeyRound, LoaderCircle, LockKeyhole } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import ChantierApp from "./ChantierApp";
 import { supabase } from "./supabase";
 
+type PasswordSessionResponse = {
+  access_token?: string;
+  refresh_token?: string;
+};
+
 export default function AuthGate() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -36,30 +40,36 @@ export default function AuthGate() {
     };
   }, []);
 
-  async function requestLink(event: FormEvent<HTMLFormElement>) {
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const cleanEmail = email.trim().toLocaleLowerCase();
-    if (!cleanEmail) return;
+    if (!password) return;
 
-    setSending(true);
+    setSigningIn(true);
     setError("");
-    setSent(false);
 
-    const emailRedirectTo = new URL("./", window.location.href).href;
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: cleanEmail,
-      options: {
-        emailRedirectTo,
-        shouldCreateUser: true,
-      },
+    const { data, error: loginError } =
+      await supabase.functions.invoke<PasswordSessionResponse>(
+        "chantier-password-login",
+        { body: { password } },
+      );
+
+    if (loginError || !data?.access_token || !data.refresh_token) {
+      setError("Mot de passe incorrect.");
+      setSigningIn(false);
+      return;
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
     });
 
-    if (signInError) {
-      setError("Le lien de connexion n’a pas pu être envoyé. Réessayez.");
+    if (sessionError) {
+      setError("Mot de passe incorrect.");
     } else {
-      setSent(true);
+      setPassword("");
     }
-    setSending(false);
+    setSigningIn(false);
   }
 
   if (loading) {
@@ -80,38 +90,31 @@ export default function AuthGate() {
           <div className="auth-heading">
             <span><LockKeyhole size={14} /> Espace privé synchronisé</span>
             <h1>Vos comptes rendus,<br />sur tous vos appareils.</h1>
-            <p>
-              Entrez votre adresse e-mail. Vous recevrez un lien sécurisé pour
-              ouvrir vos chantiers, sans mot de passe.
-            </p>
+            <p>Entrez simplement votre mot de passe pour ouvrir vos chantiers.</p>
           </div>
 
-          <form className="auth-form" onSubmit={requestLink}>
-            <label htmlFor="auth-email">Adresse e-mail</label>
+          <form className="auth-form" onSubmit={signIn}>
+            <label htmlFor="auth-password">Mot de passe</label>
             <div className="auth-input-wrap">
-              <Mail size={18} />
+              <KeyRound size={18} />
               <input
-                id="auth-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="vous@exemple.fr"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                id="auth-password"
+                type="password"
+                autoComplete="current-password"
+                enterKeyHint="go"
+                placeholder="Votre mot de passe"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 required
+                autoFocus
               />
             </div>
-            <button type="submit" disabled={sending}>
-              {sending ? <LoaderCircle className="sync-spinner" size={18} /> : <Mail size={18} />}
-              {sending ? "Envoi…" : "Recevoir mon lien de connexion"}
+            <button type="submit" disabled={signingIn}>
+              {signingIn ? <LoaderCircle className="sync-spinner" size={18} /> : <KeyRound size={18} />}
+              {signingIn ? "Ouverture…" : "Ouvrir mes comptes rendus"}
             </button>
           </form>
 
-          {sent && (
-            <p className="auth-feedback success">
-              Le lien vient d’être envoyé. Ouvrez-le depuis votre messagerie.
-            </p>
-          )}
           {error && <p className="auth-feedback error">{error}</p>}
 
           <small>Compte Rendu Chantier · Espace privé</small>

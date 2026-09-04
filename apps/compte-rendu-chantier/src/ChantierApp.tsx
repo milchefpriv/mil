@@ -119,7 +119,7 @@ type Report = {
 };
 
 type AppData = {
-  version: 2;
+  version: 3;
   projects: Project[];
   reports: Report[];
 };
@@ -128,20 +128,6 @@ type FirmProfile = {
   name: string;
   address: string;
   contact: string;
-};
-
-type LegacyReport = {
-  id?: string;
-  projectName?: string;
-  projectAddress?: string;
-  meetingNumber?: string;
-  meetingDate?: string;
-  attendees?: string;
-  nextMeetingDate?: string;
-  nextMeetingTime?: string;
-  generalNotes?: string;
-  points?: SitePoint[];
-  updatedAt?: string;
 };
 
 type RecognitionResult = ArrayLike<{ transcript: string }> & {
@@ -179,10 +165,9 @@ declare global {
   }
 }
 
-const DATA_KEY = "espace-apprivoise-chantier-v2";
-const LEGACY_REPORTS_KEY = "atelier-chantier-reports-v1";
-const SYNCED_KEY = "espace-apprivoise-chantier-v2-synced";
-const DIRTY_KEY = "espace-apprivoise-chantier-v2-dirty";
+const DATA_KEY = "espace-apprivoise-chantier-v3";
+const SYNCED_KEY = "espace-apprivoise-chantier-v3-synced";
+const DIRTY_KEY = "espace-apprivoise-chantier-v3-dirty";
 
 type SyncState = "loading" | "saving" | "saved" | "offline";
 
@@ -303,59 +288,15 @@ function makeReport(
   };
 }
 
-function migrateLegacy(): AppData {
-  const empty: AppData = { version: 2, projects: [], reports: [] };
-  try {
-    const raw = window.localStorage.getItem(LEGACY_REPORTS_KEY);
-    if (!raw) return empty;
-    const legacy = JSON.parse(raw) as LegacyReport[];
-    if (!Array.isArray(legacy)) return empty;
-
-    const projectsByKey = new Map<string, Project>();
-    const reports: Report[] = [];
-    legacy.forEach((item) => {
-      const name = item.projectName?.trim() ?? "";
-      const address = item.projectAddress?.trim() ?? "";
-      const points = Array.isArray(item.points) ? item.points : [];
-      if (!name && !address && points.length === 0) return;
-      const key = `${name.toLocaleLowerCase("fr-FR")}::${address.toLocaleLowerCase("fr-FR")}`;
-      let project = projectsByKey.get(key);
-      if (!project) {
-        project = makeProject({
-          ...emptyProjectDraft(),
-          name: name || "Projet sans titre",
-          address,
-        });
-        projectsByKey.set(key, project);
-      }
-      const parsedNumber = Number.parseInt(item.meetingNumber ?? "1", 10);
-      const now = item.updatedAt ?? new Date().toISOString();
-      reports.push({
-        id: item.id ?? uid(),
-        projectId: project.id,
-        meetingNumber: Number.isFinite(parsedNumber) ? parsedNumber : 1,
-        meetingDate: item.meetingDate || localDate(),
-        attendees: item.attendees ?? "",
-        nextMeetingDate: item.nextMeetingDate ?? "",
-        nextMeetingTime: item.nextMeetingTime ?? "10:00",
-        generalNotes: item.generalNotes ?? "",
-        points,
-        status: "draft",
-        startedAt: now,
-        updatedAt: now,
-      });
-    });
-    return { version: 2, projects: [...projectsByKey.values()], reports };
-  } catch {
-    return empty;
-  }
+function emptyAppData(): AppData {
+  return { version: 3, projects: [], reports: [] };
 }
 
 function isAppData(value: unknown): value is AppData {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AppData>;
   return (
-    candidate.version === 2 &&
+    candidate.version === 3 &&
     Array.isArray(candidate.projects) &&
     Array.isArray(candidate.reports)
   );
@@ -370,11 +311,11 @@ function readLocalData(userId: string): AppData {
     const raw =
       window.localStorage.getItem(storageKey(DATA_KEY, userId)) ??
       window.localStorage.getItem(DATA_KEY);
-    if (!raw) return migrateLegacy();
+    if (!raw) return emptyAppData();
     const parsed = JSON.parse(raw) as unknown;
-    return isAppData(parsed) ? parsed : migrateLegacy();
+    return isAppData(parsed) ? parsed : emptyAppData();
   } catch {
-    return migrateLegacy();
+    return emptyAppData();
   }
 }
 
@@ -398,7 +339,7 @@ function mergeRecords<T extends { id: string; updatedAt: string }>(
 
 function mergeAppData(remote: AppData, local: AppData): AppData {
   return {
-    version: 2,
+    version: 3,
     projects: mergeRecords(remote.projects, local.projects),
     reports: mergeRecords(remote.reports, local.reports),
   };
@@ -526,7 +467,7 @@ type ChantierAppProps = {
 
 export default function ChantierApp({ user, onSignOut }: ChantierAppProps) {
   const [data, setData] = useState<AppData>({
-    version: 2,
+    version: 3,
     projects: [],
     reports: [],
   });
@@ -967,7 +908,7 @@ export default function ChantierApp({ user, onSignOut }: ChantierAppProps) {
     const nextNumber = numbers.length ? Math.max(...numbers) + 1 : 1;
     const report = makeReport(projectId, nextNumber, launchAttendees.trim());
     setData({
-      version: 2,
+      version: 3,
       projects: nextProjects.map((project) =>
         project.id === projectId
           ? { ...project, updatedAt: new Date().toISOString() }
@@ -1403,9 +1344,7 @@ export default function ChantierApp({ user, onSignOut }: ChantierAppProps) {
             <div className="firm-mini-mark">CR</div>
             <div className="firm-mini-copy">
               <strong>{firm.name || "Compte Rendu Chantier"}</strong>
-              <span title={`Connecté : ${user.displayName} (${user.email})`}>
-                {user.displayName} · {syncShortLabel}
-              </span>
+              <span>Espace privé · {syncShortLabel}</span>
             </div>
             <div className="home-header-actions">
               <Button
@@ -1425,7 +1364,7 @@ export default function ChantierApp({ user, onSignOut }: ChantierAppProps) {
                 variant="outline"
                 size="icon"
                 aria-label="Se déconnecter"
-                title={`Se déconnecter de ${user.email}`}
+                title="Se déconnecter"
                 onClick={onSignOut}
               >
                 <LogOut size={17} />
