@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#741e2b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Auguste" />
+    <meta
+      name="description"
+      content="Les tâches et checklists du matin et du soir de Chez Auguste."
+    />
+    <title>Checklist — Chez Auguste</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="../app-icon-180.png" />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="identity">
+          <span class="wordmark">Chez Auguste</span>
+          <span class="current-date" id="currentDate"></span>
+        </div>
+        <button class="icon-button" id="openSettings" type="button" aria-label="Ouvrir les réglages">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="5" cy="12" r="1.7"></circle>
+            <circle cx="12" cy="12" r="1.7"></circle>
+            <circle cx="19" cy="12" r="1.7"></circle>
+          </svg>
+        </button>
+      </header>
+
+      <div class="routine-bar" role="group" aria-label="Checklists rapides">
+        <button class="routine-button" id="morningRoutine" type="button" data-routine="morning" aria-label="Créer la checklist du matin">
+          <span class="routine-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 15h16M7 15a5 5 0 0 1 10 0M12 4v3M4.9 7.9 7 10M19.1 7.9 17 10"></path>
+            </svg>
+          </span>
+          <span>Matin</span>
+          <span class="routine-progress" id="morningProgress"></span>
+        </button>
+        <button class="routine-button" id="eveningRoutine" type="button" data-routine="evening" aria-label="Créer la checklist du soir">
+          <span class="routine-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 15.5A7.5 7.5 0 0 1 8.5 5a7.5 7.5 0 1 0 10.5 10.5Z"></path>
+            </svg>
+          </span>
+          <span>Soir</span>
+          <span class="routine-progress" id="eveningProgress"></span>
+        </button>
+      </div>
+
+      <div class="days-grid">
+        <section class="day-card" aria-labelledby="todayTitle">
+          <div class="day-heading">
+            <h1 id="todayTitle">À faire aujourd’hui</h1>
+            <span class="day-progress" id="todayProgress" aria-live="polite"></span>
+          </div>
+          <div class="task-list" id="todayList"></div>
+          <button class="empty-add" id="emptyAddToday" type="button">+ Ajouter</button>
+        </section>
+
+        <section class="day-card tomorrow-card" aria-labelledby="tomorrowTitle">
+          <div class="day-heading">
+            <h2 id="tomorrowTitle">À faire demain</h2>
+            <span class="day-progress" id="tomorrowProgress" aria-live="polite"></span>
+          </div>
+          <div class="task-list" id="tomorrowList"></div>
+          <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
+        </section>
+      </div>
+    </main>
+
+    <form class="quick-add" id="quickAddForm" autocomplete="off">
+      <div class="quick-add-inner">
+        <button class="target-button" id="quickTarget" type="button" aria-label="Changer le jour">
+          Aujourd’hui
+        </button>
+        <label class="sr-only" for="quickInput">Ajouter une tâche</label>
+        <input
+          id="quickInput"
+          name="task"
+          type="text"
+          maxlength="180"
+          enterkeyhint="done"
+          placeholder="Ajouter une tâche…"
+        />
+        <button class="submit-button" type="submit" aria-label="Ajouter la tâche">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+        </button>
+      </div>
+    </form>
+
+    <dialog class="sheet" id="settingsDialog" aria-labelledby="settingsTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header">
+        <h2 id="settingsTitle">Organisation</h2>
+        <button class="icon-button close-button" id="closeSettings" type="button" aria-label="Fermer">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+        </button>
+      </header>
+
+      <div class="sheet-content">
+        <section class="settings-section">
+          <div class="settings-title-row">
+            <div>
+              <p class="eyebrow">Routine</p>
+              <h3>Checklist du matin</h3>
+            </div>
+            <label class="switch-label">
+              <span class="switch-copy">Auto</span>
+              <input id="autoMorning" type="checkbox" />
+              <span class="switch" aria-hidden="true"></span>
+              <span class="sr-only">Créer automatiquement la checklist du matin</span>
+            </label>
+          </div>
+          <div class="template-list" id="morningTemplateList"></div>
+          <form class="template-add" data-template-form="morning">
+            <input type="text" maxlength="180" placeholder="Ajouter une étape…" aria-label="Ajouter une étape au matin" />
+            <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
+          </form>
+          <button class="secondary-button" id="addMorningToday" type="button">Ajouter à aujourd’hui</button>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-title-row">
+            <div>
+              <p class="eyebrow">Routine</p>
+              <h3>Checklist du soir</h3>
+            </div>
+            <label class="switch-label">
+              <span class="switch-copy">Auto</span>
+              <input id="autoEvening" type="checkbox" />
+              <span class="switch" aria-hidden="true"></span>
+              <span class="sr-only">Créer automatiquement la checklist du soir</span>
+            </label>
+          </div>
+          <div class="template-list" id="eveningTemplateList"></div>
+          <form class="template-add" data-template-form="evening">
+            <input type="text" maxlength="180" placeholder="Ajouter une étape…" aria-label="Ajouter une étape au soir" />
+            <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
+          </form>
+          <button class="secondary-button" id="addEveningToday" type="button">Ajouter à aujourd’hui</button>
+        </section>
+
+        <section class="settings-section compact-section">
+          <p class="eyebrow">Données</p>
+          <div class="settings-actions">
+            <button class="plain-action" id="exportData" type="button">
+              <span>Sauvegarder</span><span aria-hidden="true">↓</span>
+            </button>
+            <button class="plain-action file-action" id="importDataButton" type="button">
+              <span>Restaurer</span><span aria-hidden="true">↑</span>
+            </button>
+            <input class="sr-only" id="importData" type="file" accept="application/json,.json" tabindex="-1" aria-label="Choisir une sauvegarde" />
+            <button class="plain-action" id="installApp" type="button" hidden>
+              <span>Installer l’app</span><span aria-hidden="true">+</span>
+            </button>
+            <button class="plain-action danger-action" id="clearCompleted" type="button">
+              <span>Effacer les tâches terminées</span><span aria-hidden="true">×</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </dialog>
+
+    <dialog class="task-dialog" id="taskDialog" aria-labelledby="taskDialogTitle">
+      <form id="editTaskForm">
+        <header class="task-dialog-header">
+          <h2 id="taskDialogTitle">Modifier</h2>
+          <button class="icon-button" id="closeTaskDialog" type="button" aria-label="Fermer">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          </button>
+        </header>
+
+        <label class="field-label" for="editTaskLabel">Tâche</label>
+        <input class="text-field" id="editTaskLabel" type="text" maxlength="180" required />
+
+        <label class="field-label" for="editTaskDate">Date</label>
+        <input class="text-field" id="editTaskDate" type="date" required />
+
+        <fieldset class="moment-fieldset">
+          <legend>Moment</legend>
+          <div class="segmented-control">
+            <label><input type="radio" name="moment" value="any" /><span>Libre</span></label>
+            <label><input type="radio" name="moment" value="morning" /><span>Matin</span></label>
+            <label><input type="radio" name="moment" value="evening" /><span>Soir</span></label>
+          </div>
+        </fieldset>
+
+        <div class="task-dialog-actions">
+          <button class="delete-button" id="deleteTask" type="button">Supprimer</button>
+          <button class="save-button" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" popover="manual">
+      <span id="toastMessage"></span>
+      <button id="toastAction" type="button" hidden></button>
+      <button class="toast-dismiss" id="toastDismiss" type="button" aria-label="Fermer" hidden>×</button>
+    </div>
+
+    <template id="taskTemplate">
+      <article class="task-row">
+        <button class="check-button" type="button" aria-label="Marquer comme terminée">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"></path></svg>
+        </button>
+        <button class="task-main" type="button">
+          <span class="task-label"></span>
+          <span class="task-meta"></span>
+        </button>
+        <button class="task-more" type="button" aria-label="Modifier la tâche">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="5" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="19" cy="12" r="1.5"></circle>
+          </svg>
+        </button>
+      </article>
+    </template>
+  </body>
+</html>
