@@ -1,3 +1,5 @@
+import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
+
 (() => {
   "use strict";
 
@@ -7,6 +9,13 @@
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
+  const SUPABASE_URL = "https://eoewkjfgqivrkkgpjsrk.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
+  const SHARED_SECTION = "checklist";
+  const AUGUSTE_AUTH_EMAIL = "chez-auguste@access.invalid";
+  const CLIENT_INSTANCE_ID = crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const DEFAULT_SETTINGS = {
     id: "preferences",
     quickTarget: "today",
@@ -15,6 +24,11 @@
   };
 
   const elements = {
+    authScreen: document.querySelector("#authScreen"),
+    authForm: document.querySelector("#authForm"),
+    authPassword: document.querySelector("#authPassword"),
+    authSubmit: document.querySelector("#authSubmit"),
+    authError: document.querySelector("#authError"),
     currentDate: document.querySelector("#currentDate"),
     todayList: document.querySelector("#todayList"),
     tomorrowList: document.querySelector("#tomorrowList"),
@@ -49,6 +63,7 @@
     importData: document.querySelector("#importData"),
     clearCompleted: document.querySelector("#clearCompleted"),
     installApp: document.querySelector("#installApp"),
+    signOut: document.querySelector("#signOut"),
     taskDialog: document.querySelector("#taskDialog"),
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
@@ -74,7 +89,26 @@
   let deferredInstallPrompt = null;
   let toastTimer = null;
   let databasePromise = null;
+  let appStarted = false;
+  let sharedUserId = null;
+  let sharedReady = false;
+  let sharedDirty = false;
+  let sharedSaving = false;
+  let sharedSaveTimer = null;
+  let sharedChannel = null;
+  let remoteFingerprint = "";
+  let pendingRemoteRow = null;
+  let lastCommittedAt = 0;
+  let syncWarningShown = false;
   const syncChannel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
+  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: "sb-eoewkjfgqivrkkgpjsrk-chez-auguste-auth",
+    },
+  });
 
   function makeId(prefix) {
     if (crypto.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
@@ -374,8 +408,176 @@
     });
   }
 
-  function announceChange() {
+  function sharedPayload() {
+    return {
+      version: 1,
+      tasks: state.tasks,
+      templates: state.templates,
+      occurrences: state.occurrences,
+      settings: {
+        autoMorning: state.settings.autoMorning,
+        autoEvening: state.settings.autoEvening,
+      },
+      _client_instance_id: CLIENT_INSTANCE_ID,
+    };
+  }
+
+  function payloadFingerprint(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return "";
+    const normalized = {
+      version: 1,
+      tasks: Array.isArray(payload.tasks) ? payload.tasks : [],
+      templates: Array.isArray(payload.templates) ? payload.templates : [],
+      occurrences: Array.isArray(payload.occurrences) ? payload.occurrences : [],
+      settings: {
+        autoMorning: Boolean(payload.settings?.autoMorning),
+        autoEvening: Boolean(payload.settings?.autoEvening),
+      },
+    };
+    return JSON.stringify(normalized);
+  }
+
+  function isSharedPayload(payload) {
+    return Boolean(
+      payload &&
+        typeof payload === "object" &&
+        !Array.isArray(payload) &&
+        Array.isArray(payload.tasks) &&
+        Array.isArray(payload.templates),
+    );
+  }
+
+  async function applySharedRow(row) {
+    const payload = row?.payload;
+    if (!isSharedPayload(payload)) return;
+    if (payload._client_instance_id === CLIENT_INSTANCE_ID) return;
+    const fingerprint = payloadFingerprint(payload);
+    if (!fingerprint || fingerprint === remoteFingerprint) return;
+
+    const quickTarget = state.settings.quickTarget;
+    const nextState = {
+      tasks: payload.tasks.map(normalizeTask).filter((task) => task.label),
+      templates: payload.templates.map(normalizeTemplate).filter((template) => template.label),
+      occurrences: Array.isArray(payload.occurrences)
+        ? payload.occurrences.map(normalizeOccurrence).filter(Boolean)
+        : [],
+      settings: normalizeSettings({
+        ...payload.settings,
+        quickTarget,
+        updatedAt: row.updated_at,
+      }),
+    };
+    await replaceAllData(nextState);
+    remoteFingerprint = fingerprint;
+    await loadState({ runAutomatic: false });
     syncChannel?.postMessage({ type: "refresh", at: Date.now() });
+  }
+
+  async function saveSharedState() {
+    if (!sharedReady || !sharedUserId || sharedSaving || !sharedDirty) return;
+    sharedSaving = true;
+    sharedDirty = false;
+    const payload = sharedPayload();
+    try {
+      const { data, error } = await supabase
+        .from("auguste_shared_state")
+        .upsert(
+          {
+            section: SHARED_SECTION,
+            payload,
+            updated_at: new Date().toISOString(),
+            updated_by: sharedUserId,
+          },
+          { onConflict: "section" },
+        )
+        .select("section,payload,updated_at,updated_by")
+        .single();
+      if (error) throw error;
+      remoteFingerprint = payloadFingerprint(data.payload);
+      lastCommittedAt = Date.parse(data.updated_at) || Date.now();
+      syncWarningShown = false;
+    } catch (error) {
+      console.error("Synchronisation différée.", error);
+      sharedDirty = true;
+      if (!syncWarningShown) {
+        syncWarningShown = true;
+        showToast("Synchronisation en attente");
+      }
+    } finally {
+      sharedSaving = false;
+    }
+
+    if (pendingRemoteRow) {
+      const row = pendingRemoteRow;
+      pendingRemoteRow = null;
+      const remoteTime = Date.parse(row.updated_at) || 0;
+      if (remoteTime > lastCommittedAt) await applySharedRow(row);
+    }
+    if (sharedDirty && navigator.onLine) scheduleSharedSave(10_000);
+  }
+
+  function scheduleSharedSave(delay = 260) {
+    if (!sharedReady) return;
+    sharedDirty = true;
+    window.clearTimeout(sharedSaveTimer);
+    sharedSaveTimer = window.setTimeout(() => void saveSharedState(), delay);
+  }
+
+  async function loadSharedRow() {
+    const { data, error } = await supabase
+      .from("auguste_shared_state")
+      .select("section,payload,updated_at,updated_by")
+      .eq("section", SHARED_SECTION)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  function subscribeToSharedState() {
+    if (sharedChannel) void supabase.removeChannel(sharedChannel);
+    sharedChannel = supabase
+      .channel(`chez-auguste:${SHARED_SECTION}:${CLIENT_INSTANCE_ID}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "auguste_shared_state",
+          filter: `section=eq.${SHARED_SECTION}`,
+        },
+        (event) => {
+          const row = event.new;
+          if (!row?.payload || row.payload._client_instance_id === CLIENT_INSTANCE_ID) return;
+          if (sharedSaving || sharedDirty) pendingRemoteRow = row;
+          else void applySharedRow(row);
+        },
+      )
+      .subscribe();
+  }
+
+  async function initializeSharedState() {
+    sharedReady = true;
+    subscribeToSharedState();
+    try {
+      const row = await loadSharedRow();
+      if (row && isSharedPayload(row.payload)) {
+        await applySharedRow(row);
+        remoteFingerprint = payloadFingerprint(row.payload);
+        lastCommittedAt = Date.parse(row.updated_at) || 0;
+      } else {
+        sharedDirty = true;
+        await saveSharedState();
+      }
+    } catch (error) {
+      console.error("La liste partagée est momentanément indisponible.", error);
+      sharedDirty = true;
+      showToast("Mode hors ligne");
+    }
+  }
+
+  function announceChange({ share = true } = {}) {
+    syncChannel?.postMessage({ type: "refresh", at: Date.now() });
+    if (share) scheduleSharedSave();
   }
 
   function normalizeSettings(record) {
@@ -642,9 +844,9 @@
     elements.todayProgress.textContent = progressText(todayTasks);
     elements.tomorrowProgress.textContent = progressText(tomorrowTasks);
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
-    elements.emptyAddToday.hidden = todayTasks.length > 0;
-    elements.emptyAddTomorrow.hidden = tomorrowTasks.length > 0;
-    elements.emptyAddMaintenance.hidden = maintenanceTasks.length > 0;
+    elements.emptyAddToday.hidden = false;
+    elements.emptyAddTomorrow.hidden = false;
+    elements.emptyAddMaintenance.hidden = false;
     setMaintenanceOpen(state.maintenanceOpen);
     renderRoutineProgress("morning", elements.morningProgress);
     renderRoutineProgress("evening", elements.eveningProgress);
@@ -681,7 +883,8 @@
     try {
       await putRecord("settings", nextSettings);
       state.settings = nextSettings;
-      announceChange();
+      const sharedSettingChanged = Object.keys(patch).some((key) => key !== "quickTarget");
+      announceChange({ share: sharedSettingChanged });
       renderQuickTarget();
       elements.autoMorning.checked = state.settings.autoMorning;
       elements.autoEvening.checked = state.settings.autoEvening;
@@ -1057,14 +1260,14 @@
       const confirmed = window.confirm("Remplacer les tâches actuelles par cette sauvegarde ?");
       if (!confirmed) return;
       await replaceAllData(nextState);
+      await loadState({ runAutomatic: false });
       announceChange();
-      await loadState();
       elements.settingsDialog.close();
       showToast("Sauvegarde restaurée", "Annuler", async () => {
         try {
           await replaceAllData(previousState);
+          await loadState({ runAutomatic: false });
           announceChange();
-          await loadState();
           requestAnimationFrame(() => elements.quickInput.focus());
         } catch (error) {
           console.error(error);
@@ -1216,6 +1419,17 @@
     elements.importDataButton.addEventListener("click", () => elements.importData.click());
     elements.importData.addEventListener("change", () => importData(elements.importData.files?.[0]));
     elements.clearCompleted.addEventListener("click", clearCompletedTasks);
+    elements.signOut.addEventListener("click", async () => {
+      elements.settingsDialog.close();
+      sharedReady = false;
+      sharedUserId = null;
+      if (sharedChannel) {
+        await supabase.removeChannel(sharedChannel);
+        sharedChannel = null;
+      }
+      await supabase.auth.signOut({ scope: "local" });
+      showAuth();
+    });
     elements.toastDismiss.addEventListener("click", () => {
       hideToast();
       if (elements.taskDialog.open) elements.closeTaskDialog.focus();
@@ -1248,7 +1462,12 @@
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible") return;
       if (state.lastDateKey !== todayKey()) loadState();
+      else if (sharedReady) void refreshSharedState();
       else renderAll();
+    });
+
+    window.addEventListener("online", () => {
+      if (sharedReady) void refreshSharedState();
     });
 
     syncChannel?.addEventListener("message", (event) => {
@@ -1273,17 +1492,94 @@
     else window.addEventListener("load", register, { once: true });
   }
 
-  async function start() {
-    bindEvents();
-    prepareInstallControl();
-    registerServiceWorker();
+  function showAuth(message = "") {
+    document.body.classList.add("auth-pending");
+    document.body.classList.remove("auth-ready");
+    elements.authError.textContent = message;
+    elements.authError.hidden = !message;
+    elements.authSubmit.disabled = false;
+    elements.authSubmit.textContent = "Ouvrir";
+    requestAnimationFrame(() => elements.authPassword.focus());
+  }
+
+  function showApplication() {
+    document.body.classList.remove("auth-pending");
+    document.body.classList.add("auth-ready");
+  }
+
+  function isAugusteSession(session) {
+    return session?.user?.email?.toLocaleLowerCase("fr-FR") === AUGUSTE_AUTH_EMAIL;
+  }
+
+  async function refreshSharedState() {
+    try {
+      const row = await loadSharedRow();
+      if (row && (Date.parse(row.updated_at) || 0) > lastCommittedAt) await applySharedRow(row);
+      if (sharedDirty) await saveSharedState();
+    } catch (error) {
+      console.error("Actualisation partagée différée.", error);
+    }
+  }
+
+  async function openApplication(session) {
+    if (appStarted) {
+      sharedUserId = session.user.id;
+      await initializeSharedState();
+      showApplication();
+      return;
+    }
+    appStarted = true;
+    sharedUserId = session.user.id;
     await migrateFallbackIfNeeded();
-    await loadState();
+    await loadState({ runAutomatic: false });
+    await initializeSharedState();
+    await runAutomaticRoutines();
+    renderAll();
+    showApplication();
 
     window.setInterval(() => {
       if (state.lastDateKey !== todayKey()) loadState();
     }, 60_000);
+  }
 
+  async function submitPassword(event) {
+    event.preventDefault();
+    const password = elements.authPassword.value;
+    if (!password) return;
+    elements.authError.hidden = true;
+    elements.authSubmit.disabled = true;
+    elements.authSubmit.textContent = "Ouverture…";
+    try {
+      const { data, error } = await supabase.functions.invoke("auguste-password-login", {
+        body: { password },
+      });
+      if (error || !data?.access_token || !data?.refresh_token) throw error || new Error("Accès refusé");
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError || !isAugusteSession(sessionData.session)) {
+        throw sessionError || new Error("Session invalide");
+      }
+      elements.authPassword.value = "";
+      await openApplication(sessionData.session);
+    } catch (error) {
+      console.error("Connexion refusée.", error);
+      showAuth("Mot de passe incorrect.");
+    }
+  }
+
+  async function start() {
+    bindEvents();
+    prepareInstallControl();
+    registerServiceWorker();
+    elements.authForm.addEventListener("submit", submitPassword);
+    const { data } = await supabase.auth.getSession();
+    if (isAugusteSession(data.session)) await openApplication(data.session);
+    else {
+      if (data.session) await supabase.auth.signOut({ scope: "local" });
+      showAuth();
+    }
   }
 
   start().catch((error) => {

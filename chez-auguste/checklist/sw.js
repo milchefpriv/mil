@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "auguste-checklist-v3";
+const CACHE_NAME = "auguste-checklist-v5";
 const CACHE_PREFIX = "auguste-checklist-";
 const CORE_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=3",
-  "./app.js?v=3",
+  "./styles.css?v=5",
+  "./app.js?v=5",
   "./manifest.webmanifest",
 ];
 const OPTIONAL_ASSETS = [
@@ -14,6 +14,7 @@ const OPTIONAL_ASSETS = [
   "../app-icon-180.png",
   "../app-icon-192.png",
   "../app-icon-512.png",
+  "../assets/supabase-D_AYc1Jo.js",
 ];
 
 self.addEventListener("install", (event) => {

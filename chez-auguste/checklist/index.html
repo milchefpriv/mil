@@ -15,10 +15,30 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=3" />
-    <script src="./app.js?v=3" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=5" />
+    <script type="module" src="./app.js?v=5"></script>
   </head>
-  <body>
+  <body class="auth-pending">
+    <main class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+      <section class="auth-card">
+        <div class="auth-mark" aria-hidden="true">A</div>
+        <h1 id="authTitle">Chez Auguste</h1>
+        <form id="authForm">
+          <label class="sr-only" for="authPassword">Mot de passe</label>
+          <input
+            id="authPassword"
+            type="password"
+            autocomplete="current-password"
+            enterkeyhint="go"
+            placeholder="Mot de passe"
+            required
+          />
+          <button id="authSubmit" type="submit">Ouvrir</button>
+        </form>
+        <p class="auth-error" id="authError" role="alert" hidden></p>
+      </section>
+    </main>
+
     <main class="app-shell">
       <header class="topbar">
         <div class="identity">
@@ -191,6 +211,9 @@
             </button>
             <button class="plain-action danger-action" id="clearCompleted" type="button">
               <span>Effacer les tâches terminées</span><span aria-hidden="true">×</span>
+            </button>
+            <button class="plain-action" id="signOut" type="button">
+              <span>Se déconnecter</span><span aria-hidden="true">→</span>
             </button>
           </div>
         </section>
