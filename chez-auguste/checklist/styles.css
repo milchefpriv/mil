@@ -228,9 +228,73 @@ label[for]:focus-visible {
   box-shadow: 0 8px 30px rgba(52, 31, 36, 0.045);
 }
 
-.maintenance-card {
+.maintenance-section {
   margin-top: 4px;
+}
+
+.maintenance-heading {
+  margin: 0;
+}
+
+.maintenance-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  border: 1px solid rgba(74, 55, 60, 0.12);
+  border-radius: 18px;
+  color: var(--ink);
+  text-align: left;
+  background: var(--paper);
+  box-shadow: 0 8px 30px rgba(52, 31, 36, 0.045);
+  font-size: 1rem;
+  font-weight: 790;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.maintenance-toggle:hover {
+  border-color: rgba(116, 30, 43, 0.28);
+}
+
+.maintenance-toggle:active {
+  transform: scale(0.99);
+}
+
+.maintenance-toggle-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.maintenance-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease;
+}
+
+.maintenance-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.maintenance-card {
+  margin-top: 10px;
+  padding-top: 10px;
   border-top-color: rgba(116, 30, 43, 0.28);
+  animation: task-in 180ms ease both;
+}
+
+.maintenance-card .task-row:first-child {
+  border-top: 0;
 }
 
 .day-heading {
@@ -1009,8 +1073,12 @@ dialog::backdrop {
     min-height: 170px;
   }
 
-  .maintenance-card {
+  .maintenance-section {
     grid-column: 1 / -1;
+  }
+
+  .maintenance-card {
+    min-height: 0;
   }
 }
 

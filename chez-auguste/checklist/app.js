@@ -18,6 +18,8 @@
     currentDate: document.querySelector("#currentDate"),
     todayList: document.querySelector("#todayList"),
     tomorrowList: document.querySelector("#tomorrowList"),
+    maintenanceToggle: document.querySelector("#maintenanceToggle"),
+    maintenancePanel: document.querySelector("#maintenancePanel"),
     maintenanceList: document.querySelector("#maintenanceList"),
     todayProgress: document.querySelector("#todayProgress"),
     tomorrowProgress: document.querySelector("#tomorrowProgress"),
@@ -66,6 +68,7 @@
     settings: { ...DEFAULT_SETTINGS },
     activeTaskId: null,
     lastDateKey: "",
+    maintenanceOpen: false,
   };
 
   let deferredInstallPrompt = null;
@@ -642,6 +645,7 @@
     elements.emptyAddToday.hidden = todayTasks.length > 0;
     elements.emptyAddTomorrow.hidden = tomorrowTasks.length > 0;
     elements.emptyAddMaintenance.hidden = maintenanceTasks.length > 0;
+    setMaintenanceOpen(state.maintenanceOpen);
     renderRoutineProgress("morning", elements.morningProgress);
     renderRoutineProgress("evening", elements.eveningProgress);
     renderTemplates("morning");
@@ -660,6 +664,12 @@
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
+  }
+
+  function setMaintenanceOpen(isOpen) {
+    state.maintenanceOpen = Boolean(isOpen);
+    elements.maintenancePanel.hidden = !state.maintenanceOpen;
+    elements.maintenanceToggle.setAttribute("aria-expanded", String(state.maintenanceOpen));
   }
 
   async function updateSettings(patch) {
@@ -707,6 +717,7 @@
       state.tasks.push(task);
       announceChange();
       renderAll();
+      if (isMaintenance) setMaintenanceOpen(true);
       return true;
     } catch (error) {
       console.error(error);
@@ -788,6 +799,7 @@
       elements.taskDialog.close();
       state.activeTaskId = null;
       renderAll();
+      if (isMaintenance) setMaintenanceOpen(true);
       requestAnimationFrame(() => {
         document.querySelector(`[data-task-id="${task.id}"] .task-main`)?.focus();
       });
@@ -1131,6 +1143,10 @@
       const quickTarget = QUICK_TARGET_ORDER[(currentIndex + 1) % QUICK_TARGET_ORDER.length];
       await updateSettings({ quickTarget });
       elements.quickInput.focus();
+    });
+
+    elements.maintenanceToggle.addEventListener("click", () => {
+      setMaintenanceOpen(!state.maintenanceOpen);
     });
 
     elements.emptyAddToday.addEventListener("click", async () => {

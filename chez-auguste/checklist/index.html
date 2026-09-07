@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=2" />
-    <script src="./app.js?v=2" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=3" />
+    <script src="./app.js?v=3" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -74,13 +74,32 @@
           <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
         </section>
 
-        <section class="day-card maintenance-card" aria-labelledby="maintenanceTitle">
-          <div class="day-heading">
-            <h2 id="maintenanceTitle">Entretien / travaux</h2>
-            <span class="day-progress" id="maintenanceProgress" aria-live="polite"></span>
+        <section class="maintenance-section" aria-labelledby="maintenanceTitle">
+          <h2 class="maintenance-heading" id="maintenanceTitle">
+            <button
+              class="maintenance-toggle"
+              id="maintenanceToggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="maintenancePanel"
+            >
+              <span>Travaux / entretien</span>
+              <span class="maintenance-toggle-end">
+                <span class="day-progress" id="maintenanceProgress" aria-live="polite"></span>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+              </span>
+            </button>
+          </h2>
+          <div
+            class="day-card maintenance-card"
+            id="maintenancePanel"
+            role="region"
+            aria-labelledby="maintenanceTitle"
+            hidden
+          >
+            <div class="task-list" id="maintenanceList"></div>
+            <button class="empty-add" id="emptyAddMaintenance" type="button">+ Ajouter</button>
           </div>
-          <div class="task-list" id="maintenanceList"></div>
-          <button class="empty-add" id="emptyAddMaintenance" type="button">+ Ajouter</button>
         </section>
       </div>
     </main>
