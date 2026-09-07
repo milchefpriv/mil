@@ -1331,6 +1331,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (event.target === dialog) dialog.close();
   }
 
+  function selectQuickTargetAndFocus(quickTarget) {
+    // iOS only opens the keyboard when focus happens synchronously during the tap.
+    // Update the in-memory target first so an immediate submission uses the right list.
+    state.settings.quickTarget = quickTarget;
+    renderQuickTarget();
+    elements.quickInput.focus();
+    void updateSettings({ quickTarget });
+  }
+
   function bindEvents() {
     elements.quickAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1341,30 +1350,26 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.quickInput.focus();
     });
 
-    elements.quickTarget.addEventListener("click", async () => {
+    elements.quickTarget.addEventListener("click", () => {
       const currentIndex = QUICK_TARGET_ORDER.indexOf(state.settings.quickTarget);
       const quickTarget = QUICK_TARGET_ORDER[(currentIndex + 1) % QUICK_TARGET_ORDER.length];
-      await updateSettings({ quickTarget });
-      elements.quickInput.focus();
+      selectQuickTargetAndFocus(quickTarget);
     });
 
     elements.maintenanceToggle.addEventListener("click", () => {
       setMaintenanceOpen(!state.maintenanceOpen);
     });
 
-    elements.emptyAddToday.addEventListener("click", async () => {
-      await updateSettings({ quickTarget: "today" });
-      elements.quickInput.focus();
+    elements.emptyAddToday.addEventListener("click", () => {
+      selectQuickTargetAndFocus("today");
     });
 
-    elements.emptyAddTomorrow.addEventListener("click", async () => {
-      await updateSettings({ quickTarget: "tomorrow" });
-      elements.quickInput.focus();
+    elements.emptyAddTomorrow.addEventListener("click", () => {
+      selectQuickTargetAndFocus("tomorrow");
     });
 
-    elements.emptyAddMaintenance.addEventListener("click", async () => {
-      await updateSettings({ quickTarget: "maintenance" });
-      elements.quickInput.focus();
+    elements.emptyAddMaintenance.addEventListener("click", () => {
+      selectQuickTargetAndFocus("maintenance");
     });
 
     elements.morningRoutine.addEventListener("click", () => generateRoutine("morning"));
