@@ -127,7 +127,7 @@ const APP_STORAGE_KEYS = [
 ] as const;
 const BACKUP_DATA_ELEMENT_ID = "auguste-backup-data";
 const OFFLINE_CACHE_NAME = "chez-auguste-offline-v24";
-const BRAND_LOGO_SRC = typeof brandLogoUrl === "string" ? brandLogoUrl : (brandLogoUrl as { src: string }).src;
+const BRAND_LOGO_SRC: string = brandLogoUrl;
 
 function createOriginalCuisineStorage(): Record<string, string> {
   return {
