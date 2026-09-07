@@ -2,7 +2,7 @@
 
 Application statique publiée sur GitHub Pages et synchronisée avec Supabase.
 
-- accès réservé aux deux adresses e-mail autorisées ;
+- accès par un mot de passe unique, sans identifiant ni lien reçu par e-mail ;
 - menus, recettes, fiches techniques et données du bar partagés ;
 - mises à jour diffusées en temps réel ;
 - copie locale conservée en cas de coupure réseau.

@@ -13,6 +13,7 @@ import {
   isNonEmptyPayload,
   loadSharedState,
   saveSharedState,
+  sharedPayloadFingerprint,
   subscribeToSharedState,
   type SharedPayload,
 } from "./shared-state";
@@ -91,7 +92,10 @@ export default function BarPilotage({ userId }: { userId: string }) {
   const [notice, setNotice] = useState("");
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "synced" | "offline">("loading");
-  const applyingRemoteStateRef = useRef(false);
+  const syncedPayloadFingerprintRef = useRef<string | null>(null);
+  const latestPayloadFingerprintRef = useRef<string | null>(null);
+  const deferredRemoteRef = useRef(false);
+  const refreshSharedStateRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -118,64 +122,136 @@ export default function BarPilotage({ userId }: { userId: string }) {
       }
     }
 
-    async function initializeSharedState() {
+    let initialized = false;
+    let realtimeEventVersion = 0;
+    let refreshSequence = 0;
+
+    function hasUnsavedLocalChanges() {
+      return initialized
+        && latestPayloadFingerprintRef.current !== null
+        && latestPayloadFingerprintRef.current !== syncedPayloadFingerprintRef.current;
+    }
+
+    function applyRemoteRow(row: Awaited<ReturnType<typeof loadSharedState>>) {
+      if (!row || !isNonEmptyPayload(row.payload) || !Array.isArray(row.payload.drinks)) return false;
+      deferredRemoteRef.current = false;
+      syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(row.payload);
+      applyPayload(row.payload);
+      initialized = true;
+      setReady(true);
+      setSyncStatus("synced");
+      return true;
+    }
+
+    async function refreshSharedState(allowLocalFallback: boolean) {
+      if (hasUnsavedLocalChanges()) {
+        deferredRemoteRef.current = true;
+        setSyncStatus("saving");
+        return;
+      }
+      const refreshId = ++refreshSequence;
+      const observedEventVersion = realtimeEventVersion;
       const localState = readLocalState();
       try {
         const remoteRow = await loadSharedState("bar");
-        if (!active) return;
-        if (remoteRow && isNonEmptyPayload(remoteRow.payload) && Array.isArray(remoteRow.payload.drinks)) {
-          applyingRemoteStateRef.current = true;
-          applyPayload(remoteRow.payload);
-        } else {
-          applyPayload(localState);
-          await saveSharedState("bar", localState, userId);
+        if (!active || refreshId !== refreshSequence || observedEventVersion !== realtimeEventVersion) return;
+        if (hasUnsavedLocalChanges()) {
+          deferredRemoteRef.current = true;
+          setSyncStatus("saving");
+          return;
         }
-        if (!active) return;
-        setReady(true);
-        setSyncStatus("synced");
-        window.requestAnimationFrame(() => { applyingRemoteStateRef.current = false; });
-        unsubscribe = subscribeToSharedState("bar", (row) => {
-          if (!active || row.updated_by === userId || !isNonEmptyPayload(row.payload)) return;
-          applyingRemoteStateRef.current = true;
-          applyPayload(row.payload);
-          setSyncStatus("synced");
-          window.requestAnimationFrame(() => { applyingRemoteStateRef.current = false; });
-        }, (status) => {
+        if (remoteRow && isNonEmptyPayload(remoteRow.payload) && Array.isArray(remoteRow.payload.drinks)) {
+          applyRemoteRow(remoteRow);
+        } else if (!initialized) {
+          applyPayload(localState);
+          const savedRow = await saveSharedState("bar", localState, userId);
           if (!active) return;
-          if (status === "SUBSCRIBED") setSyncStatus("synced");
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setSyncStatus("offline");
-        });
+          initialized = true;
+          syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
+          setReady(true);
+          setSyncStatus("synced");
+        }
       } catch (error) {
         console.warn("La synchronisation bar est momentanément indisponible.", error);
-        if (!active) return;
-        applyPayload(localState);
-        setReady(true);
+        if (!active || refreshId !== refreshSequence || observedEventVersion !== realtimeEventVersion) return;
+        if (!initialized && allowLocalFallback) {
+          applyPayload(localState);
+          initialized = true;
+          setReady(true);
+        }
         setSyncStatus("offline");
       }
     }
 
-    void initializeSharedState();
+    unsubscribe = subscribeToSharedState("bar", (row) => {
+      if (!active || !isNonEmptyPayload(row.payload) || !Array.isArray(row.payload.drinks)) return;
+      realtimeEventVersion += 1;
+      if (hasUnsavedLocalChanges()) {
+        deferredRemoteRef.current = true;
+        return;
+      }
+      applyRemoteRow(row);
+    }, (status) => {
+      if (!active) return;
+      if (status === "SUBSCRIBED") void refreshSharedState(true);
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!initialized) {
+          applyPayload(readLocalState());
+          initialized = true;
+          setReady(true);
+        }
+        setSyncStatus("offline");
+      }
+    });
+    refreshSharedStateRef.current = () => refreshSharedState(false);
+    void refreshSharedState(true);
     return () => {
       active = false;
+      refreshSharedStateRef.current = null;
       unsubscribe();
     };
   }, [userId]);
 
   useEffect(() => {
     if (!ready) return;
+    const payload = { version: 1, drinks, thresholds };
+    const fingerprint = sharedPayloadFingerprint(payload);
+    latestPayloadFingerprintRef.current = fingerprint;
     window.localStorage.setItem(DRINKS_STORAGE_KEY, JSON.stringify(drinks));
     window.localStorage.setItem(THRESHOLDS_STORAGE_KEY, JSON.stringify(thresholds));
-    if (applyingRemoteStateRef.current) return;
+    if (fingerprint === syncedPayloadFingerprintRef.current) return;
     setSyncStatus("saving");
-    const timeout = window.setTimeout(() => {
-      void saveSharedState("bar", { version: 1, drinks, thresholds }, userId)
-        .then(() => setSyncStatus("synced"))
-        .catch((error) => {
+    let cancelled = false;
+    let retryTimeout: number | undefined;
+    async function persist() {
+      try {
+        const savedRow = await saveSharedState("bar", payload, userId);
+        if (cancelled) return;
+        syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
+        if (latestPayloadFingerprintRef.current === fingerprint) {
+          if (deferredRemoteRef.current && refreshSharedStateRef.current) {
+            deferredRemoteRef.current = false;
+            setSyncStatus("saving");
+            void refreshSharedStateRef.current();
+          } else {
+            setSyncStatus("synced");
+          }
+        }
+      } catch (error) {
+        if (cancelled) return;
           console.warn("Les données bar restent enregistrées sur cet appareil en attendant la connexion.", error);
           setSyncStatus("offline");
-        });
-    }, 700);
-    return () => window.clearTimeout(timeout);
+        retryTimeout = window.setTimeout(() => {
+          if (latestPayloadFingerprintRef.current === fingerprint) void persist();
+        }, 3000);
+      }
+    }
+    const timeout = window.setTimeout(() => { void persist(); }, 700);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+      if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
+    };
   }, [drinks, thresholds, ready, userId]);
 
   useEffect(() => {

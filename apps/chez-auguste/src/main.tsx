@@ -5,6 +5,17 @@ import Home from "./page";
 import "./globals.css";
 import { loadSharedState, supabase } from "./shared-state";
 
+type PasswordLoginResponse = {
+  access_token?: string;
+  refresh_token?: string;
+};
+
+const AUGUSTE_AUTH_EMAIL = "chez-auguste@access.invalid";
+
+function signOutLocally() {
+  return supabase.auth.signOut({ scope: "local" });
+}
+
 const root = document.getElementById("root");
 
 if (!root) {
@@ -15,9 +26,8 @@ function AuthGate() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessStatus, setAccessStatus] = useState<"idle" | "checking" | "allowed">("idle");
-  const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -45,6 +55,13 @@ function AuthGate() {
       return () => { active = false; };
     }
 
+    if (session.user.email?.toLocaleLowerCase("fr-FR") !== AUGUSTE_AUTH_EMAIL) {
+      setError("Entrez le mot de passe Chez Auguste.");
+      setAccessStatus("idle");
+      void signOutLocally();
+      return () => { active = false; };
+    }
+
     setAccessStatus("checking");
     void loadSharedState("cuisine")
       .then((row) => {
@@ -54,66 +71,78 @@ function AuthGate() {
       })
       .catch(() => {
         if (!active) return;
-        setError("Cette adresse n’est pas autorisée pour Chez Auguste.");
+        setError("Impossible d’ouvrir Chez Auguste.");
         setAccessStatus("idle");
-        void supabase.auth.signOut();
+        void signOutLocally();
       });
 
     return () => { active = false; };
   }, [session]);
 
-  async function requestLink(event: FormEvent<HTMLFormElement>) {
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedEmail = email.trim().toLocaleLowerCase("fr-FR");
+    if (!password) return;
+
     setError("");
-    setSent(false);
-    setSending(true);
-    const emailRedirectTo = new URL("./", window.location.href).href;
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: { emailRedirectTo, shouldCreateUser: true },
-    });
-    setSending(false);
-    if (signInError) {
-      setError("Le lien n’a pas pu être envoyé. Réessayez dans un instant.");
+    setSigningIn(true);
+
+    const { data, error: loginError } =
+      await supabase.functions.invoke<PasswordLoginResponse>(
+        "auguste-password-login",
+        { body: { password } },
+      );
+
+    if (loginError || !data?.access_token || !data.refresh_token) {
+      setError("Mot de passe incorrect.");
+      setSigningIn(false);
       return;
     }
-    setSent(true);
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    });
+
+    if (sessionError) {
+      setError("Mot de passe incorrect.");
+    } else {
+      setPassword("");
+    }
+    setSigningIn(false);
   }
 
   if (loading || (session && accessStatus === "checking")) {
     return <main className="auguste-auth-screen"><section className="auguste-auth-card loading"><div className="auguste-auth-mark">A</div><p>Ouverture de Chez Auguste…</p></section></main>;
   }
 
-  const sessionEmail = session?.user.email?.toLocaleLowerCase("fr-FR") || "";
   if (session && accessStatus === "allowed") {
-    return <Home userId={session.user.id} userEmail={sessionEmail} onSignOut={() => void supabase.auth.signOut()} />;
+    return <Home userId={session.user.id} onSignOut={() => void signOutLocally()} />;
   }
 
   return (
     <main className="auguste-auth-screen">
       <section className="auguste-auth-card">
         <div className="auguste-auth-mark">A</div>
-        <p className="eyebrow">Espace privé synchronisé</p>
-        <h1>Chez Auguste,<br />partagé en direct.</h1>
-        <p>Connectez-vous avec votre adresse autorisée. Les menus, fiches techniques et données du bar seront identiques sur tous vos appareils.</p>
-        <form onSubmit={requestLink}>
-          <label htmlFor="auguste-auth-email">Adresse e-mail</label>
+        <p className="eyebrow">Espace privé</p>
+        <h1>Chez Auguste</h1>
+        <p>Entrez simplement le mot de passe pour continuer.</p>
+        <form onSubmit={signIn}>
+          <label htmlFor="auguste-auth-password">Mot de passe</label>
           <input
-            id="auguste-auth-email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="vous@exemple.fr"
+            id="auguste-auth-password"
+            type="password"
+            autoComplete="current-password"
+            enterKeyHint="go"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Votre mot de passe"
             required
+            autoFocus
           />
-          <button type="submit" disabled={sending}>{sending ? "Envoi…" : "Recevoir mon lien de connexion"}</button>
+          <button type="submit" disabled={signingIn}>{signingIn ? "Ouverture…" : "Ouvrir Chez Auguste"}</button>
         </form>
-        {sent && <p className="auguste-auth-feedback success">Le lien vient d’être envoyé. Ouvrez-le depuis votre messagerie.</p>}
         {error && <p className="auguste-auth-feedback error">{error}</p>}
-        <small>Accès réservé à Emile et Auguste</small>
+        <small>Accès équipe Chez Auguste</small>
       </section>
     </main>
   );

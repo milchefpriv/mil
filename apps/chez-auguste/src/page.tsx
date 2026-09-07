@@ -9,6 +9,7 @@ import {
   isNonEmptyPayload,
   loadSharedState,
   saveSharedState,
+  sharedPayloadFingerprint,
   subscribeToSharedState,
   type SharedPayload,
 } from "./shared-state";
@@ -71,7 +72,6 @@ type CardSnapshot = {
 
 type HomeProps = {
   userId: string;
-  userEmail: string;
   onSignOut: () => void;
 };
 
@@ -127,6 +127,27 @@ const APP_STORAGE_KEYS = [
 const BACKUP_DATA_ELEMENT_ID = "auguste-backup-data";
 const OFFLINE_CACHE_NAME = "chez-auguste-offline-v24";
 const BRAND_LOGO_SRC = typeof brandLogoUrl === "string" ? brandLogoUrl : (brandLogoUrl as { src: string }).src;
+
+function createOriginalCuisineStorage(): Record<string, string> {
+  return {
+    "auguste-menu-draft": JSON.stringify({
+      selected: [],
+      targets: { Entrée: 3, Plat: 5, Dessert: 3 },
+      period: "Septembre",
+      periodType: "Mois",
+      menuTitle: "",
+      covers: 60,
+      buffer: 10,
+    }),
+    "auguste-last-card": "null",
+    "auguste-custom-recipes": "[]",
+    "auguste-saved-menus": "[]",
+    "auguste-recipe-economics": "{}",
+    "auguste-recipe-content": "{}",
+    "auguste-technical-sheets": "{}",
+    "auguste-period-selections-v1": "{}",
+  };
+}
 
 const MONTH_TO_SEASON: Record<string, string> = {
   Janvier: "Hiver", Février: "Hiver", Mars: "Printemps", Avril: "Printemps",
@@ -484,7 +505,7 @@ function migrateLegacyTechnicalSheets(value: Record<string, TechnicalOverride>) 
   }));
 }
 
-export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
+export default function Home({ userId, onSignOut }: HomeProps) {
   const [pilotageMode, setPilotageMode] = useState<"cuisine" | "bar">("cuisine");
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState<Course | "Tous">("Tous");
@@ -526,7 +547,10 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const backupInputRef = useRef<HTMLInputElement>(null);
-  const applyingRemoteStateRef = useRef(false);
+  const syncedPayloadFingerprintRef = useRef<string | null>(null);
+  const latestPayloadFingerprintRef = useRef<string | null>(null);
+  const deferredRemoteRef = useRef(false);
+  const refreshSharedStateRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -569,7 +593,7 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
           if (data.targets) setTargets(data.targets);
           if (data.period) setPeriod(data.period);
           if (data.periodType) setPeriodType(data.periodType);
-          if (data.menuTitle) setMenuTitle(data.menuTitle);
+          if (typeof data.menuTitle === "string") setMenuTitle(data.menuTitle);
           if (Number.isFinite(data.covers) && data.covers > 0) setCovers(data.covers);
           if ([0, 5, 10, 15, 20].includes(data.buffer)) setBuffer(data.buffer);
         } catch { /* Ignore malformed local data. */ }
@@ -582,7 +606,7 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
         const content = JSON.parse(window.localStorage.getItem("auguste-recipe-content") || "{}");
         const technical = JSON.parse(window.localStorage.getItem("auguste-technical-sheets") || "{}");
         const storedPeriodSelections = JSON.parse(window.localStorage.getItem("auguste-period-selections-v1") || "{}");
-        if (isCardSnapshot(lastCard)) setLastSavedCard(lastCard);
+        setLastSavedCard(isCardSnapshot(lastCard) ? lastCard : null);
         if (Array.isArray(custom)) setCustomDishes(custom);
         if (Array.isArray(archives)) setSavedMenus(archives);
         if (economics && typeof economics === "object" && !Array.isArray(economics)) setEconomicOverrides(economics);
@@ -592,50 +616,96 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
       } catch { /* Ignore malformed local data. */ }
     }
 
-    async function initializeSharedState() {
+    let initialized = false;
+    let realtimeEventVersion = 0;
+    let refreshSequence = 0;
+
+    function hasUnsavedLocalChanges() {
+      return initialized
+        && latestPayloadFingerprintRef.current !== null
+        && latestPayloadFingerprintRef.current !== syncedPayloadFingerprintRef.current;
+    }
+
+    function applyRemoteRow(row: Awaited<ReturnType<typeof loadSharedState>>) {
+      if (!row || !isNonEmptyPayload(row.payload)) return false;
+      deferredRemoteRef.current = false;
+      syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(row.payload);
+      applyPayload(row.payload);
+      initialized = true;
+      setReady(true);
+      setSyncStatus("synced");
+      return true;
+    }
+
+    async function refreshSharedState(allowLocalFallback: boolean) {
+      if (hasUnsavedLocalChanges()) {
+        deferredRemoteRef.current = true;
+        setSyncStatus("saving");
+        return;
+      }
+      const refreshId = ++refreshSequence;
+      const observedEventVersion = realtimeEventVersion;
       const localPayload = readLocalPayload();
       try {
         const remoteRow = await loadSharedState("cuisine");
-        if (!active) return;
+        if (!active || refreshId !== refreshSequence || observedEventVersion !== realtimeEventVersion) return;
+        if (hasUnsavedLocalChanges()) {
+          deferredRemoteRef.current = true;
+          setSyncStatus("saving");
+          return;
+        }
         const remotePayload = remoteRow && isNonEmptyPayload(remoteRow.payload) && storageFromPayload(remoteRow.payload)
           ? remoteRow.payload
           : null;
 
         if (remotePayload) {
-          applyingRemoteStateRef.current = true;
-          applyPayload(remotePayload);
-        } else {
+          applyRemoteRow(remoteRow);
+        } else if (!initialized) {
           applyPayload(localPayload);
-          await saveSharedState("cuisine", localPayload, userId);
-        }
-        if (!active) return;
-        setReady(true);
-        setSyncStatus("synced");
-        window.requestAnimationFrame(() => { applyingRemoteStateRef.current = false; });
-
-        unsubscribe = subscribeToSharedState("cuisine", (row) => {
-          if (!active || row.updated_by === userId || !isNonEmptyPayload(row.payload)) return;
-          applyingRemoteStateRef.current = true;
-          applyPayload(row.payload);
-          setSyncStatus("synced");
-          window.requestAnimationFrame(() => { applyingRemoteStateRef.current = false; });
-        }, (status) => {
+          const savedRow = await saveSharedState("cuisine", localPayload, userId);
           if (!active) return;
-          if (status === "SUBSCRIBED") setSyncStatus("synced");
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setSyncStatus("offline");
-        });
+          initialized = true;
+          syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
+          setReady(true);
+          setSyncStatus("synced");
+        }
       } catch (error) {
         console.warn("La synchronisation cuisine est momentanément indisponible.", error);
-        if (!active) return;
-        applyPayload(localPayload);
-        setReady(true);
+        if (!active || refreshId !== refreshSequence || observedEventVersion !== realtimeEventVersion) return;
+        if (!initialized && allowLocalFallback) {
+          applyPayload(localPayload);
+          initialized = true;
+          setReady(true);
+        }
         setSyncStatus("offline");
       }
     }
 
-    void initializeSharedState();
+    unsubscribe = subscribeToSharedState("cuisine", (row) => {
+      if (!active || !isNonEmptyPayload(row.payload) || !storageFromPayload(row.payload)) return;
+      realtimeEventVersion += 1;
+      if (hasUnsavedLocalChanges()) {
+        deferredRemoteRef.current = true;
+        return;
+      }
+      applyRemoteRow(row);
+    }, (status) => {
+      if (!active) return;
+      if (status === "SUBSCRIBED") void refreshSharedState(true);
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!initialized) {
+          applyPayload(readLocalPayload());
+          initialized = true;
+          setReady(true);
+        }
+        setSyncStatus("offline");
+      }
+    });
+    refreshSharedStateRef.current = () => refreshSharedState(false);
+    void refreshSharedState(true);
     return () => {
       active = false;
+      refreshSharedStateRef.current = null;
       unsubscribe();
     };
   }, [userId]);
@@ -687,19 +757,44 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
       "auguste-technical-sheets": JSON.stringify(technicalOverrides),
       "auguste-period-selections-v1": JSON.stringify(periodSelections),
     };
+    const payload = { version: 1, storage };
+    const fingerprint = sharedPayloadFingerprint(payload);
+    latestPayloadFingerprintRef.current = fingerprint;
     Object.entries(storage).forEach(([key, value]) => window.localStorage.setItem(key, value));
-    if (applyingRemoteStateRef.current) return;
+    if (fingerprint === syncedPayloadFingerprintRef.current) return;
 
     setSyncStatus("saving");
-    const timeout = window.setTimeout(() => {
-      void saveSharedState("cuisine", { version: 1, storage }, userId)
-        .then(() => setSyncStatus("synced"))
-        .catch((error) => {
+    let cancelled = false;
+    let retryTimeout: number | undefined;
+    async function persist() {
+      try {
+        const savedRow = await saveSharedState("cuisine", payload, userId);
+        if (cancelled) return;
+        syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
+        if (latestPayloadFingerprintRef.current === fingerprint) {
+          if (deferredRemoteRef.current && refreshSharedStateRef.current) {
+            deferredRemoteRef.current = false;
+            setSyncStatus("saving");
+            void refreshSharedStateRef.current();
+          } else {
+            setSyncStatus("synced");
+          }
+        }
+      } catch (error) {
+        if (cancelled) return;
           console.warn("Les données restent enregistrées sur cet appareil en attendant la connexion.", error);
           setSyncStatus("offline");
-        });
-    }, 700);
-    return () => window.clearTimeout(timeout);
+        retryTimeout = window.setTimeout(() => {
+          if (latestPayloadFingerprintRef.current === fingerprint) void persist();
+        }, 3000);
+      }
+    }
+    const timeout = window.setTimeout(() => { void persist(); }, 700);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+      if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
+    };
   }, [selected, targets, period, periodType, menuTitle, covers, buffer, customDishes, savedMenus, lastSavedCard, economicOverrides, dishContentOverrides, technicalOverrides, periodSelections, ready, userId]);
 
   useEffect(() => {
@@ -1141,25 +1236,42 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
         "Importer cette sauvegarde ?\n\nLes recettes, fiches techniques, menus archivés et la sélection actuels seront remplacés par ceux du fichier.",
       );
       if (!confirmed) return;
+      const nextStorage = createOriginalCuisineStorage();
       APP_STORAGE_KEYS.forEach((key) => {
         const value = storage[key];
+        if (typeof value === "string") nextStorage[key] = value;
+      });
+      setSyncStatus("saving");
+      await saveSharedState("cuisine", { version: 1, storage: nextStorage }, userId);
+      APP_STORAGE_KEYS.forEach((key) => {
+        const value = nextStorage[key];
         if (typeof value === "string") window.localStorage.setItem(key, value);
         else window.localStorage.removeItem(key);
       });
       window.location.reload();
     } catch (error) {
       console.error(error);
+      setSyncStatus("offline");
       setNotice(error instanceof Error ? error.message : "Cette sauvegarde n’a pas pu être importée.");
     }
   }
 
-  function restoreOriginalData() {
+  async function restoreOriginalData() {
     const confirmed = window.confirm(
       "Restaurer les données d’origine ?\n\nCette action effacera les recettes ajoutées, les modifications des fiches techniques, les menus archivés, la dernière carte sauvegardée et la sélection actuelle sur cet appareil.",
     );
     if (!confirmed) return;
-    APP_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
-    window.location.reload();
+    const storage = createOriginalCuisineStorage();
+    setSyncStatus("saving");
+    try {
+      await saveSharedState("cuisine", { version: 1, storage }, userId);
+      APP_STORAGE_KEYS.forEach((key) => window.localStorage.setItem(key, storage[key]));
+      window.location.reload();
+    } catch (error) {
+      console.warn("La restauration n’a pas pu être synchronisée.", error);
+      setSyncStatus("offline");
+      setNotice("Impossible de restaurer les données pour le moment.");
+    }
   }
 
   async function downloadCurrentMenuPdf() {
@@ -1334,7 +1446,7 @@ export default function Home({ userId, userEmail, onSignOut }: HomeProps) {
           <button className="download-card-button" type="button" onClick={downloadCurrentMenuPdf} disabled={pdfBusy || !selectedDishes.length}>{pdfBusy ? "Création du PDF…" : "↓ Télécharger la carte"}</button>
           <button className="primary-button" type="button" onClick={focusMenuComposer}>Composer le menu <span>{selected.length}/{targetTotal}</span></button>
         </div>}
-        <button className="account-button" type="button" title={userEmail} onClick={onSignOut}>Déconnexion</button>
+        <button className="account-button" type="button" onClick={onSignOut}>Déconnexion</button>
       </header>
 
       {pilotageMode === "bar" ? <BarPilotage userId={userId} /> : <>
