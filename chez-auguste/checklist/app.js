@@ -6,6 +6,7 @@
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+  const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
   const DEFAULT_SETTINGS = {
     id: "preferences",
     quickTarget: "today",
@@ -17,8 +18,10 @@
     currentDate: document.querySelector("#currentDate"),
     todayList: document.querySelector("#todayList"),
     tomorrowList: document.querySelector("#tomorrowList"),
+    maintenanceList: document.querySelector("#maintenanceList"),
     todayProgress: document.querySelector("#todayProgress"),
     tomorrowProgress: document.querySelector("#tomorrowProgress"),
+    maintenanceProgress: document.querySelector("#maintenanceProgress"),
     morningProgress: document.querySelector("#morningProgress"),
     eveningProgress: document.querySelector("#eveningProgress"),
     morningRoutine: document.querySelector("#morningRoutine"),
@@ -28,6 +31,7 @@
     quickTarget: document.querySelector("#quickTarget"),
     emptyAddToday: document.querySelector("#emptyAddToday"),
     emptyAddTomorrow: document.querySelector("#emptyAddTomorrow"),
+    emptyAddMaintenance: document.querySelector("#emptyAddMaintenance"),
     taskTemplate: document.querySelector("#taskTemplate"),
     settingsDialog: document.querySelector("#settingsDialog"),
     openSettings: document.querySelector("#openSettings"),
@@ -46,7 +50,7 @@
     taskDialog: document.querySelector("#taskDialog"),
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
-    editTaskDate: document.querySelector("#editTaskDate"),
+    momentFieldset: document.querySelector("#momentFieldset"),
     closeTaskDialog: document.querySelector("#closeTaskDialog"),
     deleteTask: document.querySelector("#deleteTask"),
     toast: document.querySelector("#toast"),
@@ -376,7 +380,7 @@
       ...DEFAULT_SETTINGS,
       ...(record || {}),
       id: "preferences",
-      quickTarget: record?.quickTarget === "tomorrow" ? "tomorrow" : "today",
+      quickTarget: QUICK_TARGET_ORDER.includes(record?.quickTarget) ? record.quickTarget : "today",
       autoMorning: Boolean(record?.autoMorning),
       autoEvening: Boolean(record?.autoEvening),
     };
@@ -390,6 +394,7 @@
       id: typeof task?.id === "string" && task.id ? task.id : makeId("task"),
       label,
       dueDate,
+      section: task?.section === "maintenance" ? "maintenance" : "daily",
       moment,
       completedAt: typeof task?.completedAt === "string" ? task.completedAt : null,
       createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
@@ -501,13 +506,21 @@
   function tasksForToday() {
     const today = todayKey();
     return state.tasks.filter(
-      (task) => task.dueDate === today || (task.dueDate < today && !task.completedAt),
+      (task) =>
+        task.section === "daily" &&
+        (task.dueDate === today || (task.dueDate < today && !task.completedAt)),
     );
   }
 
   function tasksForTomorrow() {
     const tomorrow = tomorrowKey();
-    return state.tasks.filter((task) => task.dueDate === tomorrow);
+    return state.tasks.filter(
+      (task) => task.section === "daily" && task.dueDate === tomorrow,
+    );
+  }
+
+  function tasksForMaintenance() {
+    return state.tasks.filter((task) => task.section === "maintenance");
   }
 
   function sortTasks(tasks) {
@@ -531,7 +544,9 @@
 
   function taskMeta(task) {
     const parts = [];
-    if (task.dueDate < todayKey() && !task.completedAt) parts.push("En retard");
+    if (task.section === "daily" && task.dueDate < todayKey() && !task.completedAt) {
+      parts.push("En retard");
+    }
     if (task.moment === "morning") parts.push("Matin");
     if (task.moment === "evening") parts.push("Soir");
     return parts.join(" · ");
@@ -547,7 +562,10 @@
 
       row.dataset.taskId = task.id;
       row.classList.toggle("is-complete", Boolean(task.completedAt));
-      row.classList.toggle("is-overdue", task.dueDate < todayKey() && !task.completedAt);
+      row.classList.toggle(
+        "is-overdue",
+        task.section === "daily" && task.dueDate < todayKey() && !task.completedAt,
+      );
       row.querySelector(".task-label").textContent = task.label;
       row.querySelector(".task-meta").textContent = taskMeta(task);
       checkButton.setAttribute(
@@ -607,6 +625,7 @@
   function renderAll() {
     const todayTasks = tasksForToday();
     const tomorrowTasks = tasksForTomorrow();
+    const maintenanceTasks = tasksForMaintenance();
 
     elements.currentDate.textContent = new Intl.DateTimeFormat("fr-FR", {
       weekday: "long",
@@ -616,10 +635,13 @@
 
     renderTaskList(elements.todayList, todayTasks);
     renderTaskList(elements.tomorrowList, tomorrowTasks);
+    renderTaskList(elements.maintenanceList, maintenanceTasks);
     elements.todayProgress.textContent = progressText(todayTasks);
     elements.tomorrowProgress.textContent = progressText(tomorrowTasks);
+    elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddToday.hidden = todayTasks.length > 0;
     elements.emptyAddTomorrow.hidden = tomorrowTasks.length > 0;
+    elements.emptyAddMaintenance.hidden = maintenanceTasks.length > 0;
     renderRoutineProgress("morning", elements.morningProgress);
     renderRoutineProgress("evening", elements.eveningProgress);
     renderTemplates("morning");
@@ -630,12 +652,14 @@
   }
 
   function renderQuickTarget() {
-    const tomorrow = state.settings.quickTarget === "tomorrow";
-    elements.quickTarget.textContent = tomorrow ? "Demain" : "Aujourd’hui";
-    elements.quickTarget.setAttribute(
-      "aria-label",
-      tomorrow ? "Ajouter à demain. Appuyer pour choisir aujourd’hui" : "Ajouter à aujourd’hui. Appuyer pour choisir demain",
-    );
+    const targets = {
+      today: ["Aujourd’hui", "Ajouter à aujourd’hui. Appuyer pour choisir demain"],
+      tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir Entretien / travaux"],
+      maintenance: ["Entretien", "Ajouter à Entretien / travaux. Appuyer pour choisir aujourd’hui"],
+    };
+    const [label, ariaLabel] = targets[state.settings.quickTarget];
+    elements.quickTarget.textContent = label;
+    elements.quickTarget.setAttribute("aria-label", ariaLabel);
   }
 
   async function updateSettings(patch) {
@@ -664,10 +688,12 @@
     const cleanLabel = label.trim().slice(0, 180);
     if (!cleanLabel) return;
     const now = new Date().toISOString();
+    const isMaintenance = state.settings.quickTarget === "maintenance";
     const task = {
       id: makeId("task"),
       label: cleanLabel,
       dueDate: state.settings.quickTarget === "tomorrow" ? tomorrowKey() : todayKey(),
+      section: isMaintenance ? "maintenance" : "daily",
       moment: "any",
       completedAt: null,
       createdAt: now,
@@ -711,17 +737,30 @@
     }
   }
 
+  function updateEditorDestination() {
+    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
+    elements.momentFieldset.hidden = selectedList?.value === "maintenance";
+  }
+
   function openTaskEditor(id) {
     const task = state.tasks.find((item) => item.id === id);
     if (!task) return;
     state.activeTaskId = id;
     elements.editTaskLabel.value = task.label;
-    elements.editTaskDate.min = todayKey();
-    elements.editTaskDate.max = tomorrowKey();
-    elements.editTaskDate.value = task.dueDate < todayKey() ? todayKey() : task.dueDate;
+    const taskList =
+      task.section === "maintenance"
+        ? "maintenance"
+        : task.dueDate === tomorrowKey()
+          ? "tomorrow"
+          : "today";
+    const selectedList = elements.editTaskForm.querySelector(
+      `input[name="task-list"][value="${taskList}"]`,
+    );
+    if (selectedList) selectedList.checked = true;
     const moment = ["morning", "evening"].includes(task.moment) ? task.moment : "any";
     const selectedMoment = elements.editTaskForm.querySelector(`input[name="moment"][value="${moment}"]`);
     if (selectedMoment) selectedMoment.checked = true;
+    updateEditorDestination();
     elements.taskDialog.showModal();
     requestAnimationFrame(() => elements.editTaskLabel.focus());
   }
@@ -730,14 +769,16 @@
     const task = state.tasks.find((item) => item.id === state.activeTaskId);
     const cleanLabel = elements.editTaskLabel.value.trim().slice(0, 180);
     if (!task || !cleanLabel) return;
+    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
+    const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value) ? selectedList.value : "today";
+    const isMaintenance = taskList === "maintenance";
     const nextTask = {
       ...task,
       label: cleanLabel,
-      dueDate: DATE_PATTERN.test(elements.editTaskDate.value)
-        ? elements.editTaskDate.value
-        : todayKey(),
-      moment: selectedMoment?.value || "any",
+      dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
+      section: isMaintenance ? "maintenance" : "daily",
+      moment: isMaintenance ? "any" : selectedMoment?.value || "any",
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -875,6 +916,7 @@
         id: `routine-${template.id}-${date}`,
         label: template.label,
         dueDate: date,
+        section: "daily",
         moment: routine,
         completedAt: null,
         createdAt: timestamp,
@@ -1085,7 +1127,8 @@
     });
 
     elements.quickTarget.addEventListener("click", async () => {
-      const quickTarget = state.settings.quickTarget === "today" ? "tomorrow" : "today";
+      const currentIndex = QUICK_TARGET_ORDER.indexOf(state.settings.quickTarget);
+      const quickTarget = QUICK_TARGET_ORDER[(currentIndex + 1) % QUICK_TARGET_ORDER.length];
       await updateSettings({ quickTarget });
       elements.quickInput.focus();
     });
@@ -1097,6 +1140,11 @@
 
     elements.emptyAddTomorrow.addEventListener("click", async () => {
       await updateSettings({ quickTarget: "tomorrow" });
+      elements.quickInput.focus();
+    });
+
+    elements.emptyAddMaintenance.addEventListener("click", async () => {
+      await updateSettings({ quickTarget: "maintenance" });
       elements.quickInput.focus();
     });
 
@@ -1138,6 +1186,9 @@
       event.preventDefault();
       await saveTaskFromEditor();
     });
+    for (const input of elements.editTaskForm.querySelectorAll('input[name="task-list"]')) {
+      input.addEventListener("change", updateEditorDestination);
+    }
     elements.closeTaskDialog.addEventListener("click", () => elements.taskDialog.close());
     elements.taskDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.taskDialog, event));
     elements.taskDialog.addEventListener("close", () => {
