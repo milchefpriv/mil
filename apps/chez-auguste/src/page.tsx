@@ -76,6 +76,7 @@ type HomeProps = {
 };
 
 type SyncStatus = "loading" | "saving" | "synced" | "offline";
+type MenuMode = "view" | "edit";
 
 function isCardSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -259,6 +260,151 @@ function getDietProfile(dish: Pick<Dish, "dietProfile" | "vegetarian" | "family"
   if (dish.vegetarian) return "Végétarien";
   if (["Poissons", "Crustacés"].includes(dish.family)) return "Poisson";
   return "Viande";
+}
+
+type DishAdminCardProps = {
+  dish: Dish;
+  mode: "catalog" | "validated";
+  selected?: boolean;
+  onToggle?: () => void;
+  onOpenDetails: () => void;
+  onOpenTechnical?: () => void;
+  onUpdateEconomics?: (field: "cost" | "price", value: string) => void;
+};
+
+function DishAdminCard({
+  dish,
+  mode,
+  selected = false,
+  onToggle,
+  onOpenDetails,
+  onOpenTechnical,
+  onUpdateEconomics,
+}: DishAdminCardProps) {
+  const isValidated = mode === "validated";
+  const highlighted = isValidated || selected;
+  const activateCard = isValidated ? onOpenDetails : onToggle;
+
+  return (
+    <article className={`dish-card ${highlighted ? "selected" : ""} ${isValidated ? "validated" : ""}`}>
+      <div
+        className="dish-compact-main"
+        role="button"
+        tabIndex={0}
+        onClick={activateCard}
+        onKeyDown={(event) => {
+          if ((event.key === "Enter" || event.key === " ") && activateCard) {
+            event.preventDefault();
+            activateCard();
+          }
+        }}
+        aria-label={isValidated ? `Ouvrir la fiche de ${dish.name}` : `${selected ? "Retirer" : "Ajouter"} ${dish.name}`}
+      >
+        <div className="dish-compact-copy">
+          <div className="dish-card-top">
+            <span className={`course-dot ${dish.course.toLowerCase()}`} />
+            <span className="dish-course">{dish.family}</span>
+            {dish.signature && <span className="signature-badge">Signature</span>}
+          </div>
+          <h3>{dish.name}</h3>
+        </div>
+        <strong className="dish-list-price">{euro.format(dish.price)}</strong>
+        <span className="select-indicator" aria-hidden="true">{highlighted ? "✓" : "+"}</span>
+      </div>
+      <details className="dish-mini-details">
+        <summary>Plus d’infos</summary>
+        <div className="dish-mini-content">
+          <p>{dish.description}</p>
+          <div className="dish-tags">
+            {dish.vegetarian && <span>Végétarien</span>}
+            <span>{dish.season.includes("Toute l’année") ? "Toute l’année" : dish.season.join(" · ")}</span>
+          </div>
+          {isValidated ? (
+            <>
+              <div className="validated-economics">
+                <div><span>Coût portion</span><strong>{euro.format(dish.cost)}</strong></div>
+                <div><span>Prix carte</span><strong>{euro.format(dish.price)}</strong></div>
+                <div><span>Marge brute</span><strong>{dish.price > 0 ? `${getMargin(dish)}%` : "—"}</strong></div>
+              </div>
+              {onOpenTechnical && <button type="button" className="detail-link" onClick={onOpenTechnical}>Fiche technique complète →</button>}
+            </>
+          ) : (
+            <>
+              <p className="economics-note">Estimations de départ — corrigez-les avec vos vrais achats et votre prix de vente.</p>
+              <div className="dish-economics editable">
+                <label><span>Coût matière / portion</span><div><input type="number" min="0" step="0.01" value={dish.cost} onChange={(event) => onUpdateEconomics?.("cost", event.target.value)} /><b>€</b></div></label>
+                <label><span>Prix vendu sur la carte</span><div><input type="number" min="0" step="0.5" value={dish.price} onChange={(event) => onUpdateEconomics?.("price", event.target.value)} /><b>€</b></div></label>
+                <div className="calculated-margin"><span>Marge brute calculée</span><strong>{dish.price > 0 ? `${getMargin(dish)}%` : "—"}</strong></div>
+              </div>
+              <button type="button" className="detail-link" onClick={onOpenDetails}>Fiche recette complète →</button>
+            </>
+          )}
+        </div>
+      </details>
+    </article>
+  );
+}
+
+type ValidatedMenuViewProps = {
+  card: CardSnapshot;
+  dishes: Dish[];
+  onEdit: () => void;
+  onOpenDetails: (dish: Dish) => void;
+  onOpenTechnical: (dish: Dish) => void;
+};
+
+function ValidatedMenuView({ card, dishes: cardDishes, onEdit, onOpenDetails, onOpenTechnical }: ValidatedMenuViewProps) {
+  const title = card.title.trim() || (card.periodType === "Mois" ? `Carte de ${card.period.toLowerCase()}` : `Carte ${card.period.toLowerCase()}`);
+  const savedLabel = new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(card.savedAt));
+
+  return (
+    <>
+      <section className="validated-menu-view" aria-labelledby="validated-menu-title">
+        <header className="validated-menu-heading">
+          <div>
+            <p className="eyebrow">Carte validée</p>
+            <h2 id="validated-menu-title">{title}</h2>
+            <p>{card.periodType} · {card.period}</p>
+          </div>
+          <span>Validée le {savedLabel}</span>
+        </header>
+        <div className="validated-menu-sections">
+          {COURSE_ORDER.map((course) => {
+            const courseDishes = cardDishes.filter((dish) => dish.course === course);
+            if (!courseDishes.length) return null;
+            return (
+              <section className="validated-course" key={course}>
+                <div className="validated-course-heading">
+                  <div><span className={`course-dot ${course.toLowerCase()}`} /><h3>{course}s</h3></div>
+                  <span>{courseDishes.length}</span>
+                </div>
+                <div className="validated-menu-grid">
+                  {courseDishes.map((dish) => (
+                    <DishAdminCard
+                      key={dish.id}
+                      dish={dish}
+                      mode="validated"
+                      onOpenDetails={() => onOpenDetails(dish)}
+                      onOpenTechnical={() => onOpenTechnical(dish)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+      <footer className="validated-edit-footer">
+        <button type="button" onClick={onEdit}><span>✎</span> Éditer la carte</button>
+      </footer>
+    </>
+  );
 }
 
 function matchesExtraFilter(dish: Dish, filter: ExtraFilter) {
@@ -507,6 +653,7 @@ function migrateLegacyTechnicalSheets(value: Record<string, TechnicalOverride>) 
 
 export default function Home({ userId, onSignOut }: HomeProps) {
   const [pilotageMode, setPilotageMode] = useState<"cuisine" | "bar">("cuisine");
+  const [menuMode, setMenuMode] = useState<MenuMode>("view");
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState<Course | "Tous">("Tous");
   const [openCatalogCourse, setOpenCatalogCourse] = useState<Course | null>("Entrée");
@@ -808,6 +955,13 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     ...(dishContentOverrides[dish.id] || {}),
     ...(economicOverrides[dish.id] || {}),
   })), [customDishes, dishContentOverrides, economicOverrides]);
+  const validatedDishes = useMemo(() => {
+    if (!lastSavedCard) return [];
+    return lastSavedCard.selected
+      .map((id) => allDishes.find((dish) => dish.id === id))
+      .filter(Boolean) as Dish[];
+  }, [lastSavedCard, allDishes]);
+  const isEditingMenu = menuMode === "edit" || !lastSavedCard;
   const activeSeason = periodType === "Mois" ? MONTH_TO_SEASON[period] : period;
   const filteredDishes = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("fr");
@@ -1010,12 +1164,15 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     };
   }
 
-  function saveCurrentCard() {
-    if (!selected.length) { setNotice("Ajoutez au moins une recette avant de sauvegarder la carte."); return; }
+  function validateCurrentCard() {
+    if (!selected.length) { setNotice("Ajoutez au moins une recette avant de valider la carte."); return; }
     const snapshot = currentCardSnapshot();
     window.localStorage.setItem("auguste-last-card", JSON.stringify(snapshot));
     setLastSavedCard(snapshot);
-    setNotice("Carte sauvegardée — vous pouvez continuer à la modifier.");
+    setMenuMode("view");
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setNotice("Carte validée.");
   }
 
   function restoreLastSavedCard() {
@@ -1036,7 +1193,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     setMenuTitle(lastSavedCard.title);
     setCovers(lastSavedCard.covers || 60);
     setBuffer([0, 5, 10, 15, 20].includes(lastSavedCard.buffer) ? lastSavedCard.buffer : 10);
-    setNotice("Dernière carte sauvegardée restaurée.");
+    setNotice("Carte validée restaurée dans l’éditeur.");
   }
 
   function loadMenu(menu: SavedMenu) {
@@ -1046,6 +1203,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     setPeriodType(menu.periodType);
     setMenuTitle(menu.title);
     setArchiveOpen(false);
+    setMenuMode("edit");
     setNotice(`${menu.title} chargé dans l’éditeur.`);
   }
 
@@ -1439,17 +1597,15 @@ export default function Home({ userId, onSignOut }: HomeProps) {
           <button type="button" className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
           <button type="button" className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
         </nav>
-        {pilotageMode === "cuisine" && <div className="topbar-actions">
+        {pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
           <span className={`autosave ${syncStatus}`}><i /> {syncStatus === "loading" ? "Connexion…" : syncStatus === "saving" ? "Sauvegarde…" : syncStatus === "synced" ? "Synchronisé en direct" : "Hors ligne — sauvegardé ici"}</span>
-          <details className="topbar-tools"><summary>Outils</summary><div><button type="button" onClick={() => setArchiveOpen(true)}>Menus archivés <span>{savedMenus.length}</span></button><button type="button" onClick={printCurrentMenu} disabled={!selectedDishes.length}>Imprimer la carte</button><button type="button" onClick={() => setProductionOpen(true)}>Plan de production</button><button type="button" onClick={() => setShoppingOpen(true)} disabled={!selectedDishes.length}>Courses & budget</button></div></details>
-          <button className="save-card-top-button" type="button" onClick={saveCurrentCard} disabled={!selected.length}>✓ Sauvegarder la carte</button>
-          <button className="download-card-button" type="button" onClick={downloadCurrentMenuPdf} disabled={pdfBusy || !selectedDishes.length}>{pdfBusy ? "Création du PDF…" : "↓ Télécharger la carte"}</button>
           <button className="primary-button" type="button" onClick={focusMenuComposer}>Composer le menu <span>{selected.length}/{targetTotal}</span></button>
         </div>}
         <button className="account-button" type="button" onClick={onSignOut}>Déconnexion</button>
       </header>
 
       {pilotageMode === "bar" ? <BarPilotage userId={userId} /> : <>
+      {!ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture de la carte…</p></section> : isEditingMenu ? <>
       <section className="period-bar">
         <div className="period-intro"><p className="eyebrow">Menu en préparation</p><strong>{periodType === "Mois" ? `Carte de ${period.toLowerCase()}` : `Carte ${period.toLowerCase()}`}</strong></div>
         <div className="period-controls">
@@ -1501,17 +1657,15 @@ export default function Home({ userId, onSignOut }: HomeProps) {
                 {isOpen && <div className="dish-grid">{courseDishes.map((dish) => {
               const isSelected = selected.includes(dish.id);
               return (
-                <article className={`dish-card ${isSelected ? "selected" : ""}`} key={dish.id}>
-                  <div className="dish-compact-main" role="button" tabIndex={0} onClick={() => toggleDish(dish)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleDish(dish); } }} aria-label={`${isSelected ? "Retirer" : "Ajouter"} ${dish.name}`}>
-                    <div className="dish-compact-copy"><div className="dish-card-top"><span className={`course-dot ${dish.course.toLowerCase()}`} /><span className="dish-course">{dish.family}</span>{dish.signature && <span className="signature-badge">Signature</span>}</div><h3>{dish.name}</h3></div>
-                    <strong className="dish-list-price">{euro.format(dish.price)}</strong>
-                    <span className="select-indicator" aria-hidden="true">{isSelected ? "✓" : "+"}</span>
-                  </div>
-                  <details className="dish-mini-details">
-                    <summary>Plus d’infos</summary>
-                    <div className="dish-mini-content"><p>{dish.description}</p><div className="dish-tags">{dish.vegetarian && <span>Végétarien</span>}<span>{dish.season.includes("Toute l’année") ? "Toute l’année" : dish.season.join(" · ")}</span></div><p className="economics-note">Estimations de départ — corrigez-les avec vos vrais achats et votre prix de vente.</p><div className="dish-economics editable"><label><span>Coût matière / portion</span><div><input type="number" min="0" step="0.01" value={dish.cost} onChange={(event) => updateDishEconomics(dish, "cost", event.target.value)} /><b>€</b></div></label><label><span>Prix vendu sur la carte</span><div><input type="number" min="0" step="0.5" value={dish.price} onChange={(event) => updateDishEconomics(dish, "price", event.target.value)} /><b>€</b></div></label><div className="calculated-margin"><span>Marge brute calculée</span><strong>{dish.price > 0 ? `${getMargin(dish)}%` : "—"}</strong></div></div><button type="button" className="detail-link" onClick={() => setDetail(dish)}>Fiche recette complète →</button></div>
-                  </details>
-                </article>
+                <DishAdminCard
+                  key={dish.id}
+                  dish={dish}
+                  mode="catalog"
+                  selected={isSelected}
+                  onToggle={() => toggleDish(dish)}
+                  onOpenDetails={() => setDetail(dish)}
+                  onUpdateEconomics={(field, value) => updateDishEconomics(dish, field, value)}
+                />
               );
                 })}</div>}
               </section>;
@@ -1542,8 +1696,8 @@ export default function Home({ userId, onSignOut }: HomeProps) {
               {menuChecks.map((check) => <div className={check.ok ? "ok" : "warning"} key={check.label}><i>{check.ok ? "✓" : "!"}</i><span>{check.label}</span></div>)}
             </div>
             <div className="card-memory-actions">
-              <button className="save-card-button" type="button" onClick={saveCurrentCard} disabled={!selected.length}><span>✓</span><div><strong>Sauvegarder la carte</strong><small>Garder cet état en mémoire</small></div></button>
-              <button className="restore-card-button" type="button" onClick={restoreLastSavedCard} disabled={!lastSavedCard}><span>↶</span><div><strong>Revenir à la dernière carte</strong><small>{lastSavedCard ? `Sauvegardée le ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(lastSavedCard.savedAt))}` : "Aucune sauvegarde"}</small></div></button>
+              <button className="save-card-button" type="button" onClick={validateCurrentCard} disabled={!selected.length}><span>✓</span><div><strong>Valider la carte</strong><small>Afficher cette carte à l’accueil</small></div></button>
+              <button className="restore-card-button" type="button" onClick={restoreLastSavedCard} disabled={!lastSavedCard}><span>↶</span><div><strong>Revenir à la carte validée</strong><small>{lastSavedCard ? `Validée le ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(lastSavedCard.savedAt))}` : "Aucune carte validée"}</small></div></button>
             </div>
             <button className="recipe-book-button" type="button" onClick={downloadRecipeBook} disabled={recipeBookBusy}><span>↓</span><div><strong>{recipeBookBusy ? "Création du livre…" : "Télécharger le livre de recettes"}</strong><small>{allDishes.length} fiches techniques · ingrédients, méthode, coûts et allergènes</small></div><b>PDF</b></button>
             <button className="menu-pdf-button" type="button" onClick={downloadCurrentMenuPdf} disabled={pdfBusy || !selectedDishes.length}><span>↓</span><div><strong>{pdfBusy ? "Création du PDF…" : "Télécharger la carte PDF"}</strong><small>Édition élégante · sobre & contemporaine</small></div></button>
@@ -1569,8 +1723,18 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         <span className="mobile-menu-progress"><small>Menu en cours</small><span><strong>{selected.length}/{targetTotal}</strong> recettes choisies</span></span>
         <span className="mobile-menu-cta">Composer le menu <b>→</b></span>
       </button>
+      </> : lastSavedCard ? <ValidatedMenuView
+        card={lastSavedCard}
+        dishes={validatedDishes}
+        onEdit={() => {
+          setMenuMode("edit");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        onOpenDetails={setDetail}
+        onOpenTechnical={openTechnicalSheet}
+      /> : null}
 
-      {detail && <div className="modal-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="dish-modal" role="dialog" aria-modal="true" aria-labelledby="dish-modal-title" onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setDetail(null)} aria-label="Fermer">×</button><p className="eyebrow">{detail.course} · {detail.family}</p><h2 id="dish-modal-title">{detail.name}</h2><p className="modal-description">{detail.description}</p><div className="modal-kpis"><div><span>Coût portion</span><strong>{euro.format(detail.cost)}</strong></div><div><span>Prix conseillé</span><strong>{euro.format(detail.price)}</strong></div><div><span>Marge brute</span><strong>{getMargin(detail)}%</strong></div><div><span>Mise en place</span><strong>{detail.prep} min</strong></div></div><div className="modal-columns"><div><span className="label">Saisonnalité</span><p>{detail.season.join(", ")}</p></div><div><span className="label">Allergènes</span><p>{detail.allergens.join(", ") || "Aucun déclaré"}</p></div><div><span className="label">Profil</span><p>{detail.tags.join(" · ")}</p></div><div><span className="label">Complexité</span><p>{"●".repeat(detail.difficulty)}{"○".repeat(3 - detail.difficulty)}</p></div></div><div className="detail-actions"><button className="technical-button" type="button" onClick={() => openTechnicalSheet(detail)}>Fiche technique →</button><button className={`primary-button ${selected.includes(detail.id) ? "remove" : ""}`} type="button" onClick={() => { toggleDish(detail); setDetail(null); }}>{selected.includes(detail.id) ? "Retirer du menu" : "Ajouter au menu"}</button></div></section></div>}
+      {detail && <div className="modal-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="dish-modal" role="dialog" aria-modal="true" aria-labelledby="dish-modal-title" onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setDetail(null)} aria-label="Fermer">×</button><p className="eyebrow">{detail.course} · {detail.family}</p><h2 id="dish-modal-title">{detail.name}</h2><p className="modal-description">{detail.description}</p><div className="modal-kpis"><div><span>Coût portion</span><strong>{euro.format(detail.cost)}</strong></div><div><span>Prix conseillé</span><strong>{euro.format(detail.price)}</strong></div><div><span>Marge brute</span><strong>{getMargin(detail)}%</strong></div><div><span>Mise en place</span><strong>{detail.prep} min</strong></div></div><div className="modal-columns"><div><span className="label">Saisonnalité</span><p>{detail.season.join(", ")}</p></div><div><span className="label">Allergènes</span><p>{detail.allergens.join(", ") || "Aucun déclaré"}</p></div><div><span className="label">Profil</span><p>{detail.tags.join(" · ")}</p></div><div><span className="label">Complexité</span><p>{"●".repeat(detail.difficulty)}{"○".repeat(3 - detail.difficulty)}</p></div></div><div className={`detail-actions ${isEditingMenu ? "" : "single"}`}><button className="technical-button" type="button" onClick={() => openTechnicalSheet(detail)}>Fiche technique →</button>{isEditingMenu && <button className={`primary-button ${selected.includes(detail.id) ? "remove" : ""}`} type="button" onClick={() => { toggleDish(detail); setDetail(null); }}>{selected.includes(detail.id) ? "Retirer du menu" : "Ajouter au menu"}</button>}</div></section></div>}
 
       {technicalDish && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setTechnicalDish(null)}>
