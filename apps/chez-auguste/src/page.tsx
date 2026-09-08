@@ -656,7 +656,8 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [menuMode, setMenuMode] = useState<MenuMode>("view");
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState<Course | "Tous">("Tous");
-  const [openCatalogCourse, setOpenCatalogCourse] = useState<Course | null>("Entrée");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openCatalogCourse, setOpenCatalogCourse] = useState<Course | null>(null);
   const [seasonOnly, setSeasonOnly] = useState(true);
   const [vegOnly, setVegOnly] = useState(false);
   const [extraFilters, setExtraFilters] = useState<ExtraFilter[]>([]);
@@ -963,6 +964,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   }, [lastSavedCard, allDishes]);
   const isEditingMenu = menuMode === "edit" || !lastSavedCard;
   const activeSeason = periodType === "Mois" ? MONTH_TO_SEASON[period] : period;
+  const activeFilterCount = Number(seasonOnly) + Number(vegOnly) + extraFilters.length;
   const filteredDishes = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("fr");
     return allDishes.filter((dish) => {
@@ -1628,10 +1630,23 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <div><p className="eyebrow">Carte maître · {allDishes.length} recettes</p><h2>Choisissez les recettes</h2><p>Cliquez sur une fiche pour l’ajouter au menu. Tout reste modifiable.</p></div>
             <div className="catalog-actions"><button className="secondary-button magic-add-button" type="button" onClick={() => { setNewDish(EMPTY_RECIPE); setMagicAnalyzed(false); setCreateOpen(true); }}>✦ Ajouter un produit carte</button><button className="magic-button" type="button" onClick={completeAutomatically}>✦ Compléter intelligemment</button></div>
           </div>
-          <div className="filters">
-            <label className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher une recette, un produit…" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Effacer la recherche">×</button>}</label>
-            <div className="filter-controls">
-              <div className="filter-heading"><div><strong>Filtres</strong><span>{Number(seasonOnly) + Number(vegOnly) + extraFilters.length ? `${Number(seasonOnly) + Number(vegOnly) + extraFilters.length} actif${Number(seasonOnly) + Number(vegOnly) + extraFilters.length > 1 ? "s" : ""}` : "Affinez la carte"}</span></div><button type="button" className="clear-filters-button" onClick={resetFilters} disabled={!query && courseFilter === "Tous" && !seasonOnly && !vegOnly && extraFilters.length === 0}>× Effacer les filtres</button></div>
+          <div className={`filters ${filtersOpen ? "open" : ""}`}>
+            <div className="filter-toolbar">
+              <label className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher une recette, un produit…" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Effacer la recherche">×</button>}</label>
+              <button
+                type="button"
+                className={`filter-toggle-button ${activeFilterCount ? "has-active" : ""}`}
+                onClick={() => setFiltersOpen((value) => !value)}
+                aria-expanded={filtersOpen}
+                aria-controls="recipe-filter-controls"
+              >
+                <span>Filtres</span>
+                {activeFilterCount > 0 && <small>{activeFilterCount}</small>}
+                <b aria-hidden="true">{filtersOpen ? "−" : "+"}</b>
+              </button>
+            </div>
+            {filtersOpen && <div className="filter-controls" id="recipe-filter-controls">
+              <div className="filter-heading"><div><strong>Filtres</strong><span>{activeFilterCount ? `${activeFilterCount} actif${activeFilterCount > 1 ? "s" : ""}` : "Affinez la carte"}</span></div><button type="button" className="clear-filters-button" onClick={resetFilters} disabled={!query && courseFilter === "Tous" && !seasonOnly && !vegOnly && extraFilters.length === 0}>× Effacer les filtres</button></div>
               <div className="course-tabs" role="tablist" aria-label="Catégories de recettes">
                 {(["Tous", ...COURSE_ORDER] as const).map((course) => <button type="button" className={courseFilter === course ? "active" : ""} onClick={() => setCourseFilter(course)} key={course}>{course}{course !== "Tous" && <span>{allDishes.filter((dish) => dish.course === course).length}</span>}</button>)}
               </div>
@@ -1641,7 +1656,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
                 {EXTRA_FILTERS.map((filter) => <button type="button" className={`filter-chip ${extraFilters.includes(filter) ? "active" : ""}`} onClick={() => toggleExtraFilter(filter)} key={filter}>{extraFilters.includes(filter) ? "✓" : "+"} {filter}</button>)}
               </div>
               <p className="filter-note">Filtres « sans » calculés d’après les allergènes déclarés dans chaque fiche.</p>
-            </div>
+            </div>}
           </div>
 
           <div className="results-row"><span>{filteredDishes.length} recette{filteredDishes.length > 1 ? "s" : ""}</span><span>Ouvrir une catégorie</span></div>
@@ -1727,6 +1742,10 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         card={lastSavedCard}
         dishes={validatedDishes}
         onEdit={() => {
+          setFiltersOpen(false);
+          setOpenCatalogCourse(null);
+          setQuery("");
+          setCourseFilter("Tous");
           setMenuMode("edit");
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
