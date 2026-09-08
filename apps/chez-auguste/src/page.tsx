@@ -2,7 +2,15 @@
 /* eslint-disable @next/next/no-img-element -- the local PNG must stay directly embeddable in the one-file offline build */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { ACCOMPANIMENT_IDEAS, type AccompanimentDifficulty } from "./accompaniment-ideas";
+import {
+  ACCOMPANIMENT_DIFFICULTIES,
+  ACCOMPANIMENT_DISPATCHES,
+  ACCOMPANIMENT_FAMILIES,
+  ACCOMPANIMENT_HOLDINGS,
+  ACCOMPANIMENT_IDEAS,
+  type AccompanimentDifficulty,
+  type AccompanimentIdea,
+} from "./accompaniment-ideas";
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
@@ -125,10 +133,22 @@ const APP_STORAGE_KEYS = [
   "auguste-recipe-content",
   "auguste-technical-sheets",
   "auguste-period-selections-v1",
+  "auguste-accompaniment-ideas",
 ] as const;
 const BACKUP_DATA_ELEMENT_ID = "auguste-backup-data";
-const OFFLINE_CACHE_NAME = "chez-auguste-offline-v24";
+const OFFLINE_CACHE_NAME = "chez-auguste-offline-v25";
 const BRAND_LOGO_SRC: string = brandLogoUrl;
+
+function isAccompanimentIdea(value: unknown): value is AccompanimentIdea {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const idea = value as Partial<AccompanimentIdea>;
+  return typeof idea.name === "string"
+    && ACCOMPANIMENT_FAMILIES.some((family) => family === idea.family)
+    && ACCOMPANIMENT_DIFFICULTIES.some((difficulty) => difficulty === idea.difficulty)
+    && ACCOMPANIMENT_HOLDINGS.some((holding) => holding === idea.holding)
+    && ACCOMPANIMENT_DISPATCHES.some((dispatch) => dispatch === idea.dispatch)
+    && typeof idea.serviceNote === "string";
+}
 
 function createOriginalCuisineStorage(): Record<string, string> {
   return {
@@ -148,6 +168,7 @@ function createOriginalCuisineStorage(): Record<string, string> {
     "auguste-recipe-content": "{}",
     "auguste-technical-sheets": "{}",
     "auguste-period-selections-v1": "{}",
+    "auguste-accompaniment-ideas": "[]",
   };
 }
 
@@ -662,9 +683,32 @@ const ACCOMPANIMENT_GROUPS: Array<{
   { difficulty: "Délicat", title: "À gérer à la minute", description: "Le croustillant, la cuisson ou l’assaisonnement ne peuvent pas attendre." },
 ];
 
-function AccompanimentIdeasModal({ onClose, returnFocusRef }: { onClose: () => void; returnFocusRef: RefObject<HTMLButtonElement | null> }) {
+const EMPTY_ACCOMPANIMENT_IDEA: AccompanimentIdea = {
+  name: "",
+  family: "Légumes",
+  difficulty: "Facile",
+  holding: "Bonne",
+  dispatch: "Rapide",
+  serviceNote: "",
+};
+
+type AccompanimentIdeasModalProps = {
+  ideas: AccompanimentIdea[];
+  customIdeas: AccompanimentIdea[];
+  onAddIdea: (idea: AccompanimentIdea) => void;
+  onDeleteIdea: (name: string) => void;
+  onClose: () => void;
+  returnFocusRef: RefObject<HTMLButtonElement | null>;
+};
+
+function AccompanimentIdeasModal({ ideas, customIdeas, onAddIdea, onDeleteIdea, onClose, returnFocusRef }: AccompanimentIdeasModalProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<AccompanimentIdea>(EMPTY_ACCOMPANIMENT_IDEA);
+  const [formError, setFormError] = useState("");
+  const customIdeaNames = useMemo(() => new Set(customIdeas.map((idea) => idea.name)), [customIdeas]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -694,32 +738,75 @@ function AccompanimentIdeasModal({ onClose, returnFocusRef }: { onClose: () => v
     };
   }, [onClose, returnFocusRef]);
 
+  useEffect(() => {
+    if (adding) nameInputRef.current?.focus();
+  }, [adding]);
+
+  function submitIdea(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = draft.name.trim();
+    if (!name) {
+      setFormError("Donnez un nom à l’accompagnement.");
+      nameInputRef.current?.focus();
+      return;
+    }
+    if (ideas.some((idea) => idea.name.localeCompare(name, "fr", { sensitivity: "base" }) === 0)) {
+      setFormError("Cette idée existe déjà.");
+      nameInputRef.current?.focus();
+      return;
+    }
+    onAddIdea({
+      ...draft,
+      name,
+      serviceNote: draft.serviceNote.trim() || "Organisation à préciser selon le service.",
+    });
+    setDraft(EMPTY_ACCOMPANIMENT_IDEA);
+    setFormError("");
+    setAdding(false);
+  }
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section ref={dialogRef} className="tool-modal accompaniment-modal" role="dialog" aria-modal="true" aria-labelledby="accompaniment-title" aria-describedby="accompaniment-description" onMouseDown={(event) => event.stopPropagation()}>
         <button ref={closeButtonRef} type="button" className="modal-close" onClick={onClose} aria-label="Fermer">×</button>
         <header className="accompaniment-modal-head">
-          <p className="eyebrow">Boîte à idées · {ACCOMPANIMENT_IDEAS.length} garnitures</p>
+          <p className="eyebrow">Boîte à idées · {ideas.length} garnitures</p>
           <h2 id="accompaniment-title">Idées d’accompagnement</h2>
           <p id="accompaniment-description">Classées selon leur tenue pendant le service et leur vitesse d’envoi.</p>
         </header>
         <div className="accompaniment-modal-body">
+          <div className="accompaniment-add-heading">
+            <div><strong>Une autre idée ?</strong><span>Ajoutez-la à la liste partagée de l’équipe.</span></div>
+            <button type="button" onClick={() => { setAdding((value) => !value); setFormError(""); }} aria-expanded={adding} aria-controls="accompaniment-add-form">{adding ? "Annuler" : "+ Ajouter une idée"}</button>
+          </div>
+          {adding && (
+            <form className="accompaniment-add-form" id="accompaniment-add-form" onSubmit={submitIdea}>
+              <label className="wide"><span>Nom de l’accompagnement</span><input ref={nameInputRef} value={draft.name} maxLength={80} onChange={(event) => { setDraft((value) => ({ ...value, name: event.target.value })); setFormError(""); }} placeholder="Ex. Asperges poêlées" /></label>
+              <label><span>Famille</span><select value={draft.family} onChange={(event) => setDraft((value) => ({ ...value, family: event.target.value as AccompanimentIdea["family"] }))}>{ACCOMPANIMENT_FAMILIES.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label><span>Difficulté</span><select value={draft.difficulty} onChange={(event) => setDraft((value) => ({ ...value, difficulty: event.target.value as AccompanimentIdea["difficulty"] }))}>{ACCOMPANIMENT_DIFFICULTIES.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label><span>Tenue au service</span><select value={draft.holding} onChange={(event) => setDraft((value) => ({ ...value, holding: event.target.value as AccompanimentIdea["holding"] }))}>{ACCOMPANIMENT_HOLDINGS.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label><span>Envoi</span><select value={draft.dispatch} onChange={(event) => setDraft((value) => ({ ...value, dispatch: event.target.value as AccompanimentIdea["dispatch"] }))}>{ACCOMPANIMENT_DISPATCHES.map((option) => <option key={option}>{option}</option>)}</select></label>
+              <label className="wide"><span>Note de service <small>facultatif</small></span><textarea value={draft.serviceNote} maxLength={220} onChange={(event) => setDraft((value) => ({ ...value, serviceNote: event.target.value }))} placeholder="Ex. Réchauffer au four puis finir au beurre." /></label>
+              {formError && <p className="accompaniment-form-error" role="alert">{formError}</p>}
+              <button className="accompaniment-save-button" type="submit">Ajouter à la liste</button>
+            </form>
+          )}
           {ACCOMPANIMENT_GROUPS.map((group, groupIndex) => {
-            const ideas = ACCOMPANIMENT_IDEAS.filter((idea) => idea.difficulty === group.difficulty);
-            const previousIdeasCount = ACCOMPANIMENT_GROUPS.slice(0, groupIndex).reduce((total, previousGroup) => total + ACCOMPANIMENT_IDEAS.filter((idea) => idea.difficulty === previousGroup.difficulty).length, 0);
+            const groupIdeas = ideas.filter((idea) => idea.difficulty === group.difficulty);
+            const previousIdeasCount = ACCOMPANIMENT_GROUPS.slice(0, groupIndex).reduce((total, previousGroup) => total + ideas.filter((idea) => idea.difficulty === previousGroup.difficulty).length, 0);
             return (
               <section className={`accompaniment-group level-${group.difficulty === "Facile" ? "easy" : group.difficulty === "Intermédiaire" ? "medium" : "delicate"}`} key={group.difficulty}>
                 <div className="accompaniment-group-head">
                   <div><span>{group.difficulty}</span><h3>{group.title}</h3><p>{group.description}</p></div>
-                  <strong>{ideas.length}</strong>
+                  <strong>{groupIdeas.length}</strong>
                 </div>
                 <div className="accompaniment-grid">
-                  {ideas.map((idea, ideaIndex) => {
+                  {groupIdeas.map((idea, ideaIndex) => {
                     const number = previousIdeasCount + ideaIndex + 1;
                     const holdingClass = idea.holding === "Excellente" ? "excellent" : idea.holding === "Bonne" ? "good" : "short";
                     return (
                       <article className="accompaniment-card" key={idea.name}>
-                        <div className="accompaniment-card-top"><span>{String(number).padStart(2, "0")}</span><small>{idea.family}</small></div>
+                        <div className="accompaniment-card-top"><span>{String(number).padStart(2, "0")}</span><small>{idea.family}</small>{customIdeaNames.has(idea.name) && <button type="button" onClick={() => onDeleteIdea(idea.name)} aria-label={`Supprimer ${idea.name}`}>×</button>}</div>
                         <h4>{idea.name}</h4>
                         <p>{idea.serviceNote}</p>
                         <dl>
@@ -755,6 +842,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [targets, setTargets] = useState<Record<Course, number>>({ Entrée: 3, Plat: 5, Dessert: 3 });
   const [selected, setSelected] = useState<string[]>([]);
   const [customDishes, setCustomDishes] = useState<Dish[]>([]);
+  const [customAccompanimentIdeas, setCustomAccompanimentIdeas] = useState<AccompanimentIdea[]>([]);
   const [economicOverrides, setEconomicOverrides] = useState<Record<string, { cost: number; price: number }>>({});
   const [dishContentOverrides, setDishContentOverrides] = useState<Record<string, DishContentOverride>>({});
   const [technicalOverrides, setTechnicalOverrides] = useState<Record<string, TechnicalOverride>>({});
@@ -790,6 +878,15 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const deferredRemoteRef = useRef(false);
   const refreshSharedStateRef = useRef<(() => Promise<void>) | null>(null);
   const closeAccompanimentIdeas = useCallback(() => setAccompanimentIdeasOpen(false), []);
+  const addCustomAccompanimentIdea = useCallback((idea: AccompanimentIdea) => {
+    setCustomAccompanimentIdeas((current) => [...current, idea]);
+    setNotice("Idée d’accompagnement ajoutée à la liste.");
+  }, []);
+  const deleteCustomAccompanimentIdea = useCallback((name: string) => {
+    if (!window.confirm(`Supprimer « ${name} » de la liste partagée ?`)) return;
+    setCustomAccompanimentIdeas((current) => current.filter((idea) => idea.name !== name));
+    setNotice("Idée d’accompagnement supprimée.");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -845,8 +942,10 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         const content = JSON.parse(window.localStorage.getItem("auguste-recipe-content") || "{}");
         const technical = JSON.parse(window.localStorage.getItem("auguste-technical-sheets") || "{}");
         const storedPeriodSelections = JSON.parse(window.localStorage.getItem("auguste-period-selections-v1") || "{}");
+        const storedAccompanimentIdeas = JSON.parse(window.localStorage.getItem("auguste-accompaniment-ideas") || "[]");
         setLastSavedCard(isCardSnapshot(lastCard) ? lastCard : null);
         if (Array.isArray(custom)) setCustomDishes(custom);
+        if (Array.isArray(storedAccompanimentIdeas)) setCustomAccompanimentIdeas(storedAccompanimentIdeas.filter(isAccompanimentIdea));
         if (Array.isArray(archives)) setSavedMenus(archives);
         if (economics && typeof economics === "object" && !Array.isArray(economics)) setEconomicOverrides(economics);
         if (content && typeof content === "object" && !Array.isArray(content)) setDishContentOverrides(content);
@@ -995,6 +1094,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       "auguste-recipe-content": JSON.stringify(dishContentOverrides),
       "auguste-technical-sheets": JSON.stringify(technicalOverrides),
       "auguste-period-selections-v1": JSON.stringify(periodSelections),
+      "auguste-accompaniment-ideas": JSON.stringify(customAccompanimentIdeas),
     };
     const payload = { version: 1, storage };
     const fingerprint = sharedPayloadFingerprint(payload);
@@ -1034,7 +1134,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       window.clearTimeout(timeout);
       if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
     };
-  }, [selected, targets, period, periodType, menuTitle, covers, buffer, customDishes, savedMenus, lastSavedCard, economicOverrides, dishContentOverrides, technicalOverrides, periodSelections, ready, userId]);
+  }, [selected, targets, period, periodType, menuTitle, covers, buffer, customDishes, customAccompanimentIdeas, savedMenus, lastSavedCard, economicOverrides, dishContentOverrides, technicalOverrides, periodSelections, ready, userId]);
 
   useEffect(() => {
     if (!notice) return;
@@ -1047,6 +1147,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     ...(dishContentOverrides[dish.id] || {}),
     ...(economicOverrides[dish.id] || {}),
   })), [customDishes, dishContentOverrides, economicOverrides]);
+  const allAccompanimentIdeas = useMemo(() => [...ACCOMPANIMENT_IDEAS, ...customAccompanimentIdeas], [customAccompanimentIdeas]);
   const validatedDishes = useMemo(() => {
     if (!lastSavedCard) return [];
     return lastSavedCard.selected
@@ -1433,6 +1534,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         "auguste-recipe-content": JSON.stringify(dishContentOverrides),
         "auguste-technical-sheets": JSON.stringify(technicalOverrides),
         "auguste-period-selections-v1": JSON.stringify(periodSelections),
+        "auguste-accompaniment-ideas": JSON.stringify(customAccompanimentIdeas),
       };
       const payload = {
         version: 1,
@@ -1484,7 +1586,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         throw new Error("Cette sauvegarde ne contient aucune donnée restaurable.");
       }
       const confirmed = window.confirm(
-        "Importer cette sauvegarde ?\n\nLes recettes, fiches techniques, menus archivés et la sélection actuels seront remplacés par ceux du fichier.",
+        "Importer cette sauvegarde ?\n\nLes recettes, idées d’accompagnement, fiches techniques, menus archivés et la sélection actuels seront remplacés par ceux du fichier.",
       );
       if (!confirmed) return;
       const nextStorage = createOriginalCuisineStorage();
@@ -1509,7 +1611,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
 
   async function restoreOriginalData() {
     const confirmed = window.confirm(
-      "Restaurer les données d’origine ?\n\nCette action effacera les recettes ajoutées, les modifications des fiches techniques, les menus archivés, la dernière carte sauvegardée et la sélection actuelle sur cet appareil.",
+      "Restaurer les données d’origine ?\n\nCette action effacera les recettes et idées d’accompagnement ajoutées, les modifications des fiches techniques, les menus archivés, la dernière carte sauvegardée et la sélection actuelle sur cet appareil.",
     );
     if (!confirmed) return;
     const storage = createOriginalCuisineStorage();
@@ -1722,7 +1824,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <div className="catalog-actions">
               <button className="secondary-button magic-add-button" type="button" onClick={() => { setNewDish(EMPTY_RECIPE); setMagicAnalyzed(false); setCreateOpen(true); }}>✦ Ajouter un produit carte</button>
               <button className="magic-button" type="button" onClick={completeAutomatically}>✦ Compléter intelligemment</button>
-              <button ref={accompanimentButtonRef} className="accompaniment-ideas-button" type="button" onClick={() => setAccompanimentIdeasOpen(true)} aria-haspopup="dialog"><span>{ACCOMPANIMENT_IDEAS.length}</span><strong>Idées d’accompagnement</strong></button>
+              <button ref={accompanimentButtonRef} className="accompaniment-ideas-button" type="button" onClick={() => setAccompanimentIdeasOpen(true)} aria-haspopup="dialog"><span>{allAccompanimentIdeas.length}</span><strong>Idées d’accompagnement</strong></button>
             </div>
           </div>
           <div className={`filters ${filtersOpen ? "open" : ""}`}>
@@ -1850,7 +1952,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
 
       {detail && <div className="modal-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="dish-modal" role="dialog" aria-modal="true" aria-labelledby="dish-modal-title" onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setDetail(null)} aria-label="Fermer">×</button><p className="eyebrow">{detail.course} · {detail.family}</p><h2 id="dish-modal-title">{detail.name}</h2><p className="modal-description">{detail.description}</p><div className="modal-kpis"><div><span>Coût portion</span><strong>{euro.format(detail.cost)}</strong></div><div><span>Prix conseillé</span><strong>{euro.format(detail.price)}</strong></div><div><span>Marge brute</span><strong>{getMargin(detail)}%</strong></div><div><span>Mise en place</span><strong>{detail.prep} min</strong></div></div><div className="modal-columns"><div><span className="label">Saisonnalité</span><p>{detail.season.join(", ")}</p></div><div><span className="label">Allergènes</span><p>{detail.allergens.join(", ") || "Aucun déclaré"}</p></div><div><span className="label">Profil</span><p>{detail.tags.join(" · ")}</p></div><div><span className="label">Complexité</span><p>{"●".repeat(detail.difficulty)}{"○".repeat(3 - detail.difficulty)}</p></div></div><div className={`detail-actions ${isEditingMenu ? "" : "single"}`}><button className="technical-button" type="button" onClick={() => openTechnicalSheet(detail)}>Fiche technique →</button>{isEditingMenu && <button className={`primary-button ${selected.includes(detail.id) ? "remove" : ""}`} type="button" onClick={() => { toggleDish(detail); setDetail(null); }}>{selected.includes(detail.id) ? "Retirer du menu" : "Ajouter au menu"}</button>}</div></section></div>}
 
-      {accompanimentIdeasOpen && <AccompanimentIdeasModal onClose={closeAccompanimentIdeas} returnFocusRef={accompanimentButtonRef} />}
+      {accompanimentIdeasOpen && <AccompanimentIdeasModal ideas={allAccompanimentIdeas} customIdeas={customAccompanimentIdeas} onAddIdea={addCustomAccompanimentIdea} onDeleteIdea={deleteCustomAccompanimentIdea} onClose={closeAccompanimentIdeas} returnFocusRef={accompanimentButtonRef} />}
 
       {technicalDish && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setTechnicalDish(null)}>

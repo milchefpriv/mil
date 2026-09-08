@@ -1,10 +1,16 @@
-export type AccompanimentDifficulty = "Facile" | "Intermédiaire" | "Délicat";
-export type AccompanimentHolding = "Excellente" | "Bonne" | "Courte";
-export type AccompanimentDispatch = "Très rapide" | "Rapide" | "À la minute";
+export const ACCOMPANIMENT_FAMILIES = ["Pommes de terre", "Légumes", "Céréales & légumineuses", "Gratins & purées", "Frais"] as const;
+export const ACCOMPANIMENT_DIFFICULTIES = ["Facile", "Intermédiaire", "Délicat"] as const;
+export const ACCOMPANIMENT_HOLDINGS = ["Excellente", "Bonne", "Courte"] as const;
+export const ACCOMPANIMENT_DISPATCHES = ["Très rapide", "Rapide", "À la minute"] as const;
+
+export type AccompanimentFamily = typeof ACCOMPANIMENT_FAMILIES[number];
+export type AccompanimentDifficulty = typeof ACCOMPANIMENT_DIFFICULTIES[number];
+export type AccompanimentHolding = typeof ACCOMPANIMENT_HOLDINGS[number];
+export type AccompanimentDispatch = typeof ACCOMPANIMENT_DISPATCHES[number];
 
 export type AccompanimentIdea = {
   name: string;
-  family: "Pommes de terre" | "Légumes" | "Céréales & légumineuses" | "Gratins & purées" | "Frais";
+  family: AccompanimentFamily;
   difficulty: AccompanimentDifficulty;
   holding: AccompanimentHolding;
   dispatch: AccompanimentDispatch;
@@ -251,5 +257,45 @@ export const ACCOMPANIMENT_IDEAS: AccompanimentIdea[] = [
     holding: "Bonne",
     dispatch: "Très rapide",
     serviceNote: "Tenir au froid et ajouter les noix au dressage.",
+  },
+  {
+    name: "Pommes Pont-Neuf",
+    family: "Pommes de terre",
+    difficulty: "Délicat",
+    holding: "Courte",
+    dispatch: "À la minute",
+    serviceNote: "Faire la seconde cuisson à la commande, égoutter puis saler aussitôt.",
+  },
+  {
+    name: "Gnocchis poêlés au beurre de sauge",
+    family: "Pommes de terre",
+    difficulty: "Délicat",
+    holding: "Courte",
+    dispatch: "À la minute",
+    serviceNote: "Colorer à la poêle par petites portions et envoyer immédiatement.",
+  },
+  {
+    name: "Épinards frais tombés au beurre",
+    family: "Légumes",
+    difficulty: "Délicat",
+    holding: "Courte",
+    dispatch: "À la minute",
+    serviceNote: "Tomber rapidement à la commande, assaisonner et bien égoutter.",
+  },
+  {
+    name: "Chou-fleur rôti au beurre noisette",
+    family: "Légumes",
+    difficulty: "Délicat",
+    holding: "Courte",
+    dispatch: "À la minute",
+    serviceNote: "Précuire puis colorer vivement avec le beurre noisette à l’envoi.",
+  },
+  {
+    name: "Beignets de courgette",
+    family: "Légumes",
+    difficulty: "Délicat",
+    holding: "Courte",
+    dispatch: "À la minute",
+    serviceNote: "Frire à la commande, égoutter sur grille et servir sans attendre.",
   },
 ];

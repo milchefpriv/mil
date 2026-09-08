@@ -373,6 +373,25 @@ button { color: inherit; }
 .accompaniment-modal-head h2 { margin: 8px 42px 8px 0; }
 .accompaniment-modal-head > p:last-child { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .accompaniment-modal-body { min-height: 0; padding: 22px 34px 32px; overflow: auto; overscroll-behavior: contain; }
+.accompaniment-add-heading { margin-bottom: 22px; padding: 14px 15px; border: 1px solid #d8c6a9; border-radius: 11px; background: linear-gradient(135deg, #faf1e4, #f2e4d0); display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.accompaniment-add-heading > div { min-width: 0; }
+.accompaniment-add-heading strong, .accompaniment-add-heading span { display: block; }
+.accompaniment-add-heading strong { font: 720 15px/1.2 var(--font-display); }
+.accompaniment-add-heading span { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.accompaniment-add-heading button { min-height: 38px; padding: 0 13px; border: 1px solid #bea071; border-radius: 8px; background: #fffaf2; color: var(--burgundy); cursor: pointer; flex: none; font-size: 11px; font-weight: 850; }
+.accompaniment-add-heading button:hover { background: #fff; border-color: var(--brass); }
+.accompaniment-add-form { margin: -10px 0 25px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: #faf7f2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.accompaniment-add-form label { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.accompaniment-add-form label.wide { grid-column: 1 / -1; }
+.accompaniment-add-form label > span { color: #655a4e; font-size: 11px; font-weight: 800; }
+.accompaniment-add-form label > span small { color: var(--muted); font-size: 10px; font-weight: 600; }
+.accompaniment-add-form input, .accompaniment-add-form select, .accompaniment-add-form textarea { width: 100%; border: 1px solid #d4cabd; border-radius: 8px; background: #fff; color: var(--ink); outline: 0; font-size: 13px; }
+.accompaniment-add-form input, .accompaniment-add-form select { min-height: 42px; padding: 0 11px; }
+.accompaniment-add-form textarea { min-height: 72px; padding: 10px 11px; resize: vertical; line-height: 1.45; }
+.accompaniment-add-form input:focus, .accompaniment-add-form select:focus, .accompaniment-add-form textarea:focus { border-color: var(--brass); box-shadow: 0 0 0 3px rgba(166,120,63,.12); }
+.accompaniment-form-error { grid-column: 1 / -1; margin: 0; color: var(--burgundy); font-size: 11px; font-weight: 750; }
+.accompaniment-save-button { grid-column: 1 / -1; min-height: 43px; border: 0; border-radius: 8px; background: var(--burgundy); color: #fff; cursor: pointer; font-size: 12px; font-weight: 850; }
+.accompaniment-save-button:hover { background: #61221f; }
 .accompaniment-group + .accompaniment-group { margin-top: 28px; }
 .accompaniment-group-head { margin-bottom: 10px; padding: 2px 0 2px 13px; border-left: 4px solid #6d855f; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .accompaniment-group.level-medium .accompaniment-group-head { border-left-color: var(--brass); }
@@ -388,7 +407,9 @@ button { color: inherit; }
 .accompaniment-card { min-width: 0; padding: 14px 15px 12px; border: 1px solid var(--line); border-radius: 11px; background: #fffdfa; box-shadow: 0 4px 14px rgba(45,36,26,.035); }
 .accompaniment-card-top { display: flex; align-items: center; gap: 7px; }
 .accompaniment-card-top > span { width: 24px; height: 24px; border-radius: 50%; background: #eee7dc; color: var(--brass-deep); display: grid; place-items: center; flex: none; font-size: 8px; font-weight: 900; }
-.accompaniment-card-top small { min-width: 0; color: #8a7e70; font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.accompaniment-card-top small { min-width: 0; color: #8a7e70; font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.accompaniment-card-top button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: #f3e2df; color: var(--burgundy); cursor: pointer; flex: none; font-size: 16px; line-height: 1; }
+.accompaniment-card-top button:hover { background: #ead0cc; }
 .accompaniment-card h4 { margin: 10px 0 5px; font: 720 15px/1.2 var(--font-display); letter-spacing: -.015em; }
 .accompaniment-card > p { min-height: 36px; margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
 .accompaniment-card dl { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #ece6dd; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -871,6 +892,10 @@ button { color: inherit; }
   .accompaniment-modal-head h2 { margin-right: 38px; }
   .accompaniment-modal-head > p:last-child { font-size: 11px; }
   .accompaniment-modal-body { padding: 18px 20px 24px; }
+  .accompaniment-add-heading { align-items: stretch; flex-direction: column; gap: 11px; }
+  .accompaniment-add-heading button { width: 100%; }
+  .accompaniment-add-form { grid-template-columns: 1fr; padding: 14px; }
+  .accompaniment-add-form label.wide, .accompaniment-form-error, .accompaniment-save-button { grid-column: auto; }
   .accompaniment-group + .accompaniment-group { margin-top: 25px; }
   .accompaniment-group-head { align-items: flex-start; gap: 10px; }
   .accompaniment-group-head h3 { font-size: 17px; }
