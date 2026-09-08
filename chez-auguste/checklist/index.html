@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=6" />
-    <script type="module" src="./app.js?v=6"></script>
+    <link rel="stylesheet" href="./styles.css?v=7" />
+    <script type="module" src="./app.js?v=7"></script>
   </head>
   <body class="auth-pending">
     <main class="auth-screen" id="authScreen" aria-labelledby="authTitle">
@@ -81,7 +81,7 @@
             <h1 id="todayTitle">À faire aujourd’hui</h1>
             <span class="day-progress" id="todayProgress" aria-live="polite"></span>
           </div>
-          <div class="task-list" id="todayList"></div>
+          <div class="task-list" id="todayList" role="list"></div>
           <button class="empty-add" id="emptyAddToday" type="button">+ Ajouter</button>
         </section>
 
@@ -90,7 +90,7 @@
             <h2 id="tomorrowTitle">À faire demain</h2>
             <span class="day-progress" id="tomorrowProgress" aria-live="polite"></span>
           </div>
-          <div class="task-list" id="tomorrowList"></div>
+          <div class="task-list" id="tomorrowList" role="list"></div>
           <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
         </section>
 
@@ -117,7 +117,7 @@
             aria-labelledby="maintenanceTitle"
             hidden
           >
-            <div class="task-list" id="maintenanceList"></div>
+            <div class="task-list" id="maintenanceList" role="list"></div>
             <button class="empty-add" id="emptyAddMaintenance" type="button">+ Ajouter</button>
           </div>
         </section>
@@ -250,6 +250,14 @@
           </div>
         </fieldset>
 
+        <div class="task-order-controls">
+          <span class="field-label">Position</span>
+          <div class="task-order-buttons" role="group" aria-label="Déplacer la tâche">
+            <button id="moveTaskUp" type="button" aria-label="Monter la tâche">↑ Monter</button>
+            <button id="moveTaskDown" type="button" aria-label="Descendre la tâche">↓ Descendre</button>
+          </div>
+        </div>
+
         <div class="task-dialog-actions">
           <button class="delete-button" id="deleteTask" type="button">Supprimer</button>
           <button class="save-button" type="submit">Enregistrer</button>
@@ -264,7 +272,7 @@
     </div>
 
     <template id="taskTemplate">
-      <article class="task-row">
+      <article class="task-row" role="listitem">
         <button class="check-button" type="button" aria-label="Marquer comme terminée">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"></path></svg>
         </button>

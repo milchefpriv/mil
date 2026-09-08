@@ -9,6 +9,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
+  const REORDER_HOLD_DELAY = 450;
+  const REORDER_MOVE_TOLERANCE = 9;
+  const REORDER_EDGE_ZONE = 96;
+  const REORDER_MAX_SCROLL_SPEED = 14;
   const SUPABASE_URL = "https://eoewkjfgqivrkkgpjsrk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
   const SHARED_SECTION = "checklist";
@@ -68,6 +72,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
     momentFieldset: document.querySelector("#momentFieldset"),
+    moveTaskUp: document.querySelector("#moveTaskUp"),
+    moveTaskDown: document.querySelector("#moveTaskDown"),
     closeTaskDialog: document.querySelector("#closeTaskDialog"),
     deleteTask: document.querySelector("#deleteTask"),
     toast: document.querySelector("#toast"),
@@ -100,6 +106,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   let pendingRemoteRow = null;
   let lastCommittedAt = 0;
   let syncWarningShown = false;
+  let reorderGesture = null;
+  let reorderPersisting = false;
+  let reorderAutoScrollFrame = null;
+  let suppressedTaskClickId = null;
+  let suppressedTaskClickTimer = null;
+  let lastTouchStartedAt = 0;
+  let pendingLocalRefresh = false;
   const syncChannel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
@@ -224,6 +237,49 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const transaction = database.transaction(storeName, "readwrite");
       transaction.objectStore(storeName).put(record);
       transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+    });
+  }
+
+  async function updateTaskOrderRecords(taskIds, positionBase, updatedAt) {
+    if (!taskIds.length) return [];
+    const database = await getDatabase();
+    if (!database) {
+      const data = readFallback();
+      const positions = new Map(taskIds.map((id, index) => [id, positionBase + index]));
+      const updatedRecords = [];
+      data.tasks = data.tasks.map((task) => {
+        if (!positions.has(task.id)) return task;
+        const updatedTask = {
+          ...task,
+          manualPosition: positions.get(task.id),
+          updatedAt,
+        };
+        updatedRecords.push(updatedTask);
+        return updatedTask;
+      });
+      writeFallback(data);
+      return updatedRecords;
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction("tasks", "readwrite");
+      const store = transaction.objectStore("tasks");
+      const updatedRecords = [];
+      taskIds.forEach((id, index) => {
+        const request = store.get(id);
+        request.onsuccess = () => {
+          if (!request.result) return;
+          const updatedTask = {
+            ...request.result,
+            manualPosition: positionBase + index,
+            updatedAt,
+          };
+          updatedRecords.push(updatedTask);
+          store.put(updatedTask);
+        };
+      });
+      transaction.oncomplete = () => resolve(updatedRecords);
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
     });
@@ -447,10 +503,24 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     );
   }
 
-  async function applySharedRow(row) {
+  function taskReorderLocked() {
+    return Boolean(reorderGesture) || reorderPersisting;
+  }
+
+  function queuePendingRemoteRow(row) {
+    const queuedTime = Date.parse(pendingRemoteRow?.updated_at || "") || 0;
+    const nextTime = Date.parse(row?.updated_at || "") || 0;
+    if (!pendingRemoteRow || nextTime >= queuedTime) pendingRemoteRow = row;
+  }
+
+  async function applySharedRow(row, { force = false } = {}) {
     const payload = row?.payload;
     if (!isSharedPayload(payload)) return;
     if (payload._client_instance_id === CLIENT_INSTANCE_ID) return;
+    if (!force && taskReorderLocked()) {
+      queuePendingRemoteRow(row);
+      return;
+    }
     const fingerprint = payloadFingerprint(payload);
     if (!fingerprint || fingerprint === remoteFingerprint) return;
 
@@ -469,12 +539,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     };
     await replaceAllData(nextState);
     remoteFingerprint = fingerprint;
+    lastCommittedAt = Math.max(lastCommittedAt, Date.parse(row.updated_at) || 0);
     await loadState({ runAutomatic: false });
     syncChannel?.postMessage({ type: "refresh", at: Date.now() });
   }
 
   async function saveSharedState() {
     if (!sharedReady || !sharedUserId || sharedSaving || !sharedDirty) return;
+    if (reorderGesture?.active || reorderPersisting) {
+      scheduleSharedSave(600);
+      return;
+    }
     sharedSaving = true;
     sharedDirty = false;
     const payload = sharedPayload();
@@ -507,7 +582,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       sharedSaving = false;
     }
 
-    if (pendingRemoteRow) {
+    if (pendingRemoteRow && !taskReorderLocked()) {
       const row = pendingRemoteRow;
       pendingRemoteRow = null;
       const remoteTime = Date.parse(row.updated_at) || 0;
@@ -548,7 +623,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         (event) => {
           const row = event.new;
           if (!row?.payload || row.payload._client_instance_id === CLIENT_INSTANCE_ID) return;
-          if (sharedSaving || sharedDirty) pendingRemoteRow = row;
+          if (sharedSaving || sharedDirty || taskReorderLocked()) queuePendingRemoteRow(row);
           else void applySharedRow(row);
         },
       )
@@ -605,6 +680,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
       updatedAt: typeof task?.updatedAt === "string" ? task.updatedAt : new Date().toISOString(),
       position: Number.isFinite(task?.position) ? task.position : Date.now(),
+      manualPosition: Number.isFinite(task?.manualPosition) ? task.manualPosition : null,
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
       occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
     };
@@ -728,16 +804,422 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return state.tasks.filter((task) => task.section === "maintenance");
   }
 
+  function tasksForListKey(listKey) {
+    if (listKey === "todayList") return tasksForToday();
+    if (listKey === "tomorrowList") return tasksForTomorrow();
+    if (listKey === "maintenanceList") return tasksForMaintenance();
+    return [];
+  }
+
   function sortTasks(tasks) {
     const momentRank = { morning: 0, any: 1, evening: 2 };
     return [...tasks].sort((a, b) => {
+      const aHasManualPosition = Number.isFinite(a.manualPosition);
+      const bHasManualPosition = Number.isFinite(b.manualPosition);
+      if (aHasManualPosition || bHasManualPosition) {
+        if (aHasManualPosition !== bHasManualPosition) return aHasManualPosition ? -1 : 1;
+        const manualDifference = a.manualPosition - b.manualPosition;
+        if (manualDifference) return manualDifference;
+      }
       const completeDifference = Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt));
       if (completeDifference) return completeDifference;
-      const overdueDifference = Number(a.dueDate >= todayKey()) - Number(b.dueDate >= todayKey());
+      const aIsOverdue = a.section === "daily" && a.dueDate < todayKey() && !a.completedAt;
+      const bIsOverdue = b.section === "daily" && b.dueDate < todayKey() && !b.completedAt;
+      const overdueDifference = Number(bIsOverdue) - Number(aIsOverdue);
       if (overdueDifference) return overdueDifference;
       const momentDifference = momentRank[a.moment] - momentRank[b.moment];
       if (momentDifference) return momentDifference;
-      return a.position - b.position;
+      const positionDifference = a.position - b.position;
+      if (positionDifference) return positionDifference;
+      const creationDifference = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+      if (creationDifference) return creationDifference;
+      return a.id.localeCompare(b.id, "fr");
+    });
+  }
+
+  function taskRows(container) {
+    return [...container.children].filter((child) => child.classList.contains("task-row"));
+  }
+
+  function taskOrder(container) {
+    return taskRows(container).map((row) => row.dataset.taskId).filter(Boolean);
+  }
+
+  function sameTaskOrder(first, second) {
+    return first.length === second.length && first.every((id, index) => id === second[index]);
+  }
+
+  function suppressTaskClick(event) {
+    if (event.currentTarget.dataset.taskId !== suppressedTaskClickId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.clearTimeout(suppressedTaskClickTimer);
+    suppressedTaskClickId = null;
+    suppressedTaskClickTimer = null;
+  }
+
+  function suppressNextTaskClick(taskId) {
+    window.clearTimeout(suppressedTaskClickTimer);
+    suppressedTaskClickId = taskId;
+    suppressedTaskClickTimer = window.setTimeout(() => {
+      suppressedTaskClickId = null;
+      suppressedTaskClickTimer = null;
+    }, 180);
+  }
+
+  function startTaskReorderPress({ inputType, pointerId, row, container, clientX, clientY }) {
+    if (reorderGesture) cancelTaskReorder();
+    const gesture = {
+      inputType,
+      pointerId,
+      row,
+      container,
+      startClientX: clientX,
+      startClientY: clientY,
+      lastClientX: clientX,
+      lastClientY: clientY,
+      originalOrder: taskOrder(container),
+      active: false,
+      placeholder: null,
+      offsetY: 0,
+      timer: null,
+    };
+    gesture.timer = window.setTimeout(() => activateTaskReorder(gesture), REORDER_HOLD_DELAY);
+    reorderGesture = gesture;
+    if (inputType === "touch") attachTaskTouchListeners();
+  }
+
+  function attachTaskTouchListeners() {
+    document.addEventListener("touchstart", handleAdditionalTaskTouch, {
+      capture: true,
+      passive: true,
+    });
+    document.addEventListener("touchmove", handleTaskTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTaskTouchEnd, { passive: false });
+    document.addEventListener("touchcancel", handleTaskTouchCancel, { passive: true });
+  }
+
+  function detachTaskTouchListeners() {
+    document.removeEventListener("touchstart", handleAdditionalTaskTouch, true);
+    document.removeEventListener("touchmove", handleTaskTouchMove);
+    document.removeEventListener("touchend", handleTaskTouchEnd);
+    document.removeEventListener("touchcancel", handleTaskTouchCancel);
+  }
+
+  function activateTaskReorder(gesture) {
+    if (reorderGesture !== gesture || !gesture.row.isConnected) return;
+    const bounds = gesture.row.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) {
+      cancelTaskReorder();
+      return;
+    }
+
+    const placeholder = document.createElement("div");
+    placeholder.className = "task-placeholder";
+    placeholder.style.height = `${bounds.height}px`;
+    placeholder.setAttribute("aria-hidden", "true");
+    gesture.row.before(placeholder);
+
+    gesture.active = true;
+    gesture.timer = null;
+    gesture.placeholder = placeholder;
+    gesture.offsetY = Math.min(
+      bounds.height,
+      Math.max(0, gesture.lastClientY - bounds.top),
+    );
+
+    gesture.row.classList.add("is-reordering");
+    gesture.row.setAttribute("aria-grabbed", "true");
+    gesture.row.style.position = "fixed";
+    gesture.row.style.top = `${gesture.lastClientY - gesture.offsetY}px`;
+    gesture.row.style.left = `${bounds.left}px`;
+    gesture.row.style.width = `${bounds.width}px`;
+    gesture.row.style.height = `${bounds.height}px`;
+    document.body.classList.add("is-task-reordering");
+    try {
+      navigator.vibrate?.(18);
+    } catch {
+      // La vibration est un simple retour facultatif.
+    }
+  }
+
+  function placeTaskPlaceholder(clientY) {
+    const gesture = reorderGesture;
+    if (!gesture?.active || !gesture.placeholder?.isConnected) return;
+    const rows = taskRows(gesture.container).filter((row) => row !== gesture.row);
+    const nextRow = rows.find((row) => {
+      const bounds = row.getBoundingClientRect();
+      return clientY < bounds.top + bounds.height / 2;
+    });
+    if (nextRow) gesture.container.insertBefore(gesture.placeholder, nextRow);
+    else gesture.container.append(gesture.placeholder);
+  }
+
+  function reorderScrollSpeed(clientY) {
+    if (clientY < REORDER_EDGE_ZONE) {
+      return -Math.ceil(
+        ((REORDER_EDGE_ZONE - clientY) / REORDER_EDGE_ZONE) * REORDER_MAX_SCROLL_SPEED,
+      );
+    }
+    const bottomEdge = window.innerHeight - REORDER_EDGE_ZONE;
+    if (clientY > bottomEdge) {
+      return Math.ceil(
+        ((clientY - bottomEdge) / REORDER_EDGE_ZONE) * REORDER_MAX_SCROLL_SPEED,
+      );
+    }
+    return 0;
+  }
+
+  function runTaskReorderAutoScroll() {
+    reorderAutoScrollFrame = null;
+    const gesture = reorderGesture;
+    if (!gesture?.active) return;
+    const speed = reorderScrollSpeed(gesture.lastClientY);
+    if (!speed) return;
+    window.scrollBy(0, speed);
+    placeTaskPlaceholder(gesture.lastClientY);
+    reorderAutoScrollFrame = window.requestAnimationFrame(runTaskReorderAutoScroll);
+  }
+
+  function updateTaskReorderAutoScroll() {
+    if (!reorderGesture?.active || !reorderScrollSpeed(reorderGesture.lastClientY)) {
+      if (reorderAutoScrollFrame) window.cancelAnimationFrame(reorderAutoScrollFrame);
+      reorderAutoScrollFrame = null;
+      return;
+    }
+    if (!reorderAutoScrollFrame) {
+      reorderAutoScrollFrame = window.requestAnimationFrame(runTaskReorderAutoScroll);
+    }
+  }
+
+  function moveTaskReorder(clientX, clientY) {
+    const gesture = reorderGesture;
+    if (!gesture) return;
+    gesture.lastClientX = clientX;
+    gesture.lastClientY = clientY;
+
+    if (!gesture.active) {
+      const distance = Math.hypot(
+        clientX - gesture.startClientX,
+        clientY - gesture.startClientY,
+      );
+      if (distance > REORDER_MOVE_TOLERANCE) cancelTaskReorder();
+      return;
+    }
+
+    gesture.row.style.top = `${clientY - gesture.offsetY}px`;
+    placeTaskPlaceholder(clientY);
+    updateTaskReorderAutoScroll();
+  }
+
+  function clearTaskReorderVisuals(gesture, { commit = false } = {}) {
+    window.clearTimeout(gesture.timer);
+    if (gesture.inputType === "touch") detachTaskTouchListeners();
+    if (reorderAutoScrollFrame) window.cancelAnimationFrame(reorderAutoScrollFrame);
+    reorderAutoScrollFrame = null;
+
+    if (gesture.active) {
+      if (commit && gesture.placeholder?.parentElement && gesture.row.isConnected) {
+        gesture.placeholder.parentElement.insertBefore(gesture.row, gesture.placeholder);
+      }
+      gesture.placeholder?.remove();
+      gesture.row.classList.remove("is-reordering");
+      gesture.row.removeAttribute("aria-grabbed");
+      for (const property of ["position", "top", "left", "width", "height"]) {
+        gesture.row.style.removeProperty(property);
+      }
+      document.body.classList.remove("is-task-reordering");
+    }
+  }
+
+  function cancelTaskReorder({ flushSync = true } = {}) {
+    const gesture = reorderGesture;
+    if (!gesture) return;
+    clearTaskReorderVisuals(gesture);
+    reorderGesture = null;
+    if (flushSync) void flushDeferredTaskSync();
+  }
+
+  async function refreshStateBeforeReorderCommit() {
+    if (pendingLocalRefresh) {
+      pendingLocalRefresh = false;
+      await loadState({ runAutomatic: false });
+    }
+    if (pendingRemoteRow && !sharedDirty) {
+      const row = pendingRemoteRow;
+      pendingRemoteRow = null;
+      const remoteTime = Date.parse(row.updated_at) || 0;
+      if (remoteTime > lastCommittedAt) await applySharedRow(row, { force: true });
+    }
+  }
+
+  async function persistTaskOrder({ desiredOrder, listKey, movedTaskId, restoreFocus = true }) {
+    try {
+      let mergedOrder = [];
+      let reorderedById = new Map();
+
+      while (true) {
+        await refreshStateBeforeReorderCommit();
+        const latestListTasks = sortTasks(tasksForListKey(listKey));
+        const latestIds = new Set(latestListTasks.map((task) => task.id));
+        if (!latestIds.has(movedTaskId)) {
+          renderAll();
+          showToast("Cette tâche n’existe plus");
+          return;
+        }
+
+        mergedOrder = desiredOrder.filter((id) => latestIds.has(id));
+        const alreadyOrdered = new Set(mergedOrder);
+        for (const task of latestListTasks) {
+          if (!alreadyOrdered.has(task.id)) mergedOrder.push(task.id);
+        }
+
+        const reorderedTasks = await updateTaskOrderRecords(
+          mergedOrder,
+          Date.now(),
+          new Date().toISOString(),
+        );
+        reorderedById = new Map(reorderedTasks.map((task) => [task.id, normalizeTask(task)]));
+        state.tasks = state.tasks.map((task) => reorderedById.get(task.id) || task);
+
+        const shouldMergePendingRemote = Boolean(pendingRemoteRow) && !sharedDirty;
+        if (!pendingLocalRefresh && !shouldMergePendingRemote) break;
+      }
+
+      announceChange();
+      renderAll();
+      const movedTask = reorderedById.get(movedTaskId);
+      const position = mergedOrder.indexOf(movedTaskId) + 1;
+      if (movedTask && position > 0) {
+        showToast(`Tâche déplacée en position ${position}`);
+      }
+      if (restoreFocus) {
+        requestAnimationFrame(() => {
+          document.querySelector(`[data-task-id="${movedTaskId}"] .task-main`)?.focus();
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      renderAll();
+      showToast("Nouvel ordre non enregistré");
+    }
+  }
+
+  async function finishTaskReorder() {
+    const gesture = reorderGesture;
+    if (!gesture) return;
+    if (!gesture.active) {
+      cancelTaskReorder();
+      return;
+    }
+
+    suppressNextTaskClick(gesture.row.dataset.taskId);
+    clearTaskReorderVisuals(gesture, { commit: true });
+    const desiredOrder = taskOrder(gesture.container);
+    const listKey = gesture.container.id;
+    const movedTaskId = gesture.row.dataset.taskId;
+    if (sameTaskOrder(gesture.originalOrder, desiredOrder)) {
+      reorderGesture = null;
+      gesture.container.querySelector(`[data-task-id="${movedTaskId}"] .task-main`)?.focus();
+      await flushDeferredTaskSync();
+      return;
+    }
+
+    reorderPersisting = true;
+    reorderGesture = null;
+    try {
+      await persistTaskOrder({ desiredOrder, listKey, movedTaskId });
+    } finally {
+      reorderPersisting = false;
+      await flushDeferredTaskSync();
+    }
+  }
+
+  async function moveTaskWithKeyboard(row, direction, { restoreFocus = true } = {}) {
+    if (reorderPersisting) return;
+    if (reorderGesture) cancelTaskReorder({ flushSync: false });
+    const container = row.parentElement;
+    const rows = taskRows(container);
+    const currentIndex = rows.indexOf(row);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length) return;
+    const target = rows[targetIndex];
+    if (direction < 0) container.insertBefore(row, target);
+    else container.insertBefore(row, target.nextSibling);
+    const desiredOrder = taskOrder(container);
+    reorderPersisting = true;
+    try {
+      await persistTaskOrder({
+        desiredOrder,
+        listKey: container.id,
+        movedTaskId: row.dataset.taskId,
+        restoreFocus,
+      });
+    } finally {
+      reorderPersisting = false;
+      await flushDeferredTaskSync();
+    }
+  }
+
+  async function flushDeferredTaskSync() {
+    if (taskReorderLocked()) return;
+    if (pendingLocalRefresh) {
+      pendingLocalRefresh = false;
+      await loadState({ runAutomatic: false });
+    }
+    if (pendingRemoteRow && !sharedSaving && !sharedDirty) {
+      const row = pendingRemoteRow;
+      pendingRemoteRow = null;
+      const remoteTime = Date.parse(row.updated_at) || 0;
+      if (remoteTime > lastCommittedAt) await applySharedRow(row);
+    }
+  }
+
+  function bindTaskReorder(row, mainButton, container) {
+    row.addEventListener("click", suppressTaskClick, true);
+    mainButton.setAttribute("aria-keyshortcuts", "Alt+ArrowUp Alt+ArrowDown");
+
+    mainButton.addEventListener(
+      "touchstart",
+      (event) => {
+        if (event.touches.length !== 1) {
+          cancelTaskReorder();
+          return;
+        }
+        const touch = event.changedTouches[0];
+        lastTouchStartedAt = Date.now();
+        startTaskReorderPress({
+          inputType: "touch",
+          pointerId: touch.identifier,
+          row,
+          container,
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        });
+      },
+      { passive: true },
+    );
+
+    mainButton.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || Date.now() - lastTouchStartedAt < 800) return;
+      startTaskReorderPress({
+        inputType: "mouse",
+        pointerId: 0,
+        row,
+        container,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    });
+
+    mainButton.addEventListener("contextmenu", (event) => {
+      if (reorderGesture?.row === row) event.preventDefault();
+    });
+    mainButton.addEventListener("dragstart", (event) => event.preventDefault());
+    mainButton.addEventListener("keydown", (event) => {
+      if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+      event.preventDefault();
+      void moveTaskWithKeyboard(row, event.key === "ArrowUp" ? -1 : 1);
     });
   }
 
@@ -777,6 +1259,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         "aria-label",
         task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
       );
+      bindTaskReorder(row, mainButton, container);
       checkButton.addEventListener("click", () => toggleTask(task.id));
       mainButton.addEventListener("click", () => openTaskEditor(task.id));
       moreButton.addEventListener("click", () => openTaskEditor(task.id));
@@ -855,6 +1338,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.autoMorning.checked = state.settings.autoMorning;
     elements.autoEvening.checked = state.settings.autoEvening;
     renderQuickTarget();
+    if (elements.taskDialog.open) updateTaskOrderControls();
   }
 
   function renderQuickTarget() {
@@ -912,6 +1396,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       createdAt: now,
       updatedAt: now,
       position: Date.now(),
+      manualPosition: null,
       templateId: null,
       occurrenceKey: null,
     };
@@ -954,6 +1439,35 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function updateEditorDestination() {
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     elements.momentFieldset.hidden = selectedList?.value === "maintenance";
+    updateTaskOrderControls();
+  }
+
+  function updateTaskOrderControls() {
+    const task = state.tasks.find((item) => item.id === state.activeTaskId);
+    const row = state.activeTaskId
+      ? document.querySelector(`[data-task-id="${state.activeTaskId}"]`)
+      : null;
+    const rows = row?.parentElement ? taskRows(row.parentElement) : [];
+    const index = row ? rows.indexOf(row) : -1;
+    const currentList =
+      task?.section === "maintenance"
+        ? "maintenance"
+        : task?.dueDate === tomorrowKey()
+          ? "tomorrow"
+          : "today";
+    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
+    const canMove = Boolean(task && selectedList?.value === currentList);
+    elements.moveTaskUp.disabled = !canMove || index <= 0;
+    elements.moveTaskDown.disabled = !canMove || index < 0 || index >= rows.length - 1;
+  }
+
+  async function moveActiveTask(direction) {
+    const row = state.activeTaskId
+      ? document.querySelector(`[data-task-id="${state.activeTaskId}"]`)
+      : null;
+    if (!row) return;
+    await moveTaskWithKeyboard(row, direction, { restoreFocus: false });
+    updateTaskOrderControls();
   }
 
   function openTaskEditor(id) {
@@ -987,12 +1501,19 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
     const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value) ? selectedList.value : "today";
     const isMaintenance = taskList === "maintenance";
+    const previousTaskList =
+      task.section === "maintenance"
+        ? "maintenance"
+        : task.dueDate === tomorrowKey()
+          ? "tomorrow"
+          : "today";
     const nextTask = {
       ...task,
       label: cleanLabel,
       dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
       section: isMaintenance ? "maintenance" : "daily",
       moment: isMaintenance ? "any" : selectedMoment?.value || "any",
+      manualPosition: previousTaskList === taskList ? task.manualPosition : null,
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -1137,6 +1658,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         createdAt: timestamp,
         updatedAt: timestamp,
         position: Date.now() + index,
+        manualPosition: null,
         templateId: template.id,
         occurrenceKey,
       };
@@ -1340,7 +1862,76 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     void updateSettings({ quickTarget });
   }
 
+  function gestureTouch(touchList) {
+    if (reorderGesture?.inputType !== "touch") return null;
+    return Array.from(touchList).find(
+      (touch) => touch.identifier === reorderGesture.pointerId,
+    ) || null;
+  }
+
+  function handleAdditionalTaskTouch(event) {
+    if (reorderGesture?.inputType === "touch" && event.touches.length > 1) {
+      cancelTaskReorder();
+    }
+  }
+
+  function handleTaskTouchMove(event) {
+    if (reorderGesture?.inputType !== "touch") return;
+    if (event.touches.length > 1) {
+      cancelTaskReorder();
+      return;
+    }
+    const touch = gestureTouch(event.touches);
+    if (!touch) return;
+    if (reorderGesture.active) event.preventDefault();
+    moveTaskReorder(touch.clientX, touch.clientY);
+    if (reorderGesture?.active) event.preventDefault();
+  }
+
+  function handleTaskTouchEnd(event) {
+    const touch = gestureTouch(event.changedTouches);
+    if (!touch) return;
+    if (reorderGesture.active) {
+      event.preventDefault();
+      void finishTaskReorder();
+    } else {
+      cancelTaskReorder();
+    }
+  }
+
+  function handleTaskTouchCancel(event) {
+    if (gestureTouch(event.changedTouches)) cancelTaskReorder();
+  }
+
+  function handleTaskMouseMove(event) {
+    if (reorderGesture?.inputType !== "mouse") return;
+    if ((event.buttons & 1) === 0) {
+      if (reorderGesture.active) void finishTaskReorder();
+      else cancelTaskReorder();
+      return;
+    }
+    if (reorderGesture.active) event.preventDefault();
+    moveTaskReorder(event.clientX, event.clientY);
+  }
+
+  function handleTaskMouseUp(event) {
+    if (event.button !== 0 || reorderGesture?.inputType !== "mouse") return;
+    if (reorderGesture.active) {
+      event.preventDefault();
+      void finishTaskReorder();
+    } else {
+      cancelTaskReorder();
+    }
+  }
+
   function bindEvents() {
+    window.addEventListener("mousemove", handleTaskMouseMove);
+    window.addEventListener("mouseup", handleTaskMouseUp);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && reorderGesture) cancelTaskReorder();
+    });
+    window.addEventListener("blur", () => cancelTaskReorder());
+
     elements.quickAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const label = elements.quickInput.value;
@@ -1413,6 +2004,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     for (const input of elements.editTaskForm.querySelectorAll('input[name="task-list"]')) {
       input.addEventListener("change", updateEditorDestination);
     }
+    elements.moveTaskUp.addEventListener("click", () => void moveActiveTask(-1));
+    elements.moveTaskDown.addEventListener("click", () => void moveActiveTask(1));
     elements.closeTaskDialog.addEventListener("click", () => elements.taskDialog.close());
     elements.taskDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.taskDialog, event));
     elements.taskDialog.addEventListener("close", () => {
@@ -1465,7 +2058,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible") {
+        cancelTaskReorder();
+        return;
+      }
       if (state.lastDateKey !== todayKey()) loadState();
       else if (sharedReady) void refreshSharedState();
       else renderAll();
@@ -1476,7 +2072,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
 
     syncChannel?.addEventListener("message", (event) => {
-      if (event.data?.type === "refresh") loadState({ runAutomatic: false });
+      if (event.data?.type !== "refresh") return;
+      if (taskReorderLocked()) pendingLocalRefresh = true;
+      else loadState({ runAutomatic: false });
     });
   }
 
@@ -1519,8 +2117,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function refreshSharedState() {
     try {
       const row = await loadSharedRow();
-      if (row && (Date.parse(row.updated_at) || 0) > lastCommittedAt) await applySharedRow(row);
-      if (sharedDirty) await saveSharedState();
+      if (row && (Date.parse(row.updated_at) || 0) > lastCommittedAt) {
+        if (taskReorderLocked()) queuePendingRemoteRow(row);
+        else await applySharedRow(row);
+      }
+      if (sharedDirty && !taskReorderLocked()) await saveSharedState();
     } catch (error) {
       console.error("Actualisation partagée différée.", error);
     }
