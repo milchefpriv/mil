@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=9" />
-    <script type="module" src="./app.js?v=9"></script>
+    <link rel="stylesheet" href="./styles.css?v=10" />
+    <script type="module" src="./app.js?v=10"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -47,34 +47,6 @@
           <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
         </section>
 
-        <section class="collapsible-section" aria-labelledby="bringTitle">
-          <h2 class="collapsible-heading" id="bringTitle">
-            <button
-              class="collapsible-toggle"
-              id="bringToggle"
-              type="button"
-              aria-expanded="false"
-              aria-controls="bringPanel"
-            >
-              <span>À ramener</span>
-              <span class="collapsible-toggle-end">
-                <span class="day-progress" id="bringProgress" aria-live="polite"></span>
-                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
-              </span>
-            </button>
-          </h2>
-          <div
-            class="day-card collapsible-card"
-            id="bringPanel"
-            role="region"
-            aria-labelledby="bringTitle"
-            hidden
-          >
-            <div class="task-list" id="bringList" role="list"></div>
-            <button class="empty-add" id="emptyAddBring" type="button">+ Ajouter</button>
-          </div>
-        </section>
-
         <section class="collapsible-section" aria-labelledby="maintenanceTitle">
           <h2 class="collapsible-heading" id="maintenanceTitle">
             <button
@@ -103,6 +75,27 @@
           </div>
         </section>
       </div>
+
+      <aside class="bring-note" aria-labelledby="bringTitle">
+        <header class="bring-note-header">
+          <h2 id="bringTitle">À ramener</h2>
+          <span class="bring-count" id="bringProgress" aria-live="polite"></span>
+        </header>
+        <div class="task-list bring-list" id="bringList" role="list"></div>
+        <form class="bring-add" id="bringAddForm" autocomplete="off">
+          <label class="sr-only" for="bringInput">Ajouter quelque chose à ramener</label>
+          <input
+            id="bringInput"
+            type="text"
+            maxlength="180"
+            enterkeyhint="done"
+            placeholder="Ajouter quelque chose…"
+          />
+          <button type="submit" aria-label="Ajouter à la liste À ramener">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+          </button>
+        </form>
+      </aside>
     </main>
 
     <form class="quick-add" id="quickAddForm" autocomplete="off">
@@ -223,12 +216,11 @@
         <label class="field-label" for="editTaskLabel">Tâche</label>
         <input class="text-field" id="editTaskLabel" type="text" maxlength="180" required />
 
-        <fieldset class="list-fieldset">
+        <fieldset class="list-fieldset" id="taskListFieldset">
           <legend>Liste</legend>
           <div class="segmented-control list-control">
             <label><input type="radio" name="task-list" value="today" /><span>Aujourd’hui</span></label>
             <label><input type="radio" name="task-list" value="tomorrow" /><span>Demain</span></label>
-            <label><input type="radio" name="task-list" value="bring" /><span>À ramener</span></label>
             <label><input type="radio" name="task-list" value="maintenance" /><span>Rénovation</span></label>
           </div>
         </fieldset>

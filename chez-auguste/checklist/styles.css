@@ -264,6 +264,140 @@ label[for]:focus-visible {
   border-top: 0;
 }
 
+.bring-note {
+  width: min(100%, 620px);
+  margin: 26px auto 0;
+  padding: 19px 17px 15px;
+  border: 1px solid #e7d476;
+  border-radius: 5px 18px 7px 5px;
+  color: #332d18;
+  background: #fff3ad;
+  box-shadow: 0 14px 34px rgba(89, 70, 16, 0.14);
+  transform: rotate(-0.16deg);
+  transform-origin: center;
+}
+
+.bring-note-header {
+  display: flex;
+  min-height: 34px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 7px 8px;
+}
+
+.bring-note-header h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.bring-count {
+  color: #75662f;
+  font-size: 0.75rem;
+  font-weight: 720;
+}
+
+.bring-note .task-row {
+  border-color: rgba(103, 87, 35, 0.22);
+}
+
+.bring-note .task-row:first-child {
+  border-top: 0;
+}
+
+.bring-note .check-button::before {
+  border-color: #796a37;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.bring-note .task-label {
+  color: #332d18;
+}
+
+.bring-note .task-row.is-complete .task-label {
+  color: #81774f;
+}
+
+.bring-note .task-more {
+  color: #75662f;
+}
+
+.bring-note .task-row.is-reordering {
+  border-color: #b29a3d;
+  background: #fff7c8;
+  box-shadow: 0 16px 34px rgba(74, 59, 14, 0.22);
+}
+
+.bring-note .task-placeholder::after {
+  border-color: #ad9435;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.bring-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  padding: 5px 5px 5px 12px;
+  border-top: 1px solid rgba(103, 87, 35, 0.22);
+  border-radius: 0 0 11px 3px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.bring-add:focus-within {
+  outline: 3px solid #806c21;
+  outline-offset: 2px;
+}
+
+.bring-add input {
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #332d18;
+  background: transparent;
+  font-size: 1rem;
+}
+
+.bring-add input::placeholder {
+  color: #776b42;
+}
+
+.bring-add button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: #fff9df;
+  background: #66551d;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.bring-add button:hover {
+  background: #4e4016;
+}
+
+.bring-add button:active {
+  transform: scale(0.94);
+}
+
+.bring-add button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
 .day-heading {
   display: flex;
   min-height: 32px;
@@ -1013,7 +1147,7 @@ dialog::backdrop {
 }
 
 .list-control {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .segmented-control label {
@@ -1363,6 +1497,14 @@ dialog::backdrop {
     padding-left: 9px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .bring-note {
+    width: calc(100% - 4px);
+    margin-top: 22px;
+    padding-right: 12px;
+    padding-left: 12px;
+    transform: none;
   }
 }
 

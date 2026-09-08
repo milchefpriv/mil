@@ -8,7 +8,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-  const QUICK_TARGET_ORDER = ["today", "tomorrow", "bring", "maintenance"];
+  const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
@@ -30,9 +30,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     currentDate: document.querySelector("#currentDate"),
     todayList: document.querySelector("#todayList"),
     tomorrowList: document.querySelector("#tomorrowList"),
-    bringToggle: document.querySelector("#bringToggle"),
-    bringPanel: document.querySelector("#bringPanel"),
     bringList: document.querySelector("#bringList"),
+    bringAddForm: document.querySelector("#bringAddForm"),
+    bringInput: document.querySelector("#bringInput"),
     maintenanceToggle: document.querySelector("#maintenanceToggle"),
     maintenancePanel: document.querySelector("#maintenancePanel"),
     maintenanceList: document.querySelector("#maintenanceList"),
@@ -46,7 +46,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     quickEstimate: document.querySelector("#quickEstimate"),
     emptyAddToday: document.querySelector("#emptyAddToday"),
     emptyAddTomorrow: document.querySelector("#emptyAddTomorrow"),
-    emptyAddBring: document.querySelector("#emptyAddBring"),
     emptyAddMaintenance: document.querySelector("#emptyAddMaintenance"),
     taskTemplate: document.querySelector("#taskTemplate"),
     settingsDialog: document.querySelector("#settingsDialog"),
@@ -66,6 +65,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     taskDialog: document.querySelector("#taskDialog"),
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
+    taskListFieldset: document.querySelector("#taskListFieldset"),
     momentFieldset: document.querySelector("#momentFieldset"),
     editEstimate: document.querySelector("#editEstimate"),
     editEstimateValue: document.querySelector("#editEstimateValue"),
@@ -92,7 +92,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editEstimateMinutes: null,
     durationTarget: null,
     lastDateKey: "",
-    bringOpen: false,
     maintenanceOpen: false,
   };
 
@@ -683,7 +682,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       label,
       dueDate,
       section,
-      moment,
+      moment: section === "bring" ? "any" : moment,
       completedAt: typeof task?.completedAt === "string" ? task.completedAt : null,
       createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
       updatedAt: typeof task?.updatedAt === "string" ? task.updatedAt : new Date().toISOString(),
@@ -691,7 +690,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       manualPosition: Number.isFinite(task?.manualPosition) ? task.manualPosition : null,
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
       occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
-      estimateMinutes: normalizeEstimateMinutes(task?.estimateMinutes),
+      estimateMinutes: section === "bring" ? null : normalizeEstimateMinutes(task?.estimateMinutes),
     };
   }
 
@@ -868,6 +867,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const creationDifference = Date.parse(a.createdAt) - Date.parse(b.createdAt);
       if (creationDifference) return creationDifference;
       return a.id.localeCompare(b.id, "fr");
+    });
+  }
+
+  function sortBringTasks(tasks) {
+    return [...tasks].sort((a, b) => {
+      const aHasManualPosition = Number.isFinite(a.manualPosition);
+      const bHasManualPosition = Number.isFinite(b.manualPosition);
+      if (aHasManualPosition || bHasManualPosition) {
+        if (aHasManualPosition !== bHasManualPosition) return aHasManualPosition ? -1 : 1;
+        const manualDifference = a.manualPosition - b.manualPosition;
+        if (manualDifference) return manualDifference;
+      }
+      const positionDifference = a.position - b.position;
+      if (positionDifference) return positionDifference;
+      return Date.parse(a.createdAt) - Date.parse(b.createdAt);
     });
   }
 
@@ -1094,7 +1108,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
       while (true) {
         await refreshStateBeforeReorderCommit();
-        const latestListTasks = sortTasks(tasksForListKey(listKey));
+        const latestTasks = tasksForListKey(listKey);
+        const latestListTasks = listKey === "bringList"
+          ? sortBringTasks(latestTasks)
+          : sortTasks(latestTasks);
         const latestIds = new Set(latestListTasks.map((task) => task.id));
         if (!latestIds.has(movedTaskId)) {
           renderAll();
@@ -1273,29 +1290,31 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return parts.join(" · ");
   }
 
-  function renderTaskList(container, tasks) {
+  function renderTaskList(container, tasks, { isBring = false } = {}) {
     const fragment = document.createDocumentFragment();
-    for (const task of sortTasks(tasks)) {
+    const sortedTasks = isBring ? sortBringTasks(tasks) : sortTasks(tasks);
+    for (const task of sortedTasks) {
       const row = elements.taskTemplate.content.firstElementChild.cloneNode(true);
       const checkButton = row.querySelector(".check-button");
       const mainButton = row.querySelector(".task-main");
       const moreButton = row.querySelector(".task-more");
 
       row.dataset.taskId = task.id;
+      row.classList.toggle("is-bring-item", isBring);
       row.classList.toggle("is-complete", Boolean(task.completedAt));
       row.classList.toggle(
         "is-overdue",
         task.section === "daily" && task.dueDate < todayKey() && !task.completedAt,
       );
       row.querySelector(".task-label").textContent = task.label;
-      const meta = taskMeta(task);
+      const meta = isBring ? "" : taskMeta(task);
       row.querySelector(".task-meta").textContent = meta;
       const estimate = row.querySelector(".task-estimate");
-      if (task.estimateMinutes) {
+      if (!isBring && task.estimateMinutes) {
         estimate.hidden = false;
         row.querySelector(".task-estimate-value").textContent = formatEstimate(task.estimateMinutes);
       }
-      row.querySelector(".task-details").hidden = !meta && !task.estimateMinutes;
+      row.querySelector(".task-details").hidden = isBring || (!meta && !task.estimateMinutes);
       checkButton.setAttribute(
         "aria-label",
         task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
@@ -1360,17 +1379,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     renderTaskList(elements.todayList, todayTasks);
     renderTaskList(elements.tomorrowList, tomorrowTasks);
-    renderTaskList(elements.bringList, bringTasks);
+    renderTaskList(elements.bringList, bringTasks, { isBring: true });
     renderTaskList(elements.maintenanceList, maintenanceTasks);
     elements.todayProgress.textContent = progressText(todayTasks);
     elements.tomorrowProgress.textContent = progressText(tomorrowTasks);
-    elements.bringProgress.textContent = progressText(bringTasks);
+    elements.bringProgress.textContent = bringTasks.length
+      ? `${bringTasks.length} élément${bringTasks.length > 1 ? "s" : ""}`
+      : "";
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddToday.hidden = false;
     elements.emptyAddTomorrow.hidden = false;
-    elements.emptyAddBring.hidden = false;
     elements.emptyAddMaintenance.hidden = false;
-    setBringOpen(state.bringOpen);
     setMaintenanceOpen(state.maintenanceOpen);
     renderTemplates("morning");
     renderTemplates("evening");
@@ -1383,8 +1402,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function renderQuickTarget() {
     const targets = {
       today: ["Aujourd’hui", "Ajouter à aujourd’hui. Appuyer pour choisir demain"],
-      tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir À ramener"],
-      bring: ["À ramener", "Ajouter dans À ramener. Appuyer pour choisir Entretien / Rénovation"],
+      tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir Entretien / Rénovation"],
       maintenance: ["Rénovation", "Ajouter à Entretien / Rénovation. Appuyer pour choisir aujourd’hui"],
     };
     const [label, ariaLabel] = targets[state.settings.quickTarget];
@@ -1442,12 +1460,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.durationDialog.close();
   }
 
-  function setBringOpen(isOpen) {
-    state.bringOpen = Boolean(isOpen);
-    elements.bringPanel.hidden = !state.bringOpen;
-    elements.bringToggle.setAttribute("aria-expanded", String(state.bringOpen));
-  }
-
   function setMaintenanceOpen(isOpen) {
     state.maintenanceOpen = Boolean(isOpen);
     elements.maintenancePanel.hidden = !state.maintenanceOpen;
@@ -1481,9 +1493,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const cleanLabel = label.trim().slice(0, 180);
     if (!cleanLabel) return;
     const now = new Date().toISOString();
-    const section = ["bring", "maintenance"].includes(state.settings.quickTarget)
-      ? state.settings.quickTarget
-      : "daily";
+    const section = state.settings.quickTarget === "maintenance" ? "maintenance" : "daily";
     const task = {
       id: makeId("task"),
       label: cleanLabel,
@@ -1505,12 +1515,43 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       state.quickEstimateMinutes = null;
       announceChange();
       renderAll();
-      if (section === "bring") setBringOpen(true);
       if (section === "maintenance") setMaintenanceOpen(true);
       return true;
     } catch (error) {
       console.error(error);
       showToast("Tâche non enregistrée");
+      return false;
+    }
+  }
+
+  async function addBringTask(label) {
+    const cleanLabel = label.trim().slice(0, 180);
+    if (!cleanLabel) return false;
+    const now = new Date().toISOString();
+    const task = {
+      id: makeId("bring"),
+      label: cleanLabel,
+      dueDate: todayKey(),
+      section: "bring",
+      moment: "any",
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      position: Date.now(),
+      manualPosition: null,
+      templateId: null,
+      occurrenceKey: null,
+      estimateMinutes: null,
+    };
+    try {
+      await putRecord("tasks", task);
+      state.tasks.push(task);
+      announceChange();
+      renderAll();
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast("Élément non enregistré");
       return false;
     }
   }
@@ -1538,14 +1579,20 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function updateEditorDestination() {
+    const task = state.tasks.find((item) => item.id === state.activeTaskId);
+    const isBring = task?.section === "bring";
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
-    elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
+    elements.taskListFieldset.hidden = isBring;
+    elements.momentFieldset.hidden = isBring || selectedList?.value === "maintenance";
+    elements.editEstimate.hidden = isBring;
   }
 
   function openTaskEditor(id) {
     const task = state.tasks.find((item) => item.id === id);
     if (!task) return;
     state.activeTaskId = id;
+    elements.taskDialog.querySelector("#taskDialogTitle").textContent =
+      task.section === "bring" ? "Modifier — À ramener" : "Modifier";
     elements.editTaskLabel.value = task.label;
     const taskList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector(
@@ -1555,7 +1602,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const moment = ["morning", "evening"].includes(task.moment) ? task.moment : "any";
     const selectedMoment = elements.editTaskForm.querySelector(`input[name="moment"][value="${moment}"]`);
     if (selectedMoment) selectedMoment.checked = true;
-    state.editEstimateMinutes = task.estimateMinutes;
+    state.editEstimateMinutes = task.section === "bring" ? null : task.estimateMinutes;
     updateEstimateControls();
     updateEditorDestination();
     elements.taskDialog.showModal();
@@ -1568,7 +1615,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task || !cleanLabel) return;
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
-    const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value) ? selectedList.value : "today";
+    const isBring = task.section === "bring";
+    const taskList = isBring
+      ? "bring"
+      : QUICK_TARGET_ORDER.includes(selectedList?.value)
+        ? selectedList.value
+        : "today";
     const isDaily = ["today", "tomorrow"].includes(taskList);
     const previousTaskList = taskListForTask(task);
     const nextTask = {
@@ -1577,7 +1629,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
       section: isDaily ? "daily" : taskList,
       moment: isDaily ? selectedMoment?.value || "any" : "any",
-      estimateMinutes: state.editEstimateMinutes,
+      estimateMinutes: isBring ? null : state.editEstimateMinutes,
       manualPosition: previousTaskList === taskList ? task.manualPosition : null,
       updatedAt: new Date().toISOString(),
     };
@@ -1588,7 +1640,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.taskDialog.close();
       state.activeTaskId = null;
       renderAll();
-      if (taskList === "bring") setBringOpen(true);
       if (taskList === "maintenance") setMaintenanceOpen(true);
       requestAnimationFrame(() => {
         document.querySelector(`[data-task-id="${task.id}"] .task-main`)?.focus();
@@ -1884,7 +1935,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function clearCompletedTasks() {
-    const completed = state.tasks.filter((task) => task.completedAt);
+    const completed = state.tasks.filter((task) => task.completedAt && task.section !== "bring");
     if (!completed.length) {
       showToast("Aucune tâche terminée");
       return;
@@ -2028,12 +2079,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     elements.quickEstimate.addEventListener("click", () => openDurationPicker("quick"));
 
-    elements.maintenanceToggle.addEventListener("click", () => {
-      setMaintenanceOpen(!state.maintenanceOpen);
+    elements.bringAddForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const label = elements.bringInput.value;
+      if (!label.trim()) return;
+      const saved = await addBringTask(label);
+      if (saved) elements.bringInput.value = "";
+      elements.bringInput.focus();
     });
 
-    elements.bringToggle.addEventListener("click", () => {
-      setBringOpen(!state.bringOpen);
+    elements.maintenanceToggle.addEventListener("click", () => {
+      setMaintenanceOpen(!state.maintenanceOpen);
     });
 
     elements.emptyAddToday.addEventListener("click", () => {
@@ -2042,10 +2098,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     elements.emptyAddTomorrow.addEventListener("click", () => {
       selectQuickTargetAndFocus("tomorrow");
-    });
-
-    elements.emptyAddBring.addEventListener("click", () => {
-      selectQuickTargetAndFocus("bring");
     });
 
     elements.emptyAddMaintenance.addEventListener("click", () => {
