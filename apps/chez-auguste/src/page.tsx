@@ -1,7 +1,8 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- the local PNG must stay directly embeddable in the one-file offline build */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { ACCOMPANIMENT_IDEAS, type AccompanimentDifficulty } from "./accompaniment-ideas";
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
@@ -651,6 +652,93 @@ function migrateLegacyTechnicalSheets(value: Record<string, TechnicalOverride>) 
   }));
 }
 
+const ACCOMPANIMENT_GROUPS: Array<{
+  difficulty: AccompanimentDifficulty;
+  title: string;
+  description: string;
+}> = [
+  { difficulty: "Facile", title: "Faciles à tenir & envoyer", description: "Bonne stabilité et très peu de gestes au passe." },
+  { difficulty: "Intermédiaire", title: "Un peu de vigilance", description: "Une remise en température ou une finition à surveiller." },
+  { difficulty: "Délicat", title: "À gérer à la minute", description: "Le croustillant, la cuisson ou l’assaisonnement ne peuvent pas attendre." },
+];
+
+function AccompanimentIdeasModal({ onClose, returnFocusRef }: { onClose: () => void; returnFocusRef: RefObject<HTMLButtonElement | null> }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])];
+      if (!focusable.length) { event.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      returnFocusRef.current?.focus();
+    };
+  }, [onClose, returnFocusRef]);
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section ref={dialogRef} className="tool-modal accompaniment-modal" role="dialog" aria-modal="true" aria-labelledby="accompaniment-title" aria-describedby="accompaniment-description" onMouseDown={(event) => event.stopPropagation()}>
+        <button ref={closeButtonRef} type="button" className="modal-close" onClick={onClose} aria-label="Fermer">×</button>
+        <header className="accompaniment-modal-head">
+          <p className="eyebrow">Boîte à idées · {ACCOMPANIMENT_IDEAS.length} garnitures</p>
+          <h2 id="accompaniment-title">Idées d’accompagnement</h2>
+          <p id="accompaniment-description">Classées selon leur tenue pendant le service et leur vitesse d’envoi.</p>
+        </header>
+        <div className="accompaniment-modal-body">
+          {ACCOMPANIMENT_GROUPS.map((group, groupIndex) => {
+            const ideas = ACCOMPANIMENT_IDEAS.filter((idea) => idea.difficulty === group.difficulty);
+            const previousIdeasCount = ACCOMPANIMENT_GROUPS.slice(0, groupIndex).reduce((total, previousGroup) => total + ACCOMPANIMENT_IDEAS.filter((idea) => idea.difficulty === previousGroup.difficulty).length, 0);
+            return (
+              <section className={`accompaniment-group level-${group.difficulty === "Facile" ? "easy" : group.difficulty === "Intermédiaire" ? "medium" : "delicate"}`} key={group.difficulty}>
+                <div className="accompaniment-group-head">
+                  <div><span>{group.difficulty}</span><h3>{group.title}</h3><p>{group.description}</p></div>
+                  <strong>{ideas.length}</strong>
+                </div>
+                <div className="accompaniment-grid">
+                  {ideas.map((idea, ideaIndex) => {
+                    const number = previousIdeasCount + ideaIndex + 1;
+                    const holdingClass = idea.holding === "Excellente" ? "excellent" : idea.holding === "Bonne" ? "good" : "short";
+                    return (
+                      <article className="accompaniment-card" key={idea.name}>
+                        <div className="accompaniment-card-top"><span>{String(number).padStart(2, "0")}</span><small>{idea.family}</small></div>
+                        <h4>{idea.name}</h4>
+                        <p>{idea.serviceNote}</p>
+                        <dl>
+                          <div><dt>Tenue au service</dt><dd className={`holding-${holdingClass}`}>{idea.holding}</dd></div>
+                          <div><dt>Envoi</dt><dd>{idea.dispatch}</dd></div>
+                        </dl>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function Home({ userId, onSignOut }: HomeProps) {
   const [pilotageMode, setPilotageMode] = useState<"cuisine" | "bar">("cuisine");
   const [menuMode, setMenuMode] = useState<MenuMode>("view");
@@ -680,6 +768,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [magicAnalyzed, setMagicAnalyzed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [accompanimentIdeasOpen, setAccompanimentIdeasOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [productionOpen, setProductionOpen] = useState(false);
   const [shoppingOpen, setShoppingOpen] = useState(false);
@@ -694,11 +783,13 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [standaloneMode, setStandaloneMode] = useState(false);
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
+  const accompanimentButtonRef = useRef<HTMLButtonElement>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const syncedPayloadFingerprintRef = useRef<string | null>(null);
   const latestPayloadFingerprintRef = useRef<string | null>(null);
   const deferredRemoteRef = useRef(false);
   const refreshSharedStateRef = useRef<(() => Promise<void>) | null>(null);
+  const closeAccompanimentIdeas = useCallback(() => setAccompanimentIdeasOpen(false), []);
 
   useEffect(() => {
     let active = true;
@@ -1628,7 +1719,11 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         <section className="catalog-panel">
           <div className="catalog-heading">
             <div><p className="eyebrow">Carte maître · {allDishes.length} recettes</p><h2>Choisissez les recettes</h2><p>Cliquez sur une fiche pour l’ajouter au menu. Tout reste modifiable.</p></div>
-            <div className="catalog-actions"><button className="secondary-button magic-add-button" type="button" onClick={() => { setNewDish(EMPTY_RECIPE); setMagicAnalyzed(false); setCreateOpen(true); }}>✦ Ajouter un produit carte</button><button className="magic-button" type="button" onClick={completeAutomatically}>✦ Compléter intelligemment</button></div>
+            <div className="catalog-actions">
+              <button className="secondary-button magic-add-button" type="button" onClick={() => { setNewDish(EMPTY_RECIPE); setMagicAnalyzed(false); setCreateOpen(true); }}>✦ Ajouter un produit carte</button>
+              <button className="magic-button" type="button" onClick={completeAutomatically}>✦ Compléter intelligemment</button>
+              <button ref={accompanimentButtonRef} className="accompaniment-ideas-button" type="button" onClick={() => setAccompanimentIdeasOpen(true)} aria-haspopup="dialog"><span>{ACCOMPANIMENT_IDEAS.length}</span><strong>Idées d’accompagnement</strong></button>
+            </div>
           </div>
           <div className={`filters ${filtersOpen ? "open" : ""}`}>
             <div className="filter-toolbar">
@@ -1754,6 +1849,8 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       /> : null}
 
       {detail && <div className="modal-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="dish-modal" role="dialog" aria-modal="true" aria-labelledby="dish-modal-title" onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setDetail(null)} aria-label="Fermer">×</button><p className="eyebrow">{detail.course} · {detail.family}</p><h2 id="dish-modal-title">{detail.name}</h2><p className="modal-description">{detail.description}</p><div className="modal-kpis"><div><span>Coût portion</span><strong>{euro.format(detail.cost)}</strong></div><div><span>Prix conseillé</span><strong>{euro.format(detail.price)}</strong></div><div><span>Marge brute</span><strong>{getMargin(detail)}%</strong></div><div><span>Mise en place</span><strong>{detail.prep} min</strong></div></div><div className="modal-columns"><div><span className="label">Saisonnalité</span><p>{detail.season.join(", ")}</p></div><div><span className="label">Allergènes</span><p>{detail.allergens.join(", ") || "Aucun déclaré"}</p></div><div><span className="label">Profil</span><p>{detail.tags.join(" · ")}</p></div><div><span className="label">Complexité</span><p>{"●".repeat(detail.difficulty)}{"○".repeat(3 - detail.difficulty)}</p></div></div><div className={`detail-actions ${isEditingMenu ? "" : "single"}`}><button className="technical-button" type="button" onClick={() => openTechnicalSheet(detail)}>Fiche technique →</button>{isEditingMenu && <button className={`primary-button ${selected.includes(detail.id) ? "remove" : ""}`} type="button" onClick={() => { toggleDish(detail); setDetail(null); }}>{selected.includes(detail.id) ? "Retirer du menu" : "Ajouter au menu"}</button>}</div></section></div>}
+
+      {accompanimentIdeasOpen && <AccompanimentIdeasModal onClose={closeAccompanimentIdeas} returnFocusRef={accompanimentButtonRef} />}
 
       {technicalDish && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setTechnicalDish(null)}>
