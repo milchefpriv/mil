@@ -8,7 +8,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-  const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
+  const QUICK_TARGET_ORDER = ["today", "tomorrow", "bring", "maintenance"];
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
@@ -16,7 +16,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const SUPABASE_URL = "https://eoewkjfgqivrkkgpjsrk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
   const SHARED_SECTION = "checklist";
-  const AUGUSTE_AUTH_EMAIL = "chez-auguste@access.invalid";
   const CLIENT_INSTANCE_ID = crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -28,29 +27,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   };
 
   const elements = {
-    authScreen: document.querySelector("#authScreen"),
-    authForm: document.querySelector("#authForm"),
-    authPassword: document.querySelector("#authPassword"),
-    authSubmit: document.querySelector("#authSubmit"),
-    authError: document.querySelector("#authError"),
     currentDate: document.querySelector("#currentDate"),
     todayList: document.querySelector("#todayList"),
     tomorrowList: document.querySelector("#tomorrowList"),
+    bringToggle: document.querySelector("#bringToggle"),
+    bringPanel: document.querySelector("#bringPanel"),
+    bringList: document.querySelector("#bringList"),
     maintenanceToggle: document.querySelector("#maintenanceToggle"),
     maintenancePanel: document.querySelector("#maintenancePanel"),
     maintenanceList: document.querySelector("#maintenanceList"),
     todayProgress: document.querySelector("#todayProgress"),
     tomorrowProgress: document.querySelector("#tomorrowProgress"),
+    bringProgress: document.querySelector("#bringProgress"),
     maintenanceProgress: document.querySelector("#maintenanceProgress"),
-    morningProgress: document.querySelector("#morningProgress"),
-    eveningProgress: document.querySelector("#eveningProgress"),
-    morningRoutine: document.querySelector("#morningRoutine"),
-    eveningRoutine: document.querySelector("#eveningRoutine"),
     quickAddForm: document.querySelector("#quickAddForm"),
     quickInput: document.querySelector("#quickInput"),
     quickTarget: document.querySelector("#quickTarget"),
     emptyAddToday: document.querySelector("#emptyAddToday"),
     emptyAddTomorrow: document.querySelector("#emptyAddTomorrow"),
+    emptyAddBring: document.querySelector("#emptyAddBring"),
     emptyAddMaintenance: document.querySelector("#emptyAddMaintenance"),
     taskTemplate: document.querySelector("#taskTemplate"),
     settingsDialog: document.querySelector("#settingsDialog"),
@@ -67,7 +62,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     importData: document.querySelector("#importData"),
     clearCompleted: document.querySelector("#clearCompleted"),
     installApp: document.querySelector("#installApp"),
-    signOut: document.querySelector("#signOut"),
     taskDialog: document.querySelector("#taskDialog"),
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
@@ -89,6 +83,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     settings: { ...DEFAULT_SETTINGS },
     activeTaskId: null,
     lastDateKey: "",
+    bringOpen: false,
     maintenanceOpen: false,
   };
 
@@ -96,7 +91,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   let toastTimer = null;
   let databasePromise = null;
   let appStarted = false;
-  let sharedUserId = null;
   let sharedReady = false;
   let sharedDirty = false;
   let sharedSaving = false;
@@ -116,10 +110,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const syncChannel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: false,
+      autoRefreshToken: false,
       detectSessionInUrl: false,
-      storageKey: "sb-eoewkjfgqivrkkgpjsrk-chez-auguste-auth",
     },
   });
 
@@ -432,13 +425,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
   }
 
-  async function createRoutineTaskIfAllowed(task) {
+  async function createRoutineTaskIfAllowed(task, { restoreDismissed = false } = {}) {
     const database = await getDatabase();
     if (!database) {
       const data = readFallback();
       const dismissed = data.occurrences.some((item) => item.id === task.occurrenceKey);
       const exists = data.tasks.some((item) => item.id === task.id);
-      if (dismissed || exists) return false;
+      if (exists || (dismissed && !restoreDismissed)) return false;
+      if (dismissed) {
+        data.occurrences = data.occurrences.filter((item) => item.id !== task.occurrenceKey);
+      }
       data.tasks.push(task);
       writeFallback(data);
       return true;
@@ -450,10 +446,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       let created = false;
       const occurrenceRequest = occurrenceStore.get(task.occurrenceKey);
       occurrenceRequest.onsuccess = () => {
-        if (occurrenceRequest.result) return;
+        const dismissed = Boolean(occurrenceRequest.result);
+        if (dismissed && !restoreDismissed) return;
         const taskRequest = taskStore.get(task.id);
         taskRequest.onsuccess = () => {
           if (taskRequest.result) return;
+          if (dismissed) occurrenceStore.delete(task.occurrenceKey);
           taskStore.put(task);
           created = true;
         };
@@ -545,7 +543,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function saveSharedState() {
-    if (!sharedReady || !sharedUserId || sharedSaving || !sharedDirty) return;
+    if (!sharedReady || sharedSaving || !sharedDirty) return;
     if (reorderGesture?.active || reorderPersisting) {
       scheduleSharedSave(600);
       return;
@@ -561,7 +559,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
             section: SHARED_SECTION,
             payload,
             updated_at: new Date().toISOString(),
-            updated_by: sharedUserId,
+            updated_by: null,
           },
           { onConflict: "section" },
         )
@@ -670,11 +668,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const label = typeof task?.label === "string" ? task.label.trim().slice(0, 180) : "";
     const dueDate = DATE_PATTERN.test(task?.dueDate || "") ? task.dueDate : todayKey();
     const moment = ["morning", "evening", "any"].includes(task?.moment) ? task.moment : "any";
+    const section = ["bring", "maintenance"].includes(task?.section) ? task.section : "daily";
     return {
       id: typeof task?.id === "string" && task.id ? task.id : makeId("task"),
       label,
       dueDate,
-      section: task?.section === "maintenance" ? "maintenance" : "daily",
+      section,
       moment,
       completedAt: typeof task?.completedAt === "string" ? task.completedAt : null,
       createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
@@ -800,13 +799,24 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     );
   }
 
+  function tasksForBring() {
+    return state.tasks.filter((task) => task.section === "bring");
+  }
+
   function tasksForMaintenance() {
     return state.tasks.filter((task) => task.section === "maintenance");
+  }
+
+  function taskListForTask(task) {
+    if (task?.section === "bring") return "bring";
+    if (task?.section === "maintenance") return "maintenance";
+    return task?.dueDate === tomorrowKey() ? "tomorrow" : "today";
   }
 
   function tasksForListKey(listKey) {
     if (listKey === "todayList") return tasksForToday();
     if (listKey === "tomorrowList") return tasksForTomorrow();
+    if (listKey === "bringList") return tasksForBring();
     if (listKey === "maintenanceList") return tasksForMaintenance();
     return [];
   }
@@ -1305,14 +1315,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     container.replaceChildren(fragment);
   }
 
-  function renderRoutineProgress(routine, target) {
-    const tasks = tasksForToday().filter((task) => task.moment === routine);
-    target.textContent = progressText(tasks);
-  }
-
   function renderAll() {
     const todayTasks = tasksForToday();
     const tomorrowTasks = tasksForTomorrow();
+    const bringTasks = tasksForBring();
     const maintenanceTasks = tasksForMaintenance();
 
     elements.currentDate.textContent = new Intl.DateTimeFormat("fr-FR", {
@@ -1323,16 +1329,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     renderTaskList(elements.todayList, todayTasks);
     renderTaskList(elements.tomorrowList, tomorrowTasks);
+    renderTaskList(elements.bringList, bringTasks);
     renderTaskList(elements.maintenanceList, maintenanceTasks);
     elements.todayProgress.textContent = progressText(todayTasks);
     elements.tomorrowProgress.textContent = progressText(tomorrowTasks);
+    elements.bringProgress.textContent = progressText(bringTasks);
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddToday.hidden = false;
     elements.emptyAddTomorrow.hidden = false;
+    elements.emptyAddBring.hidden = false;
     elements.emptyAddMaintenance.hidden = false;
+    setBringOpen(state.bringOpen);
     setMaintenanceOpen(state.maintenanceOpen);
-    renderRoutineProgress("morning", elements.morningProgress);
-    renderRoutineProgress("evening", elements.eveningProgress);
     renderTemplates("morning");
     renderTemplates("evening");
     elements.autoMorning.checked = state.settings.autoMorning;
@@ -1344,12 +1352,19 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function renderQuickTarget() {
     const targets = {
       today: ["Aujourd’hui", "Ajouter à aujourd’hui. Appuyer pour choisir demain"],
-      tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir Entretien / travaux"],
-      maintenance: ["Entretien", "Ajouter à Entretien / travaux. Appuyer pour choisir aujourd’hui"],
+      tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir À ramener"],
+      bring: ["À ramener", "Ajouter dans À ramener. Appuyer pour choisir Entretien / Rénovation"],
+      maintenance: ["Rénovation", "Ajouter à Entretien / Rénovation. Appuyer pour choisir aujourd’hui"],
     };
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
+  }
+
+  function setBringOpen(isOpen) {
+    state.bringOpen = Boolean(isOpen);
+    elements.bringPanel.hidden = !state.bringOpen;
+    elements.bringToggle.setAttribute("aria-expanded", String(state.bringOpen));
   }
 
   function setMaintenanceOpen(isOpen) {
@@ -1385,12 +1400,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const cleanLabel = label.trim().slice(0, 180);
     if (!cleanLabel) return;
     const now = new Date().toISOString();
-    const isMaintenance = state.settings.quickTarget === "maintenance";
+    const section = ["bring", "maintenance"].includes(state.settings.quickTarget)
+      ? state.settings.quickTarget
+      : "daily";
     const task = {
       id: makeId("task"),
       label: cleanLabel,
       dueDate: state.settings.quickTarget === "tomorrow" ? tomorrowKey() : todayKey(),
-      section: isMaintenance ? "maintenance" : "daily",
+      section,
       moment: "any",
       completedAt: null,
       createdAt: now,
@@ -1405,7 +1422,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       state.tasks.push(task);
       announceChange();
       renderAll();
-      if (isMaintenance) setMaintenanceOpen(true);
+      if (section === "bring") setBringOpen(true);
+      if (section === "maintenance") setMaintenanceOpen(true);
       return true;
     } catch (error) {
       console.error(error);
@@ -1438,7 +1456,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function updateEditorDestination() {
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
-    elements.momentFieldset.hidden = selectedList?.value === "maintenance";
+    elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
     updateTaskOrderControls();
   }
 
@@ -1449,12 +1467,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       : null;
     const rows = row?.parentElement ? taskRows(row.parentElement) : [];
     const index = row ? rows.indexOf(row) : -1;
-    const currentList =
-      task?.section === "maintenance"
-        ? "maintenance"
-        : task?.dueDate === tomorrowKey()
-          ? "tomorrow"
-          : "today";
+    const currentList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     const canMove = Boolean(task && selectedList?.value === currentList);
     elements.moveTaskUp.disabled = !canMove || index <= 0;
@@ -1475,12 +1488,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task) return;
     state.activeTaskId = id;
     elements.editTaskLabel.value = task.label;
-    const taskList =
-      task.section === "maintenance"
-        ? "maintenance"
-        : task.dueDate === tomorrowKey()
-          ? "tomorrow"
-          : "today";
+    const taskList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector(
       `input[name="task-list"][value="${taskList}"]`,
     );
@@ -1500,19 +1508,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
     const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value) ? selectedList.value : "today";
-    const isMaintenance = taskList === "maintenance";
-    const previousTaskList =
-      task.section === "maintenance"
-        ? "maintenance"
-        : task.dueDate === tomorrowKey()
-          ? "tomorrow"
-          : "today";
+    const isDaily = ["today", "tomorrow"].includes(taskList);
+    const previousTaskList = taskListForTask(task);
     const nextTask = {
       ...task,
       label: cleanLabel,
       dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
-      section: isMaintenance ? "maintenance" : "daily",
-      moment: isMaintenance ? "any" : selectedMoment?.value || "any",
+      section: isDaily ? "daily" : taskList,
+      moment: isDaily ? selectedMoment?.value || "any" : "any",
       manualPosition: previousTaskList === taskList ? task.manualPosition : null,
       updatedAt: new Date().toISOString(),
     };
@@ -1523,7 +1526,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.taskDialog.close();
       state.activeTaskId = null;
       renderAll();
-      if (isMaintenance) setMaintenanceOpen(true);
+      if (taskList === "bring") setBringOpen(true);
+      if (taskList === "maintenance") setMaintenanceOpen(true);
       requestAnimationFrame(() => {
         document.querySelector(`[data-task-id="${task.id}"] .task-main`)?.focus();
       });
@@ -1646,7 +1650,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     for (const [index, template] of templates.entries()) {
       const occurrenceKey = `${template.id}:${date}`;
-      if (existingKeys.has(occurrenceKey) || dismissedKeys.has(occurrenceKey)) continue;
+      if (existingKeys.has(occurrenceKey) || (silent && dismissedKeys.has(occurrenceKey))) continue;
       const timestamp = new Date(Date.now() + index).toISOString();
       const task = {
         id: `routine-${template.id}-${date}`,
@@ -1663,9 +1667,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         occurrenceKey,
       };
       try {
-        const wasCreated = await createRoutineTaskIfAllowed(task);
+        const wasCreated = await createRoutineTaskIfAllowed(task, {
+          restoreDismissed: !silent,
+        });
         if (wasCreated) {
           state.tasks.push(task);
+          state.occurrences = state.occurrences.filter(
+            (occurrence) => occurrence.id !== occurrenceKey,
+          );
           existingKeys.add(occurrenceKey);
           created += 1;
         } else {
@@ -1951,6 +1960,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       setMaintenanceOpen(!state.maintenanceOpen);
     });
 
+    elements.bringToggle.addEventListener("click", () => {
+      setBringOpen(!state.bringOpen);
+    });
+
     elements.emptyAddToday.addEventListener("click", () => {
       selectQuickTargetAndFocus("today");
     });
@@ -1959,12 +1972,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       selectQuickTargetAndFocus("tomorrow");
     });
 
+    elements.emptyAddBring.addEventListener("click", () => {
+      selectQuickTargetAndFocus("bring");
+    });
+
     elements.emptyAddMaintenance.addEventListener("click", () => {
       selectQuickTargetAndFocus("maintenance");
     });
 
-    elements.morningRoutine.addEventListener("click", () => generateRoutine("morning"));
-    elements.eveningRoutine.addEventListener("click", () => generateRoutine("evening"));
     elements.addMorningToday.addEventListener("click", () => generateRoutine("morning"));
     elements.addEveningToday.addEventListener("click", () => generateRoutine("evening"));
 
@@ -2017,17 +2032,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.importDataButton.addEventListener("click", () => elements.importData.click());
     elements.importData.addEventListener("change", () => importData(elements.importData.files?.[0]));
     elements.clearCompleted.addEventListener("click", clearCompletedTasks);
-    elements.signOut.addEventListener("click", async () => {
-      elements.settingsDialog.close();
-      sharedReady = false;
-      sharedUserId = null;
-      if (sharedChannel) {
-        await supabase.removeChannel(sharedChannel);
-        sharedChannel = null;
-      }
-      await supabase.auth.signOut({ scope: "local" });
-      showAuth();
-    });
     elements.toastDismiss.addEventListener("click", () => {
       hideToast();
       if (elements.taskDialog.open) elements.closeTaskDialog.focus();
@@ -2095,25 +2099,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     else window.addEventListener("load", register, { once: true });
   }
 
-  function showAuth(message = "") {
-    document.body.classList.add("auth-pending");
-    document.body.classList.remove("auth-ready");
-    elements.authError.textContent = message;
-    elements.authError.hidden = !message;
-    elements.authSubmit.disabled = false;
-    elements.authSubmit.textContent = "Ouvrir";
-    requestAnimationFrame(() => elements.authPassword.focus());
-  }
-
-  function showApplication() {
-    document.body.classList.remove("auth-pending");
-    document.body.classList.add("auth-ready");
-  }
-
-  function isAugusteSession(session) {
-    return session?.user?.email?.toLocaleLowerCase("fr-FR") === AUGUSTE_AUTH_EMAIL;
-  }
-
   async function refreshSharedState() {
     try {
       const row = await loadSharedRow();
@@ -2127,65 +2112,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function openApplication(session) {
-    if (appStarted) {
-      sharedUserId = session.user.id;
-      await initializeSharedState();
-      showApplication();
-      return;
-    }
+  async function openApplication() {
+    if (appStarted) return;
     appStarted = true;
-    sharedUserId = session.user.id;
     await migrateFallbackIfNeeded();
     await loadState({ runAutomatic: false });
     await initializeSharedState();
     await runAutomaticRoutines();
     renderAll();
-    showApplication();
 
     window.setInterval(() => {
       if (state.lastDateKey !== todayKey()) loadState();
     }, 60_000);
   }
 
-  async function submitPassword(event) {
-    event.preventDefault();
-    const password = elements.authPassword.value;
-    if (!password) return;
-    elements.authError.hidden = true;
-    elements.authSubmit.disabled = true;
-    elements.authSubmit.textContent = "Ouverture…";
-    try {
-      const { data, error } = await supabase.functions.invoke("auguste-password-login", {
-        body: { password },
-      });
-      if (error || !data?.access_token || !data?.refresh_token) throw error || new Error("Accès refusé");
-      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
-      if (sessionError || !isAugusteSession(sessionData.session)) {
-        throw sessionError || new Error("Session invalide");
-      }
-      elements.authPassword.value = "";
-      await openApplication(sessionData.session);
-    } catch (error) {
-      console.error("Connexion refusée.", error);
-      showAuth("Mot de passe incorrect.");
-    }
-  }
-
   async function start() {
     bindEvents();
     prepareInstallControl();
     registerServiceWorker();
-    elements.authForm.addEventListener("submit", submitPassword);
-    const { data } = await supabase.auth.getSession();
-    if (isAugusteSession(data.session)) await openApplication(data.session);
-    else {
-      if (data.session) await supabase.auth.signOut({ scope: "local" });
-      showAuth();
-    }
+    await openApplication();
   }
 
   start().catch((error) => {

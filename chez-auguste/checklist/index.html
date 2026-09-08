@@ -15,65 +15,18 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=7" />
-    <script type="module" src="./app.js?v=7"></script>
+    <link rel="stylesheet" href="./styles.css?v=8" />
+    <script type="module" src="./app.js?v=8"></script>
   </head>
-  <body class="auth-pending">
-    <main class="auth-screen" id="authScreen" aria-labelledby="authTitle">
-      <section class="auth-card">
-        <div class="auth-mark" aria-hidden="true">A</div>
-        <h1 id="authTitle">Chez Auguste</h1>
-        <form id="authForm">
-          <label class="sr-only" for="authPassword">Mot de passe</label>
-          <input
-            id="authPassword"
-            type="password"
-            autocomplete="current-password"
-            enterkeyhint="go"
-            placeholder="Mot de passe"
-            required
-          />
-          <button id="authSubmit" type="submit">Ouvrir</button>
-        </form>
-        <p class="auth-error" id="authError" role="alert" hidden></p>
-      </section>
-    </main>
-
+  <body>
     <main class="app-shell">
       <header class="topbar">
         <div class="identity">
           <span class="wordmark">Chez Auguste</span>
           <span class="current-date" id="currentDate"></span>
         </div>
-        <button class="icon-button" id="openSettings" type="button" aria-label="Ouvrir les réglages">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <circle cx="5" cy="12" r="1.7"></circle>
-            <circle cx="12" cy="12" r="1.7"></circle>
-            <circle cx="19" cy="12" r="1.7"></circle>
-          </svg>
-        </button>
+        <button class="routine-menu-button" id="openSettings" type="button">Routine</button>
       </header>
-
-      <div class="routine-bar" role="group" aria-label="Checklists rapides">
-        <button class="routine-button" id="morningRoutine" type="button" data-routine="morning" aria-label="Créer la checklist du matin">
-          <span class="routine-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M4 15h16M7 15a5 5 0 0 1 10 0M12 4v3M4.9 7.9 7 10M19.1 7.9 17 10"></path>
-            </svg>
-          </span>
-          <span>Matin</span>
-          <span class="routine-progress" id="morningProgress"></span>
-        </button>
-        <button class="routine-button" id="eveningRoutine" type="button" data-routine="evening" aria-label="Créer la checklist du soir">
-          <span class="routine-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M19 15.5A7.5 7.5 0 0 1 8.5 5a7.5 7.5 0 1 0 10.5 10.5Z"></path>
-            </svg>
-          </span>
-          <span>Soir</span>
-          <span class="routine-progress" id="eveningProgress"></span>
-        </button>
-      </div>
 
       <div class="days-grid">
         <section class="day-card" aria-labelledby="todayTitle">
@@ -94,24 +47,52 @@
           <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
         </section>
 
-        <section class="maintenance-section" aria-labelledby="maintenanceTitle">
-          <h2 class="maintenance-heading" id="maintenanceTitle">
+        <section class="collapsible-section" aria-labelledby="bringTitle">
+          <h2 class="collapsible-heading" id="bringTitle">
             <button
-              class="maintenance-toggle"
+              class="collapsible-toggle"
+              id="bringToggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="bringPanel"
+            >
+              <span>À ramener</span>
+              <span class="collapsible-toggle-end">
+                <span class="day-progress" id="bringProgress" aria-live="polite"></span>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+              </span>
+            </button>
+          </h2>
+          <div
+            class="day-card collapsible-card"
+            id="bringPanel"
+            role="region"
+            aria-labelledby="bringTitle"
+            hidden
+          >
+            <div class="task-list" id="bringList" role="list"></div>
+            <button class="empty-add" id="emptyAddBring" type="button">+ Ajouter</button>
+          </div>
+        </section>
+
+        <section class="collapsible-section" aria-labelledby="maintenanceTitle">
+          <h2 class="collapsible-heading" id="maintenanceTitle">
+            <button
+              class="collapsible-toggle"
               id="maintenanceToggle"
               type="button"
               aria-expanded="false"
               aria-controls="maintenancePanel"
             >
-              <span>Entretien / travaux</span>
-              <span class="maintenance-toggle-end">
+              <span>Entretien / Rénovation</span>
+              <span class="collapsible-toggle-end">
                 <span class="day-progress" id="maintenanceProgress" aria-live="polite"></span>
                 <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
               </span>
             </button>
           </h2>
           <div
-            class="day-card maintenance-card"
+            class="day-card collapsible-card"
             id="maintenancePanel"
             role="region"
             aria-labelledby="maintenanceTitle"
@@ -147,7 +128,7 @@
     <dialog class="sheet" id="settingsDialog" aria-labelledby="settingsTitle">
       <div class="sheet-handle" aria-hidden="true"></div>
       <header class="sheet-header">
-        <h2 id="settingsTitle">Organisation</h2>
+        <h2 id="settingsTitle">Routine</h2>
         <button class="icon-button close-button" id="closeSettings" type="button" aria-label="Fermer">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
         </button>
@@ -212,9 +193,6 @@
             <button class="plain-action danger-action" id="clearCompleted" type="button">
               <span>Effacer les tâches terminées</span><span aria-hidden="true">×</span>
             </button>
-            <button class="plain-action" id="signOut" type="button">
-              <span>Se déconnecter</span><span aria-hidden="true">→</span>
-            </button>
           </div>
         </section>
       </div>
@@ -237,7 +215,8 @@
           <div class="segmented-control list-control">
             <label><input type="radio" name="task-list" value="today" /><span>Aujourd’hui</span></label>
             <label><input type="radio" name="task-list" value="tomorrow" /><span>Demain</span></label>
-            <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien</span></label>
+            <label><input type="radio" name="task-list" value="bring" /><span>À ramener</span></label>
+            <label><input type="radio" name="task-list" value="maintenance" /><span>Rénovation</span></label>
           </div>
         </fieldset>
 
