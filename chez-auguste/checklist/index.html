@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=8" />
-    <script type="module" src="./app.js?v=8"></script>
+    <link rel="stylesheet" href="./styles.css?v=9" />
+    <script type="module" src="./app.js?v=9"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -119,6 +119,19 @@
           enterkeyhint="done"
           placeholder="Ajouter une tâche…"
         />
+        <button
+          class="estimate-button"
+          id="quickEstimate"
+          type="button"
+          aria-label="Ajouter une durée estimée"
+          aria-haspopup="dialog"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="13" r="7.5"></circle>
+            <path d="M12 9v4.5l3 1.8M9 3h6M12 3v2"></path>
+          </svg>
+          <span class="estimate-indicator" aria-hidden="true"></span>
+        </button>
         <button class="submit-button" type="submit" aria-label="Ajouter la tâche">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
         </button>
@@ -229,19 +242,57 @@
           </div>
         </fieldset>
 
-        <div class="task-order-controls">
-          <span class="field-label">Position</span>
-          <div class="task-order-buttons" role="group" aria-label="Déplacer la tâche">
-            <button id="moveTaskUp" type="button" aria-label="Monter la tâche">↑ Monter</button>
-            <button id="moveTaskDown" type="button" aria-label="Descendre la tâche">↓ Descendre</button>
-          </div>
-        </div>
+        <button class="task-estimate-control" id="editEstimate" type="button" aria-haspopup="dialog">
+          <span class="task-estimate-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="13" r="7.5"></circle>
+              <path d="M12 9v4.5l3 1.8M9 3h6M12 3v2"></path>
+            </svg>
+          </span>
+          <span class="task-estimate-copy">
+            <span>Durée estimée</span>
+            <strong id="editEstimateValue">Aucune</strong>
+          </span>
+          <svg class="task-estimate-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg>
+        </button>
 
         <div class="task-dialog-actions">
           <button class="delete-button" id="deleteTask" type="button">Supprimer</button>
           <button class="save-button" type="submit">Enregistrer</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="duration-dialog" id="durationDialog" aria-labelledby="durationDialogTitle">
+      <div class="duration-dialog-handle" aria-hidden="true"></div>
+      <header class="duration-dialog-header">
+        <div>
+          <p class="eyebrow">Optionnel</p>
+          <h2 id="durationDialogTitle">Durée estimée</h2>
+        </div>
+        <button class="icon-button" id="closeDurationDialog" type="button" aria-label="Fermer">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+        </button>
+      </header>
+      <p class="duration-help">Choisis le temps visé pour accomplir cette tâche.</p>
+      <div class="duration-grid" role="group" aria-label="Choisir une durée">
+        <button type="button" data-duration-minutes="5">5 min</button>
+        <button type="button" data-duration-minutes="10">10 min</button>
+        <button type="button" data-duration-minutes="15">15 min</button>
+        <button type="button" data-duration-minutes="20">20 min</button>
+        <button type="button" data-duration-minutes="30">30 min</button>
+        <button type="button" data-duration-minutes="45">45 min</button>
+        <button type="button" data-duration-minutes="60">1 h</button>
+        <button type="button" data-duration-minutes="90">1 h 30</button>
+        <button type="button" data-duration-minutes="120">2 h</button>
+      </div>
+      <form class="custom-duration" id="customDurationForm">
+        <label class="sr-only" for="customDurationInput">Autre durée en minutes</label>
+        <input id="customDurationInput" type="number" min="1" max="720" inputmode="numeric" placeholder="Autre durée" />
+        <span aria-hidden="true">min</span>
+        <button type="submit">Valider</button>
+      </form>
+      <button class="clear-duration" id="clearDuration" type="button">Aucune durée</button>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" popover="manual">
@@ -257,7 +308,16 @@
         </button>
         <button class="task-main" type="button">
           <span class="task-label"></span>
-          <span class="task-meta"></span>
+          <span class="task-details">
+            <span class="task-meta"></span>
+            <span class="task-estimate" hidden>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="13" r="7.5"></circle>
+                <path d="M12 9v4.5l3 1.8M9 3h6M12 3v2"></path>
+              </svg>
+              <span class="task-estimate-value"></span>
+            </span>
+          </span>
         </button>
         <button class="task-more" type="button" aria-label="Modifier la tâche">
           <svg aria-hidden="true" viewBox="0 0 24 24">

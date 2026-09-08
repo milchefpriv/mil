@@ -160,7 +160,10 @@ label[for]:focus-visible {
 
 .icon-button svg,
 .submit-button svg,
-.task-more svg {
+.task-more svg,
+.estimate-button svg,
+.task-estimate svg,
+.task-estimate-control svg {
   width: 22px;
   height: 22px;
   fill: currentColor;
@@ -171,7 +174,10 @@ label[for]:focus-visible {
 }
 
 .icon-button svg path,
-.submit-button svg path {
+.submit-button svg path,
+.estimate-button svg path,
+.task-estimate svg path,
+.task-estimate-control svg path {
   fill: none;
 }
 
@@ -421,7 +427,35 @@ body.is-task-reordering * {
 }
 
 .task-meta:not(:empty) {
-  display: block;
+  display: inline-flex;
+}
+
+.task-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.task-estimate {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 99px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 0.7rem;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-estimate svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke-width: 1.9;
 }
 
 .task-row.is-complete .task-label {
@@ -430,7 +464,8 @@ body.is-task-reordering * {
   text-decoration-thickness: 1px;
 }
 
-.task-row.is-complete .task-meta {
+.task-row.is-complete .task-meta,
+.task-row.is-complete .task-estimate {
   color: var(--muted);
 }
 
@@ -489,7 +524,7 @@ body.is-task-reordering * {
   width: min(100%, 620px);
   min-height: 60px;
   margin: 0 auto;
-  grid-template-columns: auto minmax(0, 1fr) 46px;
+  grid-template-columns: auto minmax(0, 1fr) 42px 46px;
   align-items: center;
   gap: 8px;
   padding: 7px 7px 7px 8px;
@@ -533,6 +568,57 @@ body.is-task-reordering * {
 
 .quick-add input::placeholder {
   color: var(--muted);
+}
+
+.estimate-button {
+  position: relative;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 13px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.estimate-button:hover,
+.estimate-button.is-active {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.estimate-button:active {
+  transform: scale(0.94);
+}
+
+.estimate-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.estimate-indicator {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--paper);
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.estimate-button.is-active .estimate-indicator {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .submit-button {
@@ -965,40 +1051,58 @@ dialog::backdrop {
   font-size: 0.76rem;
 }
 
-.task-order-controls {
-  display: flex;
-  min-height: 44px;
+.task-estimate-control {
+  display: grid;
+  width: 100%;
+  min-height: 58px;
+  grid-template-columns: 38px minmax(0, 1fr) 20px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.task-order-controls .field-label {
-  margin: 0;
-}
-
-.task-order-buttons {
-  display: flex;
-  gap: 6px;
-}
-
-.task-order-buttons button {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 12px;
-  color: var(--brand);
-  background: var(--brand-soft);
-  font-size: 0.8rem;
-  font-weight: 750;
+  gap: 10px;
+  margin-top: 15px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  color: var(--ink);
+  text-align: left;
+  background: var(--soft);
   cursor: pointer;
 }
 
-.task-order-buttons button:disabled {
-  color: var(--muted);
-  cursor: default;
-  opacity: 0.42;
+.task-estimate-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.task-estimate-icon svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.task-estimate-copy {
+  display: grid;
+  gap: 2px;
+  font-size: 0.78rem;
+  font-weight: 690;
+}
+
+.task-estimate-copy strong {
+  color: var(--brand);
+  font-size: 0.93rem;
+}
+
+.task-estimate-control .task-estimate-chevron {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
 }
 
 .task-dialog-actions {
@@ -1028,6 +1132,133 @@ dialog::backdrop {
   margin-left: auto;
   color: white;
   background: var(--solid-brand);
+}
+
+.duration-dialog {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(100%, 480px);
+  max-width: none;
+  margin: auto auto 0;
+  padding: 9px 18px calc(20px + var(--safe-bottom));
+  border: 0;
+  border-radius: 26px 26px 0 0;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 -20px 60px rgba(42, 19, 25, 0.2);
+}
+
+.duration-dialog[open] {
+  animation: sheet-in 210ms cubic-bezier(0.2, 0.78, 0.2, 1) both;
+}
+
+.duration-dialog-handle {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 8px;
+  border-radius: 99px;
+  background: #d1cbcd;
+}
+
+.duration-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.duration-dialog-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.duration-help {
+  margin: 8px 0 16px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.duration-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.duration-grid button,
+.clear-duration {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  color: var(--ink);
+  background: var(--soft);
+  font-size: 0.88rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.duration-grid button:active,
+.clear-duration:active {
+  transform: scale(0.96);
+}
+
+.duration-grid button.is-selected,
+.clear-duration.is-selected {
+  border-color: rgba(116, 30, 43, 0.25);
+  color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px rgba(116, 30, 43, 0.08);
+}
+
+.custom-duration {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 5px 5px 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--soft);
+}
+
+.custom-duration input {
+  min-width: 0;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+  font-size: 0.9rem;
+}
+
+.custom-duration > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.custom-duration button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  background: var(--solid-brand);
+  font-size: 0.8rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.clear-duration {
+  width: 100%;
+  margin-top: 10px;
+  color: var(--muted);
+  background: transparent;
 }
 
 .toast {

@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "auguste-checklist-v9";
+const CACHE_NAME = "auguste-checklist-v10";
 const CACHE_PREFIX = "auguste-checklist-";
 const CORE_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=8",
-  "./app.js?v=8",
+  "./styles.css?v=9",
+  "./app.js?v=9",
   "./manifest.webmanifest",
 ];
 const OPTIONAL_ASSETS = [

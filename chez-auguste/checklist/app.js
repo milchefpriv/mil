@@ -43,6 +43,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     quickAddForm: document.querySelector("#quickAddForm"),
     quickInput: document.querySelector("#quickInput"),
     quickTarget: document.querySelector("#quickTarget"),
+    quickEstimate: document.querySelector("#quickEstimate"),
     emptyAddToday: document.querySelector("#emptyAddToday"),
     emptyAddTomorrow: document.querySelector("#emptyAddTomorrow"),
     emptyAddBring: document.querySelector("#emptyAddBring"),
@@ -66,10 +67,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
     momentFieldset: document.querySelector("#momentFieldset"),
-    moveTaskUp: document.querySelector("#moveTaskUp"),
-    moveTaskDown: document.querySelector("#moveTaskDown"),
+    editEstimate: document.querySelector("#editEstimate"),
+    editEstimateValue: document.querySelector("#editEstimateValue"),
     closeTaskDialog: document.querySelector("#closeTaskDialog"),
     deleteTask: document.querySelector("#deleteTask"),
+    durationDialog: document.querySelector("#durationDialog"),
+    closeDurationDialog: document.querySelector("#closeDurationDialog"),
+    clearDuration: document.querySelector("#clearDuration"),
+    customDurationForm: document.querySelector("#customDurationForm"),
+    customDurationInput: document.querySelector("#customDurationInput"),
     toast: document.querySelector("#toast"),
     toastMessage: document.querySelector("#toastMessage"),
     toastAction: document.querySelector("#toastAction"),
@@ -82,6 +88,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     occurrences: [],
     settings: { ...DEFAULT_SETTINGS },
     activeTaskId: null,
+    quickEstimateMinutes: null,
+    editEstimateMinutes: null,
+    durationTarget: null,
     lastDateKey: "",
     bringOpen: false,
     maintenanceOpen: false,
@@ -682,7 +691,22 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       manualPosition: Number.isFinite(task?.manualPosition) ? task.manualPosition : null,
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
       occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
+      estimateMinutes: normalizeEstimateMinutes(task?.estimateMinutes),
     };
+  }
+
+  function normalizeEstimateMinutes(value) {
+    const minutes = Number(value);
+    return Number.isInteger(minutes) && minutes >= 1 && minutes <= 720 ? minutes : null;
+  }
+
+  function formatEstimate(minutes) {
+    const normalized = normalizeEstimateMinutes(minutes);
+    if (!normalized) return "Aucune";
+    if (normalized < 60) return `${normalized} min`;
+    const hours = Math.floor(normalized / 60);
+    const remainder = normalized % 60;
+    return remainder ? `${hours} h ${remainder}` : `${hours} h`;
   }
 
   function normalizeTemplate(template) {
@@ -1264,7 +1288,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         task.section === "daily" && task.dueDate < todayKey() && !task.completedAt,
       );
       row.querySelector(".task-label").textContent = task.label;
-      row.querySelector(".task-meta").textContent = taskMeta(task);
+      const meta = taskMeta(task);
+      row.querySelector(".task-meta").textContent = meta;
+      const estimate = row.querySelector(".task-estimate");
+      if (task.estimateMinutes) {
+        estimate.hidden = false;
+        row.querySelector(".task-estimate-value").textContent = formatEstimate(task.estimateMinutes);
+      }
+      row.querySelector(".task-details").hidden = !meta && !task.estimateMinutes;
       checkButton.setAttribute(
         "aria-label",
         task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
@@ -1346,7 +1377,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.autoMorning.checked = state.settings.autoMorning;
     elements.autoEvening.checked = state.settings.autoEvening;
     renderQuickTarget();
-    if (elements.taskDialog.open) updateTaskOrderControls();
+    updateEstimateControls();
   }
 
   function renderQuickTarget() {
@@ -1359,6 +1390,56 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
+  }
+
+  function selectedEstimate() {
+    return state.durationTarget === "edit"
+      ? state.editEstimateMinutes
+      : state.quickEstimateMinutes;
+  }
+
+  function updateEstimateControls() {
+    const quickLabel = state.quickEstimateMinutes
+      ? `Durée estimée : ${formatEstimate(state.quickEstimateMinutes)}`
+      : "Ajouter une durée estimée";
+    elements.quickEstimate.classList.toggle("is-active", Boolean(state.quickEstimateMinutes));
+    elements.quickEstimate.setAttribute("aria-label", quickLabel);
+    elements.editEstimateValue.textContent = formatEstimate(state.editEstimateMinutes);
+
+    const selected = selectedEstimate();
+    for (const button of elements.durationDialog.querySelectorAll("[data-duration-minutes]")) {
+      const active = Number(button.dataset.durationMinutes) === selected;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+    elements.clearDuration.classList.toggle("is-selected", !selected);
+    elements.clearDuration.setAttribute("aria-pressed", String(!selected));
+  }
+
+  function openDurationPicker(target) {
+    state.durationTarget = target;
+    const currentEstimate = selectedEstimate();
+    const hasPreset = Boolean(
+      elements.durationDialog.querySelector(`[data-duration-minutes="${currentEstimate}"]`),
+    );
+    elements.customDurationInput.value = currentEstimate && !hasPreset ? currentEstimate : "";
+    updateEstimateControls();
+    elements.durationDialog.showModal();
+    requestAnimationFrame(() => {
+      const preferred = currentEstimate
+        ? elements.durationDialog.querySelector(".duration-grid .is-selected") ||
+          elements.customDurationInput
+        : elements.durationDialog.querySelector('[data-duration-minutes="15"]');
+      preferred?.focus();
+    });
+  }
+
+  function setSelectedEstimate(value) {
+    const minutes = normalizeEstimateMinutes(value);
+    if (state.durationTarget === "edit") state.editEstimateMinutes = minutes;
+    else state.quickEstimateMinutes = minutes;
+    updateEstimateControls();
+    elements.durationDialog.close();
   }
 
   function setBringOpen(isOpen) {
@@ -1416,10 +1497,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       manualPosition: null,
       templateId: null,
       occurrenceKey: null,
+      estimateMinutes: state.quickEstimateMinutes,
     };
     try {
       await putRecord("tasks", task);
       state.tasks.push(task);
+      state.quickEstimateMinutes = null;
       announceChange();
       renderAll();
       if (section === "bring") setBringOpen(true);
@@ -1457,30 +1540,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function updateEditorDestination() {
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
-    updateTaskOrderControls();
-  }
-
-  function updateTaskOrderControls() {
-    const task = state.tasks.find((item) => item.id === state.activeTaskId);
-    const row = state.activeTaskId
-      ? document.querySelector(`[data-task-id="${state.activeTaskId}"]`)
-      : null;
-    const rows = row?.parentElement ? taskRows(row.parentElement) : [];
-    const index = row ? rows.indexOf(row) : -1;
-    const currentList = taskListForTask(task);
-    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
-    const canMove = Boolean(task && selectedList?.value === currentList);
-    elements.moveTaskUp.disabled = !canMove || index <= 0;
-    elements.moveTaskDown.disabled = !canMove || index < 0 || index >= rows.length - 1;
-  }
-
-  async function moveActiveTask(direction) {
-    const row = state.activeTaskId
-      ? document.querySelector(`[data-task-id="${state.activeTaskId}"]`)
-      : null;
-    if (!row) return;
-    await moveTaskWithKeyboard(row, direction, { restoreFocus: false });
-    updateTaskOrderControls();
   }
 
   function openTaskEditor(id) {
@@ -1496,6 +1555,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const moment = ["morning", "evening"].includes(task.moment) ? task.moment : "any";
     const selectedMoment = elements.editTaskForm.querySelector(`input[name="moment"][value="${moment}"]`);
     if (selectedMoment) selectedMoment.checked = true;
+    state.editEstimateMinutes = task.estimateMinutes;
+    updateEstimateControls();
     updateEditorDestination();
     elements.taskDialog.showModal();
     requestAnimationFrame(() => elements.editTaskLabel.focus());
@@ -1516,6 +1577,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
       section: isDaily ? "daily" : taskList,
       moment: isDaily ? selectedMoment?.value || "any" : "any",
+      estimateMinutes: state.editEstimateMinutes,
       manualPosition: previousTaskList === taskList ? task.manualPosition : null,
       updatedAt: new Date().toISOString(),
     };
@@ -1645,6 +1707,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const date = todayKey();
     const existingKeys = new Set(state.tasks.map((task) => task.occurrenceKey).filter(Boolean));
     const dismissedKeys = new Set(state.occurrences.map((occurrence) => occurrence.id));
+    const firstManualPosition = Math.min(
+      0,
+      ...tasksForToday()
+        .map((task) => task.manualPosition)
+        .filter((position) => Number.isFinite(position)),
+    );
+    const morningStartPosition = firstManualPosition - templates.length;
     let created = 0;
     let needsRefresh = false;
 
@@ -1662,9 +1731,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         createdAt: timestamp,
         updatedAt: timestamp,
         position: Date.now() + index,
-        manualPosition: null,
+        manualPosition: routine === "morning" ? morningStartPosition + index : null,
         templateId: template.id,
         occurrenceKey,
+        estimateMinutes: null,
       };
       try {
         const wasCreated = await createRoutineTaskIfAllowed(task, {
@@ -1956,6 +2026,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       selectQuickTargetAndFocus(quickTarget);
     });
 
+    elements.quickEstimate.addEventListener("click", () => openDurationPicker("quick"));
+
     elements.maintenanceToggle.addEventListener("click", () => {
       setMaintenanceOpen(!state.maintenanceOpen);
     });
@@ -2019,14 +2091,43 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     for (const input of elements.editTaskForm.querySelectorAll('input[name="task-list"]')) {
       input.addEventListener("change", updateEditorDestination);
     }
-    elements.moveTaskUp.addEventListener("click", () => void moveActiveTask(-1));
-    elements.moveTaskDown.addEventListener("click", () => void moveActiveTask(1));
+    elements.editEstimate.addEventListener("click", () => openDurationPicker("edit"));
     elements.closeTaskDialog.addEventListener("click", () => elements.taskDialog.close());
     elements.taskDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.taskDialog, event));
     elements.taskDialog.addEventListener("close", () => {
       state.activeTaskId = null;
+      state.editEstimateMinutes = null;
     });
     elements.deleteTask.addEventListener("click", deleteActiveTask);
+
+    for (const button of elements.durationDialog.querySelectorAll("[data-duration-minutes]")) {
+      button.addEventListener("click", () => setSelectedEstimate(button.dataset.durationMinutes));
+    }
+    elements.clearDuration.addEventListener("click", () => setSelectedEstimate(null));
+    elements.customDurationForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const minutes = normalizeEstimateMinutes(elements.customDurationInput.value);
+      if (!minutes) {
+        elements.customDurationInput.setCustomValidity("Choisis une durée entre 1 et 720 minutes");
+        elements.customDurationInput.reportValidity();
+        return;
+      }
+      elements.customDurationInput.setCustomValidity("");
+      setSelectedEstimate(minutes);
+    });
+    elements.customDurationInput.addEventListener("input", () =>
+      elements.customDurationInput.setCustomValidity(""),
+    );
+    elements.closeDurationDialog.addEventListener("click", () => elements.durationDialog.close());
+    elements.durationDialog.addEventListener("click", (event) =>
+      closeDialogOnBackdrop(elements.durationDialog, event),
+    );
+    elements.durationDialog.addEventListener("close", () => {
+      const target = state.durationTarget;
+      state.durationTarget = null;
+      if (target === "edit" && elements.taskDialog.open) elements.editEstimate.focus();
+      else if (target === "quick") elements.quickEstimate.focus();
+    });
 
     elements.exportData.addEventListener("click", exportData);
     elements.importDataButton.addEventListener("click", () => elements.importData.click());
