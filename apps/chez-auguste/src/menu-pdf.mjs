@@ -236,7 +236,7 @@ function drawDrinkSectionTitle(doc, label, y, sectionIndex) {
   setColor(doc, COLORS.warm);
   doc.text(String(sectionIndex + 1).padStart(2, "0"), 24, y);
   doc.setFont("Roboto", "bold");
-  doc.setFontSize(7.7);
+  doc.setFontSize(7.5);
   setColor(doc, COLORS.red);
   const displayLabel = tracked(cleanText(label).toUpperCase());
   doc.text(displayLabel, 36, y);
@@ -246,36 +246,31 @@ function drawDrinkSectionTitle(doc, label, y, sectionIndex) {
     doc.setLineWidth(0.25);
     doc.line(lineStart, y - 0.7, 186, y - 0.7);
   }
-  return y + 9.5;
+  return y + 8.2;
 }
 
 function measureDrink(doc, drink) {
   doc.setFont("Roboto", "bold");
-  doc.setFontSize(10.2);
-  const titleLines = doc.splitTextToSize(cleanText(drink.name), 125).slice(0, 2);
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(7.5);
-  const formatLines = doc.splitTextToSize(cleanText(drink.format), 125).slice(0, 1);
-  const height = titleLines.length * 4.15 + (formatLines.length ? 3.6 : 0) + 3.6;
-  return { titleLines, formatLines, height };
+  doc.setFontSize(9.3);
+  const titleLines = doc.splitTextToSize(cleanText(drink.name), 92).slice(0, 2);
+  const height = titleLines.length * 3.7 + 3.4;
+  return { titleLines, height };
 }
 
 function drawDrink(doc, drink, y, measured) {
   doc.setFont("Roboto", "bold");
-  doc.setFontSize(10.2);
+  doc.setFontSize(9.3);
   setColor(doc, COLORS.ink);
   doc.text(measured.titleLines, 36, y, { lineHeightFactor: 1.05 });
 
   doc.setFont("Roboto", "normal");
-  doc.setFontSize(9.2);
-  doc.text(`${priceLabel(drink.price)} €`, 184, y, { align: "right" });
+  doc.setFontSize(7.2);
+  setColor(doc, COLORS.muted);
+  doc.text(cleanText(drink.format), 157, y, { align: "right" });
 
-  if (measured.formatLines.length) {
-    const formatY = y + measured.titleLines.length * 4.35 + 0.1;
-    doc.setFontSize(7.5);
-    setColor(doc, COLORS.muted);
-    doc.text(measured.formatLines, 36, formatY);
-  }
+  doc.setFontSize(8.8);
+  setColor(doc, COLORS.ink);
+  doc.text(`${priceLabel(drink.price)} €`, 184, y, { align: "right" });
   return y + measured.height;
 }
 
@@ -299,9 +294,9 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
     const items = menuDrinks.filter((drink) => drink.category === category);
     if (!items.length) continue;
     const measuredItems = items.map((drink) => ({ drink, measured: measureDrink(doc, drink) }));
-    const categoryHeight = 9.5 + measuredItems.reduce((total, item) => total + item.measured.height, 0) + 4.5;
+    const categoryHeight = 8.2 + measuredItems.reduce((total, item) => total + item.measured.height, 0) + 3;
     const fitsOnFreshPage = 38 + categoryHeight <= 272;
-    if ((fitsOnFreshPage && y + categoryHeight > 272) || y + 9.5 + measuredItems[0].measured.height > 272) {
+    if ((fitsOnFreshPage && y + categoryHeight > 272) || y + 8.2 + measuredItems[0].measured.height > 272) {
       doc.addPage();
       pageNumber += 1;
       y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, false, logoDataUrl);
@@ -317,7 +312,7 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
       }
       y = drawDrink(doc, drink, y, measured);
     }
-    y += 4.5;
+    y += 3;
     sectionIndex += 1;
   }
 
