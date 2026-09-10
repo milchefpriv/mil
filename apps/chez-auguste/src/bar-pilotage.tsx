@@ -100,6 +100,20 @@ function loadImageAsDataUrl(source: string): Promise<string> {
   });
 }
 
+function isAppleMobileBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function openMobilePdfPreview() {
+  if (!isAppleMobileBrowser()) return null;
+  const preview = window.open("", "_blank");
+  if (preview) {
+    preview.document.title = "Carte des boissons - Chez Auguste";
+    preview.document.body.textContent = "Création de la carte des boissons…";
+  }
+  return preview;
+}
+
 export default function BarPilotage({ userId }: { userId: string }) {
   const [view, setView] = useState<BarView>("dashboard");
   const [drinks, setDrinks] = useState<Drink[]>(INITIAL_DRINKS);
@@ -344,6 +358,7 @@ export default function BarPilotage({ userId }: { userId: string }) {
       setNotice("Ajoutez au moins une boisson avec un prix de vente avant de télécharger la carte.");
       return;
     }
+    const mobilePdfPreview = openMobilePdfPreview();
     setDrinkMenuPdfBusy(true);
     try {
       const { downloadDrinksMenuPdf } = await import("./menu-pdf.mjs");
@@ -357,10 +372,12 @@ export default function BarPilotage({ userId }: { userId: string }) {
         })),
         categories: DRINK_CATEGORIES,
         logoDataUrl,
+        targetWindow: mobilePdfPreview,
       });
-      setNotice("La carte des boissons est téléchargée en PDF.");
+      setNotice(mobilePdfPreview ? "La carte des boissons est ouverte en PDF." : "La carte des boissons est téléchargée en PDF.");
     } catch (error) {
       console.error(error);
+      mobilePdfPreview?.close();
       setNotice("La carte des boissons n’a pas pu être générée. Réessayez dans un instant.");
     } finally {
       setDrinkMenuPdfBusy(false);

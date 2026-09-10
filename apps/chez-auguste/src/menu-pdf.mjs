@@ -277,7 +277,7 @@ function drawDrink(doc, drink, y, measured) {
 /**
  * Build the customer-facing drinks menu. Purchase prices, suppliers and margin
  * data deliberately stay out of this document.
- * @param {{ drinks: Array<{ category: string, name: string, format: string, price: number }>, categories?: readonly string[], logoDataUrl?: string }} options
+ * @param {{ drinks: Array<{ category: string, name: string, format: string, price: number }>, categories?: readonly string[], logoDataUrl?: string, targetWindow?: Window | null }} options
  */
 export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -328,7 +328,20 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
 export function downloadDrinksMenuPdf(options) {
   const doc = buildDrinksMenuPdf(options);
   const filename = "carte-des-boissons-chez-auguste.pdf";
-  doc.save(filename);
+  const pdfUrl = URL.createObjectURL(doc.output("blob"));
+  if (options.targetWindow && !options.targetWindow.closed) {
+    options.targetWindow.location.replace(pdfUrl);
+  } else {
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = filename;
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
   return filename;
 }
 
