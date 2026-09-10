@@ -3,8 +3,10 @@
 Application statique publiée sur GitHub Pages et synchronisée avec Supabase.
 
 - accès par un mot de passe unique, sans identifiant ni lien reçu par e-mail ;
-- carte validée affichée à l’accueil, avec un mode édition séparé ;
+- accueil organisé autour de `Pilotage vente` et `Hygiène & traçabilité` ;
+- carte validée affichée dans le pilotage vente, avec un mode édition séparé ;
 - menus, recettes, fiches techniques et données du bar partagés ;
+- scan photo des étiquettes, classement par jour et historique partagé ;
 - mises à jour diffusées en temps réel ;
 - copie locale conservée en cas de coupure réseau.
 

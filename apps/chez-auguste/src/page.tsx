@@ -13,6 +13,7 @@ import {
 } from "./accompaniment-ideas";
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
+import TraceabilityPanel from "./traceability-panel";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
   isNonEmptyPayload,
@@ -86,6 +87,7 @@ type HomeProps = {
 
 type SyncStatus = "loading" | "saving" | "synced" | "offline";
 type MenuMode = "view" | "edit";
+type AppArea = "home" | "sales" | "hygiene";
 
 function isCardSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -827,6 +829,7 @@ function AccompanimentIdeasModal({ ideas, customIdeas, onAddIdea, onDeleteIdea, 
 }
 
 export default function Home({ userId, onSignOut }: HomeProps) {
+  const [appArea, setAppArea] = useState<AppArea>("home");
   const [pilotageMode, setPilotageMode] = useState<"cuisine" | "bar">("cuisine");
   const [menuMode, setMenuMode] = useState<MenuMode>("view");
   const [query, setQuery] = useState("");
@@ -1784,22 +1787,52 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     window.localStorage.setItem("auguste-pilotage-mode", mode);
   }
 
+  function openArea(area: AppArea) {
+    setAppArea(area);
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const areaHeading = appArea === "home" ? "Accueil" : appArea === "sales" ? "Pilotage vente" : "Hygiène & traçabilité";
+  const areaContext = appArea === "home" ? "Les outils du restaurant" : appArea === "sales" ? "Carte, bar, coûts & production" : "Scan & historique";
+
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand-lockup"><img className="brand-logo" src={BRAND_LOGO_SRC} alt="Chez Auguste — Bouillon Brasserie" /><div className="brand-context"><h1>Carnet de cuisine</h1><span>Carte, coûts & production</span></div></div>
-        <nav className="pilotage-switcher" aria-label="Choisir l’espace de pilotage">
+        <button className="brand-lockup brand-home-button" type="button" onClick={() => openArea("home")} aria-label="Retour à l’accueil"><img className="brand-logo" src={BRAND_LOGO_SRC} alt="Chez Auguste — Bouillon Brasserie" /><div className="brand-context"><h1>{areaHeading}</h1><span>{areaContext}</span></div></button>
+        {appArea === "sales" && <nav className="pilotage-switcher" aria-label="Choisir l’espace de pilotage">
           <button type="button" className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
           <button type="button" className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
-        </nav>
-        {pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
+        </nav>}
+        {appArea === "sales" && pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
           <span className={`autosave ${syncStatus}`}><i /> {syncStatus === "loading" ? "Connexion…" : syncStatus === "saving" ? "Sauvegarde…" : syncStatus === "synced" ? "Synchronisé en direct" : "Hors ligne — sauvegardé ici"}</span>
           <button className="primary-button" type="button" onClick={focusMenuComposer}>Composer le menu <span>{selected.length}/{targetTotal}</span></button>
         </div>}
-        <button className="account-button" type="button" onClick={onSignOut}>Déconnexion</button>
+        <div className="topbar-end">
+          {appArea !== "home" && <button className="home-button" type="button" onClick={() => openArea("home")}><span aria-hidden="true">←</span> Accueil</button>}
+          <button className="account-button" type="button" onClick={onSignOut}>Déconnexion</button>
+        </div>
       </header>
 
-      {pilotageMode === "bar" ? <BarPilotage userId={userId} /> : <>
+      {appArea === "home" ? (
+        <section className="auguste-home" aria-labelledby="auguste-home-title">
+          <div className="auguste-home-heading"><p className="eyebrow">Chez Auguste</p><h2 id="auguste-home-title">Pilotage</h2></div>
+          <div className="auguste-home-grid">
+            <button className="auguste-area-card sales" type="button" onClick={() => openArea("sales")}>
+              <span className="auguste-area-number">01</span>
+              <span className="auguste-area-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M3 20h18M15 6l3-3 3 3" /></svg></span>
+              <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · production</small></span>
+              <b aria-hidden="true">→</b>
+            </button>
+            <button className="auguste-area-card hygiene" type="button" onClick={() => openArea("hygiene")}>
+              <span className="auguste-area-number">02</span>
+              <span className="auguste-area-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3ZM9 12l2 2 4-5" /></svg></span>
+              <span className="auguste-area-copy"><strong>Hygiène & traçabilité</strong><small>Scanner · retrouver</small></span>
+              <b aria-hidden="true">→</b>
+            </button>
+          </div>
+        </section>
+      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : <>
       {!ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture de la carte…</p></section> : isEditingMenu ? <>
       <section className="period-bar">
         <div className="period-intro"><p className="eyebrow">Menu en préparation</p><strong>{periodType === "Mois" ? `Carte de ${period.toLowerCase()}` : `Carte ${period.toLowerCase()}`}</strong></div>

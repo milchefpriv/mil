@@ -42,6 +42,8 @@ button { color: inherit; }
 
 .topbar { height: 76px; padding: 0 28px; border-bottom: 1px solid var(--line); background: rgba(255,253,250,.96); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30; backdrop-filter: blur(18px); box-shadow: 0 1px 0 rgba(40,30,20,.02); }
 .brand-lockup { display: flex; align-items: center; gap: 13px; }
+.brand-home-button { padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.brand-home-button:focus-visible { outline: 2px solid var(--burgundy); outline-offset: 5px; border-radius: 4px; }
 .brand-logo { width: 112px; height: 59px; object-fit: contain; }
 .eyebrow { margin: 0 0 4px; color: var(--brass-deep); font-size: 10px; line-height: 1; text-transform: uppercase; letter-spacing: .18em; font-weight: 800; }
 .brand-context { padding-left: 13px; border-left: 1px solid var(--line); display: grid; gap: 4px; }
@@ -61,6 +63,10 @@ button { color: inherit; }
 .autosave.offline i { background: #a04747; box-shadow: 0 0 0 3px #f0dada; }
 .account-button { min-height: 35px; padding: 0 10px; border: 1px solid #d7cec2; border-radius: 8px; background: transparent; color: #7b7167; cursor: pointer; font-size: 9px; font-weight: 750; }
 .account-button:hover { border-color: #bdaea0; background: #f4efe7; color: var(--ink); }
+.topbar-end { display: flex; align-items: center; gap: 7px; }
+.home-button { min-height: 35px; padding: 0 11px; border: 1px solid #d7cec2; border-radius: 8px; background: #f7f2eb; color: #5d554d; cursor: pointer; font-size: 10px; font-weight: 800; }
+.home-button span { margin-right: 4px; }
+.home-button:hover { background: #eee6dc; border-color: #c0b4a7; color: var(--ink); }
 .ghost-button, .primary-button, .magic-button, .secondary-button { border: 0; border-radius: 9px; min-height: 39px; padding: 0 14px; font-size: 11px; font-weight: 760; cursor: pointer; transition: .18s ease; }
 .ghost-button { background: transparent; border: 1px solid var(--line); }
 .ghost-button:hover { background: #f3efe7; border-color: #c3b9aa; }
@@ -68,6 +74,93 @@ button { color: inherit; }
 .primary-button { background: var(--ink); color: #fff; box-shadow: 0 8px 18px rgba(23,21,18,.12); }
 .primary-button:hover { background: #332e27; transform: translateY(-1px); }
 .primary-button span { padding-left: 8px; margin-left: 5px; border-left: 1px solid #504a42; color: #d9c3a4; }
+
+.auguste-home { min-height: calc(100vh - 76px); padding: clamp(42px, 8vh, 90px) 28px 70px; background: radial-gradient(circle at 82% 13%, rgba(166,120,63,.14), transparent 28%), linear-gradient(145deg, #f8f4ed, #eee7dc); }
+.auguste-home-heading { width: min(1100px, 100%); margin: 0 auto 27px; }
+.auguste-home-heading h2 { margin: 8px 0 0; font: 730 clamp(36px, 5vw, 58px)/.98 var(--font-display); letter-spacing: -.055em; }
+.auguste-home-grid { width: min(1100px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.auguste-area-card { min-height: 300px; padding: 25px; border: 1px solid #d5cabd; border-radius: 22px; background: rgba(255,253,249,.94); color: var(--ink); display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto 1fr auto; gap: 18px; text-align: left; cursor: pointer; box-shadow: 0 18px 50px rgba(58,43,27,.08); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.auguste-area-card:hover { transform: translateY(-3px); border-color: #bba68b; box-shadow: 0 25px 60px rgba(58,43,27,.13); }
+.auguste-area-card:focus-visible { outline: 3px solid rgba(118,47,43,.28); outline-offset: 3px; }
+.auguste-area-card.hygiene { background: linear-gradient(145deg, #fffdfa, #f2eee7); }
+.auguste-area-number { align-self: start; color: #9b8d7d; font-size: 12px; font-weight: 850; letter-spacing: .12em; }
+.auguste-area-icon { grid-column: 2; grid-row: 1 / 3; align-self: start; justify-self: end; width: 72px; height: 72px; border-radius: 20px; background: #efe4d5; color: var(--burgundy); display: grid; place-items: center; }
+.auguste-area-card.hygiene .auguste-area-icon { background: #e6ebe2; color: #4f6547; }
+.auguste-area-icon svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.auguste-area-copy { grid-column: 1 / 3; align-self: end; display: grid; gap: 8px; }
+.auguste-area-copy strong { font: 720 clamp(27px, 3vw, 39px)/1 var(--font-display); letter-spacing: -.045em; }
+.auguste-area-copy small { color: var(--muted); font-size: 14px; }
+.auguste-area-card > b { grid-column: 3; grid-row: 3; align-self: end; width: 43px; height: 43px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 20px; }
+.auguste-area-card.hygiene > b { background: #51614c; }
+
+.traceability-page { width: min(920px, 100%); min-height: calc(100vh - 76px); margin: 0 auto; padding: 38px 28px 90px; }
+.traceability-hero { margin-bottom: 18px; display: flex; align-items: end; justify-content: space-between; gap: 22px; }
+.traceability-hero h2 { margin: 7px 0 0; font: 730 clamp(32px, 5vw, 48px)/1 var(--font-display); letter-spacing: -.05em; }
+.traceability-counter { min-width: 100px; padding: 13px 16px; border: 1px solid #d7cec2; border-radius: 13px; background: var(--panel); display: grid; gap: 2px; text-align: center; box-shadow: 0 8px 24px rgba(45,37,27,.04); }
+.traceability-counter strong { font-size: 25px; line-height: 1; }
+.traceability-counter span { color: var(--muted); font-size: 12px; }
+.traceability-scan-card { padding: 15px; border: 1px solid #ccbda9; border-radius: 18px; background: linear-gradient(135deg, #fffdf9, #f0e7da); box-shadow: 0 15px 40px rgba(65,47,29,.08); }
+.operator-choice { margin-bottom: 11px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.operator-choice > span { color: #62594f; font-size: 14px; font-weight: 800; }
+.operator-choice > div, .traceability-operator-field > div { padding: 3px; border: 1px solid #d2c7b9; border-radius: 10px; background: #e9e1d6; display: flex; gap: 3px; }
+.operator-choice button, .traceability-operator-field button { min-height: 34px; padding: 0 14px; border: 0; border-radius: 7px; background: transparent; color: #71675d; cursor: pointer; font-size: 13px; font-weight: 800; }
+.operator-choice button.active, .traceability-operator-field button.active { background: #fffdfa; color: var(--burgundy); box-shadow: 0 3px 10px rgba(45,34,21,.1); }
+.scan-label-button { width: 100%; min-height: 94px; padding: 16px 20px; border: 0; border-radius: 14px; background: linear-gradient(135deg, #7c292d, #5c171c); color: #fff; display: flex; align-items: center; gap: 17px; text-align: left; cursor: pointer; box-shadow: 0 13px 28px rgba(83,20,25,.24); }
+.scan-label-button:disabled { opacity: .68; cursor: wait; }
+.scan-label-button > span { width: 53px; height: 53px; flex: none; border-radius: 15px; background: rgba(255,255,255,.12); display: grid; place-items: center; }
+.scan-label-button svg { width: 29px; height: 29px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.scan-label-button > div { display: grid; gap: 5px; }
+.scan-label-button strong { font-size: 19px; }
+.scan-label-button small { color: #eacfd0; font-size: 13px; }
+.traceability-file-input { display: none; }
+.scan-pending { margin: 10px 3px 0; color: #75695d; font-size: 12px; text-align: center; }
+.traceability-feedback { margin-top: 12px; padding: 12px 13px; border-radius: 11px; display: grid; grid-template-columns: 27px 1fr auto; align-items: center; gap: 9px; }
+.traceability-feedback.error { background: #f6e4e2; color: #7b272d; }
+.traceability-feedback > span { width: 27px; height: 27px; border-radius: 50%; background: #7b272d; color: #fff; display: grid; place-items: center; font-weight: 900; }
+.traceability-feedback p { margin: 0; font-size: 14px; line-height: 1.4; }
+.traceability-feedback button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 20px; }
+.traceability-history-heading { margin: 34px 2px 14px; display: flex; align-items: end; justify-content: space-between; gap: 14px; }
+.traceability-history-heading h3 { margin: 5px 0 0; font: 700 24px/1.05 var(--font-display); letter-spacing: -.035em; }
+.traceability-history-heading > span { color: var(--muted); font-size: 13px; }
+.traceability-history { display: grid; gap: 24px; }
+.traceability-day { display: grid; gap: 8px; }
+.traceability-day-heading { padding: 0 3px; display: flex; align-items: center; justify-content: space-between; }
+.traceability-day-heading strong { font-size: 14px; }
+.traceability-day-heading span { min-width: 24px; height: 24px; border-radius: 12px; background: #e8e1d7; color: #645a50; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.traceability-records { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; box-shadow: 0 7px 22px rgba(45,37,27,.035); }
+.traceability-record { width: 100%; min-height: 72px; padding: 10px 13px; border: 0; border-bottom: 1px solid #e7e0d7; background: transparent; display: grid; grid-template-columns: 43px minmax(0, 1fr) auto; align-items: center; gap: 12px; text-align: left; cursor: pointer; }
+.traceability-record:last-child { border-bottom: 0; }
+.traceability-record:hover { background: #f8f4ee; }
+.traceability-record-icon { width: 43px; height: 43px; border-radius: 11px; background: #ede8e0; color: #6b6259; display: grid; place-items: center; }
+.traceability-record-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.traceability-record-copy { min-width: 0; display: grid; gap: 3px; }
+.traceability-record-copy strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.traceability-record-copy small { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.traceability-record-copy > span { color: #765f45; font-size: 12px; }
+.traceability-record > b { color: #8f8478; font-size: 22px; }
+.traceability-empty { min-height: 170px; border: 1px dashed #cec3b6; border-radius: 14px; color: var(--muted); display: grid; place-items: center; align-content: center; gap: 7px; font-size: 14px; }
+.traceability-empty strong { color: var(--ink); font-size: 17px; }
+.traceability-detail { width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 36px); padding: 28px; border-radius: 18px; background: var(--panel); overflow: auto; box-shadow: 0 28px 90px rgba(31,24,18,.28); position: relative; }
+.traceability-detail h2 { margin: 7px 42px 18px 0; font: 720 30px/1.05 var(--font-display); letter-spacing: -.04em; }
+.traceability-photo { width: 100%; min-height: 220px; max-height: 360px; padding: 0; border: 1px solid #d8d0c5; border-radius: 13px; background: #eee9e2; overflow: hidden; cursor: zoom-in; }
+.traceability-photo:disabled { cursor: default; }
+.traceability-photo img { width: 100%; height: 100%; max-height: 360px; object-fit: contain; display: block; }
+.traceability-photo > span { min-height: 220px; color: var(--muted); display: grid; place-items: center; font-size: 14px; }
+.traceability-form { margin-top: 17px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.traceability-form label { display: grid; gap: 6px; }
+.traceability-form label > span, .traceability-barcode > span, .traceability-operator-field legend { color: #6e6459; font-size: 12px; font-weight: 800; }
+.traceability-form input { width: 100%; min-height: 45px; padding: 0 12px; border: 1px solid #d7cec2; border-radius: 9px; background: #fff; outline: 0; font-size: 16px; }
+.traceability-form input:focus { border-color: var(--burgundy); box-shadow: 0 0 0 3px rgba(118,47,43,.1); }
+.traceability-form .wide { grid-column: 1 / -1; }
+.traceability-barcode { min-height: 54px; padding: 10px 12px; border-radius: 9px; background: #f0ece6; display: grid; gap: 4px; }
+.traceability-barcode strong { font-size: 14px; overflow-wrap: anywhere; }
+.traceability-operator-field { margin: 0; padding: 0; border: 0; }
+.traceability-operator-field legend { margin-bottom: 6px; }
+.traceability-operator-field > div { width: max-content; }
+.traceability-detail-actions { margin-top: 20px; display: grid; grid-template-columns: auto 1fr; gap: 9px; }
+.traceability-detail-actions button { min-height: 47px; }
+.traceability-delete { padding: 0 14px; border: 1px solid #d9bdbb; border-radius: 9px; background: #f8ebea; color: #8a2c32; cursor: pointer; font-size: 13px; font-weight: 800; }
+.traceability-detail-actions button:disabled { opacity: .55; cursor: wait; }
 
 .period-bar { min-height: 108px; padding: 18px 28px; background: linear-gradient(135deg, #81272d 0%, #6c1c22 58%, #5d151b 100%); border-bottom: 1px solid #4c1116; color: #fffaf3; display: grid; grid-template-columns: minmax(190px, .75fr) auto minmax(470px, 1.35fr); align-items: center; gap: 24px; box-shadow: inset 0 1px rgba(255,255,255,.08); }
 .period-intro .eyebrow { color: #eacbc2; }
@@ -739,6 +832,10 @@ button { color: inherit; }
   .pilotage-switcher { margin-left: auto; padding: 2px; border-radius: 10px; }
   .pilotage-switcher button { min-width: 112px; height: 39px; padding: 0 8px; gap: 5px; }
   .pilotage-switcher button strong { font-size: 10px; }
+  .auguste-home { min-height: calc(100vh - 68px); padding: 40px 16px 60px; }
+  .auguste-home-grid { grid-template-columns: 1fr; }
+  .auguste-area-card { min-height: 220px; }
+  .traceability-page { min-height: calc(100vh - 68px); padding: 28px 16px 80px; }
   .bar-pilotage { min-height: calc(100vh - 68px); padding: 24px 16px 95px; }
   .bar-hero h2 { font-size: 31px; }
   .bar-view-tabs button { min-height: 57px; padding: 7px 9px; grid-template-columns: 24px 1fr; }
@@ -820,12 +917,45 @@ button { color: inherit; }
   .brand-context { display: none; }
   .topbar { gap: 7px; padding: 0 10px; }
   .brand-lockup { gap: 0; }
+  .topbar-end { gap: 4px; }
+  .home-button { width: 34px; padding: 0; font-size: 0; }
+  .home-button span { margin: 0; font-size: 16px; }
   .pilotage-switcher { min-width: 0; flex: 1; }
   .pilotage-switcher button { min-width: 0; width: 100%; height: 41px; padding: 0 5px; }
   .pilotage-switcher button span { display: none; }
   .pilotage-switcher button strong { font-size: 9px; }
   .account-button { width: 34px; padding: 0; font-size: 0; }
   .account-button::after { content: "↪"; font-size: 15px; }
+  .auguste-home { padding-top: 31px; }
+  .auguste-home-heading { margin-bottom: 20px; }
+  .auguste-home-heading h2 { font-size: 38px; }
+  .auguste-area-card { min-height: 188px; padding: 19px; border-radius: 17px; }
+  .auguste-area-icon { width: 56px; height: 56px; border-radius: 15px; }
+  .auguste-area-icon svg { width: 27px; height: 27px; }
+  .auguste-area-copy strong { font-size: 27px; }
+  .auguste-area-copy small { font-size: 13px; }
+  .auguste-area-card > b { width: 38px; height: 38px; }
+  .traceability-page { padding-top: 24px; }
+  .traceability-hero { align-items: center; }
+  .traceability-hero h2 { font-size: 32px; }
+  .traceability-counter { min-width: 79px; padding: 11px 9px; }
+  .traceability-counter strong { font-size: 22px; }
+  .operator-choice { align-items: stretch; flex-direction: column; }
+  .operator-choice > div { width: 100%; }
+  .operator-choice button { flex: 1; }
+  .scan-label-button { min-height: 88px; padding: 14px; gap: 13px; }
+  .scan-label-button > span { width: 49px; height: 49px; }
+  .scan-label-button strong { font-size: 17px; }
+  .traceability-history-heading { margin-top: 28px; }
+  .traceability-history-heading h3 { font-size: 21px; }
+  .traceability-record { padding-left: 10px; grid-template-columns: 41px minmax(0, 1fr) auto; gap: 10px; }
+  .traceability-record-copy strong { font-size: 14px; }
+  .traceability-detail { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 23px 16px 18px; border-radius: 16px; }
+  .traceability-detail h2 { font-size: 27px; }
+  .traceability-photo { min-height: 190px; }
+  .traceability-form { grid-template-columns: 1fr; }
+  .traceability-form .wide { grid-column: auto; }
+  .traceability-detail-actions { grid-template-columns: 1fr; }
   .bar-hero { align-items: stretch; flex-direction: column; gap: 15px; }
   .bar-hero h2 { font-size: 28px; }
   .bar-add-button { width: 100%; justify-content: center; }
