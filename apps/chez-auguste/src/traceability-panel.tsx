@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { supabase } from "./shared-state";
 
-type OperatorName = "Émile" | "Auguste";
-
 type TraceabilityRecord = {
   id: string;
   captured_at: string;
@@ -14,7 +12,6 @@ type TraceabilityRecord = {
   lot_number: string;
   expiry_date: string | null;
   quantity: string;
-  operator_name: OperatorName;
 };
 
 type TraceabilityPanelProps = {
@@ -26,7 +23,6 @@ type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
 };
 
 const BUCKET = "auguste-traceability";
-const OPERATOR_KEY = "auguste-traceability-operator";
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 const TIME_FORMAT = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
@@ -95,15 +91,10 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
-  const [operator, setOperator] = useState<OperatorName>(() => {
-    const saved = window.localStorage.getItem(OPERATOR_KEY);
-    return saved === "Auguste" ? "Auguste" : "Émile";
-  });
-
   const loadRecords = useCallback(async () => {
     const { data, error: loadError } = await supabase
       .from("auguste_traceability_records")
-      .select("id,captured_at,updated_at,photo_path,barcode,product_name,supplier,lot_number,expiry_date,quantity,operator_name")
+      .select("id,captured_at,updated_at,photo_path,barcode,product_name,supplier,lot_number,expiry_date,quantity")
       .order("captured_at", { ascending: false })
       .limit(250);
     if (loadError) throw loadError;
@@ -152,11 +143,6 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
     return records.filter((record) => dateKey(record.captured_at) === today).length;
   }, [records]);
 
-  function selectOperator(name: OperatorName) {
-    setOperator(name);
-    window.localStorage.setItem(OPERATOR_KEY, name);
-  }
-
   async function scanLabel(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -181,7 +167,6 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
           id,
           photo_path: photoPath,
           barcode,
-          operator_name: operator,
           recorded_by: userId,
         });
       if (insertError) {
@@ -224,11 +209,10 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
         lot_number: selectedRecord.lot_number.trim(),
         expiry_date: selectedRecord.expiry_date || null,
         quantity: selectedRecord.quantity.trim(),
-        operator_name: selectedRecord.operator_name,
         updated_at: new Date().toISOString(),
       })
       .eq("id", selectedRecord.id)
-      .select("id,captured_at,updated_at,photo_path,barcode,product_name,supplier,lot_number,expiry_date,quantity,operator_name")
+      .select("id,captured_at,updated_at,photo_path,barcode,product_name,supplier,lot_number,expiry_date,quantity")
       .single();
     setSavingDetails(false);
     if (updateError) {
@@ -270,14 +254,6 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
       </div>
 
       <div className="traceability-scan-card">
-        <div className="operator-choice" aria-label="Personne qui scanne">
-          <span>Qui scanne ?</span>
-          <div>
-            {(["Émile", "Auguste"] as OperatorName[]).map((name) => (
-              <button key={name} type="button" className={operator === name ? "active" : ""} onClick={() => selectOperator(name)}>{name}</button>
-            ))}
-          </div>
-        </div>
         <button className="scan-label-button" type="button" onClick={() => fileInputRef.current?.click()} disabled={scanning}>
           <span aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8" /></svg>
@@ -308,7 +284,7 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
                     </span>
                     <span className="traceability-record-copy">
                       <strong>{recordTitle(record)}</strong>
-                      <small>{TIME_FORMAT.format(new Date(record.captured_at))} · {record.operator_name}{record.supplier ? ` · ${record.supplier}` : ""}</small>
+                      <small>{TIME_FORMAT.format(new Date(record.captured_at))}{record.supplier ? ` · ${record.supplier}` : ""}</small>
                       {(record.lot_number || record.expiry_date || record.barcode) && <span>{record.lot_number ? `Lot ${record.lot_number}` : record.barcode ? `Code ${record.barcode}` : ""}{record.expiry_date ? `${record.lot_number || record.barcode ? " · " : ""}Date ${new Intl.DateTimeFormat("fr-FR").format(new Date(`${record.expiry_date}T12:00:00`))}` : ""}</span>}
                     </span>
                     <b aria-hidden="true">›</b>
@@ -336,7 +312,6 @@ export default function TraceabilityPanel({ userId }: TraceabilityPanelProps) {
               <label><span>Numéro de lot</span><input value={selectedRecord.lot_number} onChange={(event) => setSelectedRecord({ ...selectedRecord, lot_number: event.target.value })} placeholder="Lot" /></label>
               <label><span>DLC / DDM</span><input type="date" value={selectedRecord.expiry_date ?? ""} onChange={(event) => setSelectedRecord({ ...selectedRecord, expiry_date: event.target.value || null })} /></label>
               {selectedRecord.barcode && <div className="traceability-barcode wide"><span>Code détecté</span><strong>{selectedRecord.barcode}</strong></div>}
-              <fieldset className="traceability-operator-field wide"><legend>Enregistré par</legend><div>{(["Émile", "Auguste"] as OperatorName[]).map((name) => <button type="button" key={name} className={selectedRecord.operator_name === name ? "active" : ""} onClick={() => setSelectedRecord({ ...selectedRecord, operator_name: name })}>{name}</button>)}</div></fieldset>
             </div>
             <div className="traceability-detail-actions">
               <button className="traceability-delete" type="button" onClick={() => void deleteRecord()} disabled={savingDetails}>Supprimer</button>

@@ -1824,10 +1824,9 @@ export default function Home({ userId, onSignOut }: HomeProps) {
               <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · production</small></span>
               <b aria-hidden="true">→</b>
             </button>
-            <button className="auguste-area-card hygiene" type="button" onClick={() => openArea("hygiene")}>
-              <span className="auguste-area-number">02</span>
-              <span className="auguste-area-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3ZM9 12l2 2 4-5" /></svg></span>
-              <span className="auguste-area-copy"><strong>Hygiène & traçabilité</strong><small>Scanner · retrouver</small></span>
+            <button className="auguste-hygiene-button" type="button" onClick={() => openArea("hygiene")}>
+              <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.9 8.1 7 10 4.1-1.9 7-5.3 7-10V6l-7-3ZM9 12l2 2 4-5" /></svg></span>
+              <strong>Hygiène & traçabilité</strong>
               <b aria-hidden="true">→</b>
             </button>
           </div>
