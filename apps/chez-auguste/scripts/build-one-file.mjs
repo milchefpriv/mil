@@ -77,6 +77,7 @@ const requiredMarkers = [
   "Sauvegarder la carte",
   "Revenir à la dernière carte",
   "Télécharger la carte PDF",
+  "Télécharger la carte des boissons",
   "Imprimer la carte",
   "Sauvegarder l’outil (.html)",
   "Importer une sauvegarde",

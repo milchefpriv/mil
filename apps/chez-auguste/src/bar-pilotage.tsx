@@ -9,6 +9,7 @@ import {
   type DrinkCategory,
   type DrinkThresholds,
 } from "./bar-data";
+import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
   isNonEmptyPayload,
   loadSharedState,
@@ -35,6 +36,7 @@ type CalculatedDrink = Drink & {
 
 const DRINKS_STORAGE_KEY = "auguste-bar-drinks-v1";
 const THRESHOLDS_STORAGE_KEY = "auguste-bar-thresholds-v1";
+const BRAND_LOGO_SRC: string = brandLogoUrl;
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const percent = new Intl.NumberFormat("fr-FR", { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 1 });
 
@@ -81,6 +83,23 @@ function numericInputValue(value: number | null) {
   return value === null || !Number.isFinite(value) ? "" : String(value);
 }
 
+function loadImageAsDataUrl(source: string): Promise<string> {
+  if (source.startsWith("data:")) return Promise.resolve(source);
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d")?.drawImage(image, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    image.onerror = () => reject(new Error("Logo indisponible"));
+    image.src = source;
+  });
+}
+
 export default function BarPilotage({ userId }: { userId: string }) {
   const [view, setView] = useState<BarView>("dashboard");
   const [drinks, setDrinks] = useState<Drink[]>(INITIAL_DRINKS);
@@ -90,6 +109,7 @@ export default function BarPilotage({ userId }: { userId: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [newDrink, setNewDrink] = useState<Omit<Drink, "id">>(EMPTY_DRINK);
   const [notice, setNotice] = useState("");
+  const [drinkMenuPdfBusy, setDrinkMenuPdfBusy] = useState(false);
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"loading" | "saving" | "synced" | "offline">("loading");
   const syncedPayloadFingerprintRef = useRef<string | null>(null);
@@ -318,6 +338,35 @@ export default function BarPilotage({ userId }: { userId: string }) {
     setNotice("Les données boissons d’origine ont été restaurées.");
   }
 
+  async function downloadDrinksCard() {
+    const menuDrinks = drinks.filter((drink) => drink.name.trim() && drink.format.trim() && drink.salePriceTtc > 0);
+    if (!menuDrinks.length) {
+      setNotice("Ajoutez au moins une boisson avec un prix de vente avant de télécharger la carte.");
+      return;
+    }
+    setDrinkMenuPdfBusy(true);
+    try {
+      const { downloadDrinksMenuPdf } = await import("./menu-pdf.mjs");
+      const logoDataUrl = await loadImageAsDataUrl(BRAND_LOGO_SRC).catch(() => undefined);
+      downloadDrinksMenuPdf({
+        drinks: menuDrinks.map((drink) => ({
+          category: drink.category,
+          name: drink.name,
+          format: drink.format,
+          price: drink.salePriceTtc,
+        })),
+        categories: DRINK_CATEGORIES,
+        logoDataUrl,
+      });
+      setNotice("La carte des boissons est téléchargée en PDF.");
+    } catch (error) {
+      console.error(error);
+      setNotice("La carte des boissons n’a pas pu être générée. Réessayez dans un instant.");
+    } finally {
+      setDrinkMenuPdfBusy(false);
+    }
+  }
+
   return (
     <section className="bar-pilotage">
       <div className="bar-hero">
@@ -360,6 +409,7 @@ export default function BarPilotage({ userId }: { userId: string }) {
         <div className="bar-drinks-toolbar">
           <label className="bar-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher une boisson, un format…" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Effacer la recherche">×</button>}</label>
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as DrinkCategory | "Toutes")} aria-label="Filtrer par famille"><option>Toutes</option>{DRINK_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select>
+          <button type="button" className="bar-download-button" onClick={downloadDrinksCard} disabled={drinkMenuPdfBusy || !drinks.some((drink) => drink.name.trim() && drink.format.trim() && drink.salePriceTtc > 0)}><span aria-hidden="true">↓</span><strong>{drinkMenuPdfBusy ? "Création du PDF…" : "Télécharger la carte des boissons"}</strong><small>PDF</small></button>
           <button type="button" className="bar-add-button compact" onClick={() => setAddOpen(true)}>+ Ajouter</button>
         </div>
         <div className="bar-results-line"><span>{filteredDrinks.length} référence{filteredDrinks.length > 1 ? "s" : ""}</span><small>Les valeurs saisies sont enregistrées automatiquement sur cet appareil.</small></div>

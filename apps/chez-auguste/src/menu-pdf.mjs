@@ -230,6 +230,113 @@ export function downloadMenuPdf(options) {
   return filename;
 }
 
+function drawDrinkSectionTitle(doc, label, y, sectionIndex) {
+  doc.setFont("Roboto", "normal");
+  doc.setFontSize(7);
+  setColor(doc, COLORS.warm);
+  doc.text(String(sectionIndex + 1).padStart(2, "0"), 24, y);
+  doc.setFont("Roboto", "bold");
+  doc.setFontSize(7.7);
+  setColor(doc, COLORS.red);
+  const displayLabel = tracked(cleanText(label).toUpperCase());
+  doc.text(displayLabel, 36, y);
+  const lineStart = 43 + doc.getTextWidth(displayLabel);
+  if (lineStart < 186) {
+    doc.setDrawColor(...COLORS.line);
+    doc.setLineWidth(0.25);
+    doc.line(lineStart, y - 0.7, 186, y - 0.7);
+  }
+  return y + 9.5;
+}
+
+function measureDrink(doc, drink) {
+  doc.setFont("Roboto", "bold");
+  doc.setFontSize(10.2);
+  const titleLines = doc.splitTextToSize(cleanText(drink.name), 125).slice(0, 2);
+  doc.setFont("Roboto", "normal");
+  doc.setFontSize(7.5);
+  const formatLines = doc.splitTextToSize(cleanText(drink.format), 125).slice(0, 1);
+  const height = titleLines.length * 4.15 + (formatLines.length ? 3.6 : 0) + 3.6;
+  return { titleLines, formatLines, height };
+}
+
+function drawDrink(doc, drink, y, measured) {
+  doc.setFont("Roboto", "bold");
+  doc.setFontSize(10.2);
+  setColor(doc, COLORS.ink);
+  doc.text(measured.titleLines, 36, y, { lineHeightFactor: 1.05 });
+
+  doc.setFont("Roboto", "normal");
+  doc.setFontSize(9.2);
+  doc.text(`${priceLabel(drink.price)} €`, 184, y, { align: "right" });
+
+  if (measured.formatLines.length) {
+    const formatY = y + measured.titleLines.length * 4.35 + 0.1;
+    doc.setFontSize(7.5);
+    setColor(doc, COLORS.muted);
+    doc.text(measured.formatLines, 36, formatY);
+  }
+  return y + measured.height;
+}
+
+/**
+ * Build the customer-facing drinks menu. Purchase prices, suppliers and margin
+ * data deliberately stay out of this document.
+ * @param {{ drinks: Array<{ category: string, name: string, format: string, price: number }>, categories?: readonly string[], logoDataUrl?: string }} options
+ */
+export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+  registerFonts(doc);
+  const menuDrinks = drinks.filter((drink) => cleanText(drink.name).trim() && cleanText(drink.format).trim() && Number(drink.price) > 0);
+  const categoryOrder = [...categories, ...menuDrinks.map((drink) => drink.category)]
+    .filter((category, index, all) => category && all.indexOf(category) === index)
+    .filter((category) => menuDrinks.some((drink) => drink.category === category));
+  let pageNumber = 1;
+  let y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, true, logoDataUrl);
+  let sectionIndex = 0;
+
+  for (const category of categoryOrder) {
+    const items = menuDrinks.filter((drink) => drink.category === category);
+    if (!items.length) continue;
+    const measuredItems = items.map((drink) => ({ drink, measured: measureDrink(doc, drink) }));
+    const categoryHeight = 9.5 + measuredItems.reduce((total, item) => total + item.measured.height, 0) + 4.5;
+    const fitsOnFreshPage = 38 + categoryHeight <= 272;
+    if ((fitsOnFreshPage && y + categoryHeight > 272) || y + 9.5 + measuredItems[0].measured.height > 272) {
+      doc.addPage();
+      pageNumber += 1;
+      y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, false, logoDataUrl);
+    }
+    y = drawDrinkSectionTitle(doc, category, y, sectionIndex);
+
+    for (const { drink, measured } of measuredItems) {
+      if (y + measured.height > 272) {
+        doc.addPage();
+        pageNumber += 1;
+        y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, false, logoDataUrl);
+        y = drawDrinkSectionTitle(doc, `${category} · suite`, y, sectionIndex);
+      }
+      y = drawDrink(doc, drink, y, measured);
+    }
+    y += 4.5;
+    sectionIndex += 1;
+  }
+
+  doc.setProperties({
+    title: "Carte des boissons - Chez Auguste",
+    subject: "Carte des boissons du restaurant Chez Auguste",
+    author: "Chez Auguste",
+    creator: "Le carnet de cuisine Chez Auguste",
+  });
+  return doc;
+}
+
+export function downloadDrinksMenuPdf(options) {
+  const doc = buildDrinksMenuPdf(options);
+  const filename = "carte-des-boissons-chez-auguste.pdf";
+  doc.save(filename);
+  return filename;
+}
+
 const TOTAL_PAGES_TOKEN = "{total_pages_count_string}";
 
 function marginLabel(recipe) {
