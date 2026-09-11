@@ -249,28 +249,95 @@ function drawDrinkSectionTitle(doc, label, y, sectionIndex) {
   return y + 8.2;
 }
 
-function measureDrink(doc, drink) {
+const CUSTOMER_CATEGORY_LABELS = {
+  "Softs / sodas": "Sodas",
+  "Jus & nectars": "Jus de fruits",
+  "Bières pression": "Bières & apéritifs",
+  "Bières bouteille / canette": "Bières & apéritifs",
+  "Autres alcoolisés": "Bières & apéritifs",
+  "Autres sans alcool": "Sans alcool",
+};
+
+function customerCategoryLabel(category) {
+  return CUSTOMER_CATEGORY_LABELS[cleanText(category).trim()] || cleanText(category).trim();
+}
+
+function customerDrinkName(name) {
+  return cleanText(name)
+    .trim()
+    .replace(/\s*-\s*sirop standard$/i, "")
+    .replace(/\s*-\s*standard$/i, "");
+}
+
+function isCustomerReadyDrink(drink) {
+  const name = cleanText(drink.name).trim();
+  return name
+    && cleanText(drink.format).trim()
+    && Number(drink.price) > 0
+    && !/^cubi(?:\s|$)/i.test(name);
+}
+
+function customerDrinkFormat(format) {
+  const label = cleanText(format).trim();
+  if (/^(?:1\s+(?:tasse|sachet)|dose\s+\d)/i.test(label)) return "";
+  return label;
+}
+
+function groupCustomerDrinks(drinks, categories) {
+  const sectionOrder = [];
+  const sections = new Map();
+  const orderedCategories = [...categories, ...drinks.map((drink) => drink.category)]
+    .filter((category, index, all) => category && all.indexOf(category) === index);
+
+  for (const category of orderedCategories) {
+    const label = customerCategoryLabel(category);
+    if (!sections.has(label)) {
+      sections.set(label, []);
+      sectionOrder.push(label);
+    }
+    const groups = sections.get(label);
+    for (const drink of drinks.filter((item) => item.category === category)) {
+      const name = customerDrinkName(drink.name);
+      let group = groups.find((item) => item.name.toLocaleLowerCase("fr") === name.toLocaleLowerCase("fr"));
+      if (!group) {
+        group = { name, variants: [] };
+        groups.push(group);
+      }
+      group.variants.push({ format: customerDrinkFormat(drink.format), price: drink.price });
+    }
+  }
+
+  return sectionOrder
+    .map((label) => ({ label, groups: sections.get(label) || [] }))
+    .filter((section) => section.groups.length);
+}
+
+function measureDrinkGroup(doc, group) {
   doc.setFont("Roboto", "bold");
   doc.setFontSize(9.3);
-  const titleLines = doc.splitTextToSize(cleanText(drink.name), 92).slice(0, 2);
-  const height = titleLines.length * 3.7 + 3.4;
+  const titleLines = doc.splitTextToSize(cleanText(group.name), 86).slice(0, 2);
+  const rows = Math.max(titleLines.length, group.variants.length);
+  const height = rows * 4.2 + 2.5;
   return { titleLines, height };
 }
 
-function drawDrink(doc, drink, y, measured) {
+function drawDrinkGroup(doc, group, y, measured) {
   doc.setFont("Roboto", "bold");
   doc.setFontSize(9.3);
   setColor(doc, COLORS.ink);
   doc.text(measured.titleLines, 36, y, { lineHeightFactor: 1.05 });
 
-  doc.setFont("Roboto", "normal");
-  doc.setFontSize(7.2);
-  setColor(doc, COLORS.muted);
-  doc.text(cleanText(drink.format), 157, y, { align: "right" });
+  group.variants.forEach((variant, index) => {
+    const rowY = y + index * 4.2;
+    doc.setFont("Roboto", "normal");
+    doc.setFontSize(7.2);
+    setColor(doc, COLORS.muted);
+    if (variant.format) doc.text(variant.format, 157, rowY, { align: "right" });
 
-  doc.setFontSize(8.8);
-  setColor(doc, COLORS.ink);
-  doc.text(`${priceLabel(drink.price)} €`, 184, y, { align: "right" });
+    doc.setFontSize(8.8);
+    setColor(doc, COLORS.ink);
+    doc.text(`${priceLabel(variant.price)} €`, 184, rowY, { align: "right" });
+  });
   return y + measured.height;
 }
 
@@ -282,18 +349,14 @@ function drawDrink(doc, drink, y, measured) {
 export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   registerFonts(doc);
-  const menuDrinks = drinks.filter((drink) => cleanText(drink.name).trim() && cleanText(drink.format).trim() && Number(drink.price) > 0);
-  const categoryOrder = [...categories, ...menuDrinks.map((drink) => drink.category)]
-    .filter((category, index, all) => category && all.indexOf(category) === index)
-    .filter((category) => menuDrinks.some((drink) => drink.category === category));
+  const menuDrinks = drinks.filter(isCustomerReadyDrink);
+  const sections = groupCustomerDrinks(menuDrinks, categories);
   let pageNumber = 1;
   let y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, true, logoDataUrl);
   let sectionIndex = 0;
 
-  for (const category of categoryOrder) {
-    const items = menuDrinks.filter((drink) => drink.category === category);
-    if (!items.length) continue;
-    const measuredItems = items.map((drink) => ({ drink, measured: measureDrink(doc, drink) }));
+  for (const section of sections) {
+    const measuredItems = section.groups.map((group) => ({ group, measured: measureDrinkGroup(doc, group) }));
     const categoryHeight = 8.2 + measuredItems.reduce((total, item) => total + item.measured.height, 0) + 3;
     const fitsOnFreshPage = 38 + categoryHeight <= 272;
     if ((fitsOnFreshPage && y + categoryHeight > 272) || y + 8.2 + measuredItems[0].measured.height > 272) {
@@ -301,16 +364,16 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
       pageNumber += 1;
       y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, false, logoDataUrl);
     }
-    y = drawDrinkSectionTitle(doc, category, y, sectionIndex);
+    y = drawDrinkSectionTitle(doc, section.label, y, sectionIndex);
 
-    for (const { drink, measured } of measuredItems) {
+    for (const { group, measured } of measuredItems) {
       if (y + measured.height > 272) {
         doc.addPage();
         pageNumber += 1;
         y = drawPage(doc, "Carte des boissons", "BOISSONS · VINS · CAFÉS", pageNumber, false, logoDataUrl);
-        y = drawDrinkSectionTitle(doc, `${category} · suite`, y, sectionIndex);
+        y = drawDrinkSectionTitle(doc, `${section.label} · suite`, y, sectionIndex);
       }
-      y = drawDrink(doc, drink, y, measured);
+      y = drawDrinkGroup(doc, group, y, measured);
     }
     y += 3;
     sectionIndex += 1;
