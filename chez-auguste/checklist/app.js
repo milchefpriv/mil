@@ -1592,7 +1592,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task) return;
     state.activeTaskId = id;
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
-      task.section === "bring" ? "Modifier — À ramener" : "Modifier";
+      task.section === "bring" ? "Modifier — À acheter" : "Modifier";
     elements.editTaskLabel.value = task.label;
     const taskList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector(
