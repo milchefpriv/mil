@@ -1147,7 +1147,7 @@ dialog::backdrop {
 }
 
 .list-control {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .segmented-control label {
