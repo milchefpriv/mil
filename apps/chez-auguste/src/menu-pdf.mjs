@@ -1,6 +1,10 @@
 import { jsPDF } from "jspdf";
 import robotoVfs from "pdfmake/build/vfs_fonts.js";
-import { augusteSerifBold, augusteSerifRegular } from "./fonts/auguste-serif.mjs";
+import {
+  augusteSerifBold,
+  augusteSerifBoldItalic,
+  augusteSerifRegular,
+} from "./fonts/auguste-serif.mjs";
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -57,6 +61,8 @@ function registerDrinkFonts(doc) {
   doc.addFont("AugusteSerif-Regular.ttf", "AugusteSerif", "normal");
   doc.addFileToVFS("AugusteSerif-Bold.ttf", augusteSerifBold);
   doc.addFont("AugusteSerif-Bold.ttf", "AugusteSerif", "bold");
+  doc.addFileToVFS("AugusteSerif-BoldItalic.ttf", augusteSerifBoldItalic);
+  doc.addFont("AugusteSerif-BoldItalic.ttf", "AugusteSerif", "bolditalic");
 }
 
 function priceLabel(value) {
@@ -239,13 +245,24 @@ export function downloadMenuPdf(options) {
   return filename;
 }
 
+const DRINK_COLORS = {
+  paper: [249, 245, 235],
+  red: [159, 34, 40],
+  ink: [48, 39, 31],
+  muted: [112, 95, 78],
+  line: [202, 174, 146],
+  faint: [216, 197, 173],
+};
+
 const DRINK_CARD = {
-  frameInset: 8.5,
-  contentLeft: 18,
-  contentRight: 192,
-  contentTop: 72,
-  contentBottom: 275,
-  columnGap: 10,
+  frameInset: 7.5,
+  innerFrameInset: 10.4,
+  contentLeft: 17,
+  contentRight: 193,
+  contentTop: 62,
+  contentBottom: 271,
+  columnGap: 12,
+  winePreferredTop: 202,
 };
 
 const WINE_SERVING_COLUMNS = [
@@ -254,85 +271,86 @@ const WINE_SERVING_COLUMNS = [
   { key: "pitcher-50", label: "PICHET", format: "50 cl" },
 ];
 
+function drawSmallDiamond(doc, x, y, size = 1.15) {
+  doc.setFillColor(...DRINK_COLORS.red);
+  doc.triangle(x, y - size, x + size, y, x, y + size, "F");
+  doc.triangle(x, y - size, x - size, y, x, y + size, "F");
+}
+
 function drawDrinkCardFrame(doc) {
-  doc.setFillColor(...COLORS.paper);
+  doc.setFillColor(...DRINK_COLORS.paper);
   doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, "F");
 
-  const inset = DRINK_CARD.frameInset;
-  doc.setDrawColor(...COLORS.red);
-  doc.setLineWidth(0.32);
-  doc.rect(inset, inset, PAGE_WIDTH - inset * 2, PAGE_HEIGHT - inset * 2);
+  const outer = DRINK_CARD.frameInset;
+  doc.setDrawColor(...DRINK_COLORS.red);
+  doc.setLineWidth(0.3);
+  doc.rect(outer, outer, PAGE_WIDTH - outer * 2, PAGE_HEIGHT - outer * 2);
 
-  const innerInset = inset + 3;
-  const ornamentLength = 8;
-  doc.setLineWidth(0.18);
-  for (const [x, y, directionX, directionY] of [
-    [innerInset, innerInset, 1, 1],
-    [PAGE_WIDTH - innerInset, innerInset, -1, 1],
-    [innerInset, PAGE_HEIGHT - innerInset, 1, -1],
-    [PAGE_WIDTH - innerInset, PAGE_HEIGHT - innerInset, -1, -1],
-  ]) {
-    doc.line(x, y, x + directionX * ornamentLength, y);
-    doc.line(x, y, x, y + directionY * ornamentLength);
-  }
+  const inner = DRINK_CARD.innerFrameInset;
+  doc.setLineWidth(0.12);
+  doc.rect(inner, inner, PAGE_WIDTH - inner * 2, PAGE_HEIGHT - inner * 2);
+
+  drawSmallDiamond(doc, PAGE_WIDTH / 2, inner, 0.8);
+  drawSmallDiamond(doc, PAGE_WIDTH / 2, PAGE_HEIGHT - inner, 0.8);
 }
 
 function drawDrinkCardHeader(doc, logoDataUrl) {
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", 86, 11.5, 38, 27.6, undefined, "FAST");
+  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", 88, 11.5, 34, 24.6, undefined, "FAST");
   else {
     doc.setFont("AugusteSerif", "bold");
     doc.setFontSize(17);
-    setColor(doc, COLORS.red);
-    doc.text("CHEZ AUGUSTE", 105, 31, { align: "center" });
+    setColor(doc, DRINK_COLORS.red);
+    doc.text("CHEZ AUGUSTE", 105, 30, { align: "center" });
   }
 
   doc.setFont("AugusteSerif", "bold");
-  doc.setFontSize(19);
-  setColor(doc, COLORS.ink);
-  doc.text("Carte des boissons", 105, 49, { align: "center" });
+  doc.setFontSize(18.5);
+  setColor(doc, DRINK_COLORS.ink);
+  doc.text("Carte des boissons", 105, 44.2, { align: "center" });
 
-  doc.setFont("Roboto", "bold");
-  doc.setFontSize(5.8);
-  setColor(doc, COLORS.red);
-  doc.text(tracked("BOISSONS · VINS · CAFÉS"), 105, 56, { align: "center" });
+  doc.setFont("AugusteSerif", "bolditalic");
+  doc.setFontSize(7.8);
+  setColor(doc, DRINK_COLORS.red);
+  doc.text("Boissons · Vins · Cafés", 105, 51, { align: "center" });
 
-  doc.setDrawColor(...COLORS.red);
-  doc.setLineWidth(0.22);
-  doc.line(93, 62, 101.8, 62);
-  doc.line(108.2, 62, 117, 62);
-  doc.setFillColor(...COLORS.red);
-  doc.triangle(105, 60.7, 106.3, 62, 105, 63.3, "F");
-  doc.triangle(105, 60.7, 103.7, 62, 105, 63.3, "F");
+  doc.setDrawColor(...DRINK_COLORS.red);
+  doc.setLineWidth(0.18);
+  doc.line(88, 56.4, 101.2, 56.4);
+  doc.line(108.8, 56.4, 122, 56.4);
+  drawSmallDiamond(doc, 105, 56.4, 1.15);
 }
 
 function drawDrinkCardFooter(doc) {
   doc.setFont("Roboto", "normal");
-  doc.setFontSize(5.4);
-  setColor(doc, COLORS.muted);
-  doc.text("PRIX NETS EN EUROS · SERVICE COMPRIS", 105, 284.8, { align: "center" });
+  doc.setFontSize(5.7);
+  setColor(doc, DRINK_COLORS.muted);
+  doc.text("PRIX NETS EN EUROS · SERVICE COMPRIS", 105, 281.8, { align: "center" });
 
-  doc.setDrawColor(...COLORS.red);
-  doc.setLineWidth(0.18);
-  doc.line(52, 283.3, 78, 283.3);
-  doc.line(132, 283.3, 158, 283.3);
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.16);
+  doc.line(35, 280.3, 73, 280.3);
+  doc.line(137, 280.3, 175, 280.3);
 }
 
 function drawDrinkSectionTitle(doc, label, y, x, width, scale) {
-  const baseline = y + 3.7 * scale;
-  doc.setFont("Roboto", "bold");
-  doc.setFontSize(7.1 * scale);
-  setColor(doc, COLORS.red);
-  const displayLabel = tracked(cleanText(label).toUpperCase());
-  doc.text(displayLabel, x, baseline);
+  const displayLabel = cleanText(label);
+  const baseline = y + 3.8 * scale;
+  doc.setFont("AugusteSerif", "bolditalic");
+  doc.setFontSize(10.6 * scale);
+  setColor(doc, DRINK_COLORS.red);
+  const labelWidth = doc.getTextWidth(displayLabel);
+  const centerX = x + width / 2;
+  doc.text(displayLabel, centerX, baseline, { align: "center" });
 
-  const lineStart = x + doc.getTextWidth(displayLabel) + 4;
-  const lineEnd = x + width;
-  if (lineStart < lineEnd) {
-    doc.setDrawColor(...COLORS.line);
-    doc.setLineWidth(0.22);
-    doc.line(lineStart, baseline - 0.65 * scale, lineEnd, baseline - 0.65 * scale);
+  const lineY = baseline - 0.7 * scale;
+  const gap = 3 * scale;
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.16);
+  if (labelWidth < width - 12 * scale) {
+    doc.line(x, lineY, centerX - labelWidth / 2 - gap, lineY);
+    doc.line(centerX + labelWidth / 2 + gap, lineY, x + width, lineY);
   }
-  return y + 7.5 * scale;
+  return y + 8.25 * scale;
 }
 
 const CUSTOMER_CATEGORY_LABELS = {
@@ -340,6 +358,7 @@ const CUSTOMER_CATEGORY_LABELS = {
   "Jus & nectars": "Jus de fruits",
   "Bières pression": "Bières & apéritifs",
   "Bières bouteille / canette": "Bières & apéritifs",
+  "Cafés / boissons chaudes": "Cafés & boissons chaudes",
   "Autres alcoolisés": "Bières & apéritifs",
   "Autres sans alcool": "Sans alcool",
 };
@@ -401,33 +420,59 @@ function groupCustomerDrinks(drinks, categories) {
     .filter((section) => section.groups.length);
 }
 
+function drawDottedLeader(doc, startX, endX, y, scale) {
+  if (endX - startX < 3 * scale) return;
+  doc.setDrawColor(...DRINK_COLORS.faint);
+  doc.setLineWidth(0.12);
+  doc.setLineDashPattern([0.3 * scale, 0.9 * scale], 0);
+  doc.line(startX, y, endX, y);
+  doc.setLineDashPattern([], 0);
+}
+
 function measureDrinkGroup(doc, group, width, scale) {
-  const rowStep = 4.45 * scale;
-  doc.setFont("AugusteSerif", "bold");
-  doc.setFontSize(9.2 * scale);
-  const titleLines = doc.splitTextToSize(cleanText(group.name), width - 31).slice(0, 2);
+  const rowStep = 4.75 * scale;
+  doc.setFont("AugusteSerif", "normal");
+  doc.setFontSize(9.5 * scale);
+  const titleLines = doc.splitTextToSize(cleanText(group.name), width - 25.5).slice(0, 2);
   const rows = Math.max(titleLines.length, group.variants.length);
-  return { titleLines, rowStep, height: rows * rowStep + 1.65 * scale };
+  return { titleLines, rowStep, height: rows * rowStep + 1.15 * scale };
 }
 
 function drawDrinkGroup(doc, group, y, x, width, scale, measured = measureDrinkGroup(doc, group, width, scale)) {
   const baseline = y + 3.45 * scale;
-  doc.setFont("AugusteSerif", "bold");
-  doc.setFontSize(9.2 * scale);
-  setColor(doc, COLORS.ink);
-  doc.text(measured.titleLines, x, baseline, { lineHeightFactor: 1.08 });
+  doc.setFont("AugusteSerif", "normal");
+  doc.setFontSize(9.5 * scale);
+  setColor(doc, DRINK_COLORS.ink);
+  doc.text(measured.titleLines, x, baseline, { lineHeightFactor: 1.07 });
 
+  const firstLineWidth = doc.getTextWidth(measured.titleLines[0] || "");
   group.variants.forEach((variant, index) => {
     const rowY = baseline + index * measured.rowStep;
-    doc.setFont("Roboto", "normal");
-    doc.setFontSize(6.6 * scale);
-    setColor(doc, COLORS.muted);
-    if (variant.format) doc.text(variant.format, x + width - 16, rowY, { align: "right" });
+    const price = `${priceLabel(variant.price)} €`;
+    doc.setFont("AugusteSerif", "bold");
+    doc.setFontSize(9 * scale);
+    const priceWidth = doc.getTextWidth(price);
+    const priceLeft = x + width - priceWidth;
 
-    doc.setFont("Roboto", "bold");
-    doc.setFontSize(7.8 * scale);
-    setColor(doc, COLORS.ink);
-    doc.text(`${priceLabel(variant.price)} €`, x + width, rowY, { align: "right" });
+    let leaderEnd = priceLeft - 1.8 * scale;
+    if (variant.format) {
+      doc.setFont("Roboto", "normal");
+      doc.setFontSize(6.8 * scale);
+      const formatWidth = doc.getTextWidth(variant.format);
+      const formatRight = priceLeft - 3.1 * scale;
+      setColor(doc, DRINK_COLORS.muted);
+      doc.text(variant.format, formatRight, rowY, { align: "right" });
+      leaderEnd = formatRight - formatWidth - 1.5 * scale;
+    }
+
+    if (index === 0 && measured.titleLines.length === 1) {
+      drawDottedLeader(doc, x + firstLineWidth + 1.5 * scale, leaderEnd, rowY - 0.55 * scale, scale);
+    }
+
+    doc.setFont("AugusteSerif", "bold");
+    doc.setFontSize(9 * scale);
+    setColor(doc, DRINK_COLORS.red);
+    doc.text(price, x + width, rowY, { align: "right" });
   });
   return y + measured.height;
 }
@@ -455,7 +500,7 @@ function prepareWineRows(section) {
     for (const variant of group.variants) {
       const servingKey = wineServingKey(variant.format);
       if (servingKey) servings.set(servingKey, variant.price);
-      else if (isBottleWine(variant.format)) bottleRows.push({ name: group.name, format: "75 cl", price: variant.price });
+      else if (isBottleWine(variant.format)) bottleRows.push({ name: group.name, price: variant.price });
       else otherVariants.push(variant);
     }
     if (servings.size) servingRows.push({ name: group.name, servings });
@@ -464,106 +509,162 @@ function prepareWineRows(section) {
   return { servingRows, bottleRows, otherGroups };
 }
 
+function wineServingName(name) {
+  const label = cleanText(name);
+  if (/^(?:rouge|blanc|rosé)$/i.test(label)) return `Vin ${label.toLocaleLowerCase("fr")}`;
+  return label;
+}
+
+function wineBottleSideRows(rows) {
+  const result = rows.bottleRows.map((row) => ({ name: row.name, detail: "", price: row.price }));
+  for (const group of rows.otherGroups) {
+    group.variants.forEach((variant, index) => {
+      result.push({
+        name: index === 0 ? group.name : "",
+        detail: variant.format,
+        price: variant.price,
+      });
+    });
+  }
+  return result;
+}
+
 function measureWineSection(doc, section, width, scale) {
   const rows = prepareWineRows(section);
-  let bodyHeight = 0;
+  const bottleSideRows = wineBottleSideRows(rows);
+  const servingBody = rows.servingRows.length ? 15.5 + rows.servingRows.length * 5.5 : 0;
+  const bottleBody = bottleSideRows.length ? 9.7 + bottleSideRows.length * 5.5 : 0;
+  return (9.2 + Math.max(servingBody, bottleBody, 15) + 3.2) * scale;
+}
 
-  if (rows.servingRows.length) {
-    bodyHeight += 8.2 * scale;
-    doc.setFont("AugusteSerif", "bold");
-    doc.setFontSize(8.7 * scale);
-    for (const row of rows.servingRows) {
-      const lines = doc.splitTextToSize(cleanText(row.name), width - 48).slice(0, 2);
-      bodyHeight += Math.max(1, lines.length) * 4.25 * scale + 0.9 * scale;
-    }
-  }
-
-  if (rows.bottleRows.length) {
-    if (bodyHeight) bodyHeight += 2.6 * scale;
-    for (const row of rows.bottleRows) {
-      bodyHeight += measureDrinkGroup(doc, {
-        name: row.name,
-        variants: [{ format: row.format, price: row.price }],
-      }, width, scale).height;
-    }
-  }
-
-  for (const group of rows.otherGroups) bodyHeight += measureDrinkGroup(doc, group, width, scale).height;
-  return 7.5 * scale + bodyHeight + 2.4 * scale;
+function drawWinePanelHeading(doc, label, x, y, width, scale) {
+  doc.setFont("AugusteSerif", "bolditalic");
+  doc.setFontSize(8.6 * scale);
+  setColor(doc, DRINK_COLORS.red);
+  doc.text(cleanText(label), x + width / 2, y, { align: "center" });
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.14);
+  doc.line(x + 4 * scale, y + 1.8 * scale, x + width - 4 * scale, y + 1.8 * scale);
 }
 
 function drawWineSection(doc, section, y, x, width, scale) {
-  let cursor = drawDrinkSectionTitle(doc, section.label, y, x, width, scale);
   const rows = prepareWineRows(section);
-  const priceColumnWidth = 16;
-  const priceXs = WINE_SERVING_COLUMNS.map((_, index) => x + width - priceColumnWidth * (2 - index));
+  const bottleSideRows = wineBottleSideRows(rows);
+  const height = measureWineSection(doc, section, width, scale);
+  const titleBaseline = y + 4 * scale;
+
+  doc.setFont("AugusteSerif", "bolditalic");
+  doc.setFontSize(11.8 * scale);
+  setColor(doc, DRINK_COLORS.red);
+  const title = "Les vins";
+  const titleWidth = doc.getTextWidth(title);
+  const centerX = x + width / 2;
+  doc.text(title, centerX, titleBaseline, { align: "center" });
+  doc.setDrawColor(...DRINK_COLORS.red);
+  doc.setLineWidth(0.18);
+  doc.line(x, titleBaseline - 0.7 * scale, centerX - titleWidth / 2 - 4 * scale, titleBaseline - 0.7 * scale);
+  doc.line(centerX + titleWidth / 2 + 4 * scale, titleBaseline - 0.7 * scale, x + width, titleBaseline - 0.7 * scale);
+
+  const panelTop = y + 10 * scale;
+  const panelGap = 10 * scale;
+  const panelWidth = (width - panelGap) / 2;
+  const rightX = x + panelWidth + panelGap;
+  drawWinePanelHeading(doc, "Au verre & en pichet", x, panelTop, panelWidth, scale);
+  drawWinePanelHeading(doc, "En bouteille · 75 cl", rightX, panelTop, panelWidth, scale);
+
+  const dividerX = x + width / 2;
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.13);
+  doc.setLineDashPattern([0.75 * scale, 1.15 * scale], 0);
+  doc.line(dividerX, panelTop - 2 * scale, dividerX, y + height - 2.4 * scale);
+  doc.setLineDashPattern([], 0);
 
   if (rows.servingRows.length) {
+    const nameWidth = 31 * scale;
+    const priceXs = WINE_SERVING_COLUMNS.map(
+      (_, index) => x + nameWidth + ((panelWidth - nameWidth) / 3) * (index + 0.5),
+    );
     doc.setFont("Roboto", "bold");
-    doc.setFontSize(4.6 * scale);
-    setColor(doc, COLORS.muted);
+    doc.setFontSize(4.8 * scale);
+    setColor(doc, DRINK_COLORS.muted);
     WINE_SERVING_COLUMNS.forEach((column, index) => {
-      doc.text(column.label, priceXs[index], cursor + 2.4 * scale, { align: "center" });
-      doc.setFontSize(5.2 * scale);
-      doc.text(column.format, priceXs[index], cursor + 5.1 * scale, { align: "center" });
-      doc.setFontSize(4.6 * scale);
+      doc.text(column.label, priceXs[index], panelTop + 6.1 * scale, { align: "center" });
+      doc.setFontSize(5.5 * scale);
+      doc.text(column.format, priceXs[index], panelTop + 9.1 * scale, { align: "center" });
+      doc.setFontSize(4.8 * scale);
     });
-    doc.setDrawColor(...COLORS.line);
-    doc.setLineWidth(0.18);
-    doc.line(x, cursor + 6.5 * scale, x + width, cursor + 6.5 * scale);
-    cursor += 8.2 * scale;
 
-    for (const row of rows.servingRows) {
-      doc.setFont("AugusteSerif", "bold");
-      doc.setFontSize(8.7 * scale);
-      setColor(doc, COLORS.ink);
-      const lines = doc.splitTextToSize(cleanText(row.name), width - 48).slice(0, 2);
-      doc.text(lines, x, cursor + 3.15 * scale, { lineHeightFactor: 1.08 });
+    doc.setDrawColor(...DRINK_COLORS.faint);
+    doc.setLineWidth(0.13);
+    doc.line(x, panelTop + 10.8 * scale, x + panelWidth, panelTop + 10.8 * scale);
+
+    rows.servingRows.forEach((row, rowIndex) => {
+      const rowY = panelTop + (15 + rowIndex * 5.5) * scale;
+      doc.setFont("AugusteSerif", "normal");
+      doc.setFontSize(9.1 * scale);
+      setColor(doc, DRINK_COLORS.ink);
+      doc.text(wineServingName(row.name), x, rowY);
 
       WINE_SERVING_COLUMNS.forEach((column, index) => {
         const price = row.servings.get(column.key);
         if (price === undefined) return;
-        doc.setFont("Roboto", "bold");
-        doc.setFontSize(7.4 * scale);
-        setColor(doc, COLORS.ink);
-        doc.text(priceLabel(price), priceXs[index], cursor + 3.15 * scale, { align: "center" });
+        doc.setFont("AugusteSerif", "bold");
+        doc.setFontSize(8.7 * scale);
+        setColor(doc, DRINK_COLORS.red);
+        doc.text(`${priceLabel(price)} €`, priceXs[index], rowY, { align: "center" });
       });
-      cursor += Math.max(1, lines.length) * 4.25 * scale + 0.9 * scale;
-    }
+    });
   }
 
-  if (rows.bottleRows.length) {
-    if (rows.servingRows.length) cursor += 2.6 * scale;
-    for (const row of rows.bottleRows) {
-      cursor = drawDrinkGroup(doc, {
-        name: row.name,
-        variants: [{ format: row.format, price: row.price }],
-      }, cursor, x, width, scale);
-    }
-  }
+  bottleSideRows.forEach((row, rowIndex) => {
+    const rowY = panelTop + (8.9 + rowIndex * 5.5) * scale;
+    const name = cleanText(row.name);
+    const price = `${priceLabel(row.price)} €`;
+    doc.setFont("AugusteSerif", "normal");
+    doc.setFontSize(8.7 * scale);
+    setColor(doc, DRINK_COLORS.ink);
+    const label = row.detail ? `${name}${name ? " · " : ""}${cleanText(row.detail)}` : name;
+    const lines = doc.splitTextToSize(label, panelWidth - 16 * scale).slice(0, 1);
+    doc.text(lines, rightX, rowY);
+    const labelWidth = doc.getTextWidth(lines[0] || "");
 
-  for (const group of rows.otherGroups) cursor = drawDrinkGroup(doc, group, cursor, x, width, scale);
-  return cursor + 2.4 * scale;
+    doc.setFont("AugusteSerif", "bold");
+    doc.setFontSize(8.9 * scale);
+    const priceWidth = doc.getTextWidth(price);
+    drawDottedLeader(
+      doc,
+      rightX + labelWidth + 1.4 * scale,
+      rightX + panelWidth - priceWidth - 1.7 * scale,
+      rowY - 0.55 * scale,
+      scale,
+    );
+    setColor(doc, DRINK_COLORS.red);
+    doc.text(price, rightX + panelWidth, rowY, { align: "right" });
+  });
+
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.14);
+  doc.line(x, y + height - 1.4 * scale, x + width, y + height - 1.4 * scale);
+  return y + height;
 }
 
 function measureDrinkSection(doc, section, width, scale) {
-  if (section.label.toLocaleLowerCase("fr") === "vins") return measureWineSection(doc, section, width, scale);
   const groupsHeight = section.groups.reduce(
     (total, group) => total + measureDrinkGroup(doc, group, width, scale).height,
     0,
   );
-  return 7.5 * scale + groupsHeight + 2.4 * scale;
+  return 8.25 * scale + groupsHeight + 2.8 * scale;
 }
 
 function drawDrinkSection(doc, section, y, x, width, scale) {
-  if (section.label.toLocaleLowerCase("fr") === "vins") return drawWineSection(doc, section, y, x, width, scale);
   let cursor = drawDrinkSectionTitle(doc, section.label, y, x, width, scale);
   for (const group of section.groups) cursor = drawDrinkGroup(doc, group, cursor, x, width, scale);
-  return cursor + 2.4 * scale;
+  return cursor + 2.8 * scale;
 }
 
 function balancedDrinkColumns(doc, sections, width, scale) {
-  if (sections.length < 2) return [sections, []];
+  if (!sections.length) return [[], []];
+  if (sections.length === 1) return [sections, []];
   let bestSplit = 1;
   let bestHeight = Number.POSITIVE_INFINITY;
   for (let split = 1; split < sections.length; split += 1) {
@@ -586,11 +687,21 @@ function balancedDrinkColumns(doc, sections, width, scale) {
 
 function drinkColumnsHeight(doc, columns, width, scale) {
   return Math.max(
+    0,
     ...columns.map((column) => column.reduce(
       (total, section) => total + measureDrinkSection(doc, section, width, scale),
       0,
     )),
   );
+}
+
+function drawDrinkColumnDivider(doc, top, bottom, scale) {
+  if (bottom <= top) return;
+  doc.setDrawColor(...DRINK_COLORS.line);
+  doc.setLineWidth(0.13);
+  doc.setLineDashPattern([0.7 * scale, 1.15 * scale], 0);
+  doc.line(PAGE_WIDTH / 2, top, PAGE_WIDTH / 2, bottom);
+  doc.setLineDashPattern([], 0);
 }
 
 /**
@@ -603,6 +714,9 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
   registerDrinkFonts(doc);
   const menuDrinks = drinks.filter(isCustomerReadyDrink);
   const sections = groupCustomerDrinks(menuDrinks, categories);
+  const wineSection = sections.find((section) => section.label.toLocaleLowerCase("fr") === "vins");
+  const regularSections = sections.filter((section) => section !== wineSection);
+
   drawDrinkCardFrame(doc);
   drawDrinkCardHeader(doc, logoDataUrl);
   drawDrinkCardFooter(doc);
@@ -611,28 +725,40 @@ export function buildDrinksMenuPdf({ drinks = [], categories = [], logoDataUrl }
   const columnWidth = (contentWidth - DRINK_CARD.columnGap) / 2;
   const availableHeight = DRINK_CARD.contentBottom - DRINK_CARD.contentTop;
   let scale = 1;
-  let columns = balancedDrinkColumns(doc, sections, columnWidth, scale);
-  const baseHeight = drinkColumnsHeight(doc, columns, columnWidth, scale);
-  const targetHeight = availableHeight * 0.9;
-  if (baseHeight < targetHeight) {
-    scale = Math.min(1.18, targetHeight / baseHeight);
-    columns = balancedDrinkColumns(doc, sections, columnWidth, scale);
-  } else if (baseHeight > availableHeight) {
-    scale = availableHeight / baseHeight;
-    columns = balancedDrinkColumns(doc, sections, columnWidth, scale);
-  }
-  for (let pass = 0; pass < 2; pass += 1) {
-    const adjustedHeight = drinkColumnsHeight(doc, columns, columnWidth, scale);
-    if (adjustedHeight <= availableHeight) break;
-    scale *= availableHeight / adjustedHeight;
-    columns = balancedDrinkColumns(doc, sections, columnWidth, scale);
+  let columns = balancedDrinkColumns(doc, regularSections, columnWidth, scale);
+  let topHeight = drinkColumnsHeight(doc, columns, columnWidth, scale);
+  let wineHeight = wineSection ? measureWineSection(doc, wineSection, contentWidth, scale) : 0;
+  const naturalHeight = topHeight + (wineSection ? 7 * scale + wineHeight : 0);
+
+  if (naturalHeight > availableHeight) {
+    scale = availableHeight / naturalHeight;
+    columns = balancedDrinkColumns(doc, regularSections, columnWidth, scale);
+    topHeight = drinkColumnsHeight(doc, columns, columnWidth, scale);
+    wineHeight = wineSection ? measureWineSection(doc, wineSection, contentWidth, scale) : 0;
   }
 
   columns.forEach((column, columnIndex) => {
     const x = DRINK_CARD.contentLeft + columnIndex * (columnWidth + DRINK_CARD.columnGap);
-    let y = DRINK_CARD.contentTop;
-    for (const section of column) y = drawDrinkSection(doc, section, y, x, columnWidth, scale);
+    let cursor = DRINK_CARD.contentTop;
+    for (const section of column) cursor = drawDrinkSection(doc, section, cursor, x, columnWidth, scale);
   });
+  drawDrinkColumnDivider(
+    doc,
+    DRINK_CARD.contentTop - 1.2 * scale,
+    DRINK_CARD.contentTop + topHeight - 1.2 * scale,
+    scale,
+  );
+
+  if (wineSection) {
+    let wineY = Math.max(
+      DRINK_CARD.winePreferredTop,
+      DRINK_CARD.contentTop + topHeight + 6.5 * scale,
+    );
+    if (wineY + wineHeight > DRINK_CARD.contentBottom) {
+      wineY = DRINK_CARD.contentBottom - wineHeight;
+    }
+    drawWineSection(doc, wineSection, wineY, DRINK_CARD.contentLeft, contentWidth, scale);
+  }
 
   doc.setProperties({
     title: "Carte des boissons - Chez Auguste",
@@ -662,7 +788,6 @@ export function downloadDrinksMenuPdf(options) {
   window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
   return filename;
 }
-
 const TOTAL_PAGES_TOKEN = "{total_pages_count_string}";
 
 function marginLabel(recipe) {
