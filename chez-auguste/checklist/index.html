@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css?v=10" />
-    <script type="module" src="./app.js?v=10"></script>
+    <script type="module" src="./app.js?v=11"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -78,12 +78,12 @@
 
       <aside class="bring-note" aria-labelledby="bringTitle">
         <header class="bring-note-header">
-          <h2 id="bringTitle">À ramener</h2>
+          <h2 id="bringTitle">À acheter</h2>
           <span class="bring-count" id="bringProgress" aria-live="polite"></span>
         </header>
         <div class="task-list bring-list" id="bringList" role="list"></div>
         <form class="bring-add" id="bringAddForm" autocomplete="off">
-          <label class="sr-only" for="bringInput">Ajouter quelque chose à ramener</label>
+          <label class="sr-only" for="bringInput">Ajouter quelque chose à acheter</label>
           <input
             id="bringInput"
             type="text"
@@ -91,7 +91,7 @@
             enterkeyhint="done"
             placeholder="Ajouter quelque chose…"
           />
-          <button type="submit" aria-label="Ajouter à la liste À ramener">
+          <button type="submit" aria-label="Ajouter à la liste À acheter">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
           </button>
         </form>
