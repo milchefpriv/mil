@@ -8,7 +8,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-  const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance"];
+  const QUICK_TARGET_ORDER = ["today", "tomorrow", "maintenance", "bring"];
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
@@ -1383,9 +1383,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     renderTaskList(elements.maintenanceList, maintenanceTasks);
     elements.todayProgress.textContent = progressText(todayTasks);
     elements.tomorrowProgress.textContent = progressText(tomorrowTasks);
-    elements.bringProgress.textContent = bringTasks.length
-      ? `${bringTasks.length} élément${bringTasks.length > 1 ? "s" : ""}`
-      : "";
+    elements.bringProgress.textContent = progressText(bringTasks);
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddToday.hidden = false;
     elements.emptyAddTomorrow.hidden = false;
@@ -1403,11 +1401,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const targets = {
       today: ["Aujourd’hui", "Ajouter à aujourd’hui. Appuyer pour choisir demain"],
       tomorrow: ["Demain", "Ajouter à demain. Appuyer pour choisir Entretien / Rénovation"],
-      maintenance: ["Rénovation", "Ajouter à Entretien / Rénovation. Appuyer pour choisir aujourd’hui"],
+      maintenance: ["Rénovation", "Ajouter à Entretien / Rénovation. Appuyer pour choisir la liste de courses"],
+      bring: ["Courses", "Ajouter à la liste de courses. Appuyer pour choisir aujourd’hui"],
     };
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
+    elements.quickEstimate.hidden = state.settings.quickTarget === "bring";
   }
 
   function selectedEstimate() {
@@ -1493,7 +1493,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const cleanLabel = label.trim().slice(0, 180);
     if (!cleanLabel) return;
     const now = new Date().toISOString();
-    const section = state.settings.quickTarget === "maintenance" ? "maintenance" : "daily";
+    const section = ["maintenance", "bring"].includes(state.settings.quickTarget)
+      ? state.settings.quickTarget
+      : "daily";
     const task = {
       id: makeId("task"),
       label: cleanLabel,
@@ -1507,7 +1509,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       manualPosition: null,
       templateId: null,
       occurrenceKey: null,
-      estimateMinutes: state.quickEstimateMinutes,
+      estimateMinutes: section === "bring" ? null : state.quickEstimateMinutes,
     };
     try {
       await putRecord("tasks", task);
@@ -1579,12 +1581,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function updateEditorDestination() {
-    const task = state.tasks.find((item) => item.id === state.activeTaskId);
-    const isBring = task?.section === "bring";
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
-    elements.taskListFieldset.hidden = isBring;
-    elements.momentFieldset.hidden = isBring || selectedList?.value === "maintenance";
-    elements.editEstimate.hidden = isBring;
+    elements.taskListFieldset.hidden = false;
+    elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
+    elements.editEstimate.hidden = selectedList?.value === "bring";
   }
 
   function openTaskEditor(id) {
@@ -1592,7 +1592,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task) return;
     state.activeTaskId = id;
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
-      task.section === "bring" ? "Modifier — À acheter" : "Modifier";
+      task.section === "bring" ? "Modifier — Liste de courses" : "Modifier";
     elements.editTaskLabel.value = task.label;
     const taskList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector(
@@ -1615,12 +1615,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task || !cleanLabel) return;
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
-    const isBring = task.section === "bring";
-    const taskList = isBring
-      ? "bring"
-      : QUICK_TARGET_ORDER.includes(selectedList?.value)
-        ? selectedList.value
-        : "today";
+    const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value)
+      ? selectedList.value
+      : "today";
     const isDaily = ["today", "tomorrow"].includes(taskList);
     const previousTaskList = taskListForTask(task);
     const nextTask = {
@@ -1629,7 +1626,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: taskList === "tomorrow" ? tomorrowKey() : todayKey(),
       section: isDaily ? "daily" : taskList,
       moment: isDaily ? selectedMoment?.value || "any" : "any",
-      estimateMinutes: isBring ? null : state.editEstimateMinutes,
+      estimateMinutes: taskList === "bring" ? null : state.editEstimateMinutes,
       manualPosition: previousTaskList === taskList ? task.manualPosition : null,
       updatedAt: new Date().toISOString(),
     };
@@ -1935,7 +1932,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function clearCompletedTasks() {
-    const completed = state.tasks.filter((task) => task.completedAt && task.section !== "bring");
+    const completed = state.tasks.filter((task) => task.completedAt);
     if (!completed.length) {
       showToast("Aucune tâche terminée");
       return;
