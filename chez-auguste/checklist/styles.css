@@ -828,6 +828,24 @@ dialog::backdrop {
   padding: 0 16px 0 22px;
 }
 
+.sheet-header-leading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.sheet-back-button {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+}
+
+.sheet-back-button svg {
+  width: 20px;
+  height: 20px;
+}
+
 .sheet-header h2,
 .task-dialog-header h2 {
   margin: 0;
@@ -842,6 +860,11 @@ dialog::backdrop {
   padding: 0 14px calc(24px + var(--safe-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.settings-main-view {
+  display: grid;
+  gap: 12px;
 }
 
 .settings-section {
@@ -1071,6 +1094,94 @@ dialog::backdrop {
 
 .danger-action {
   color: var(--danger);
+}
+
+.history-view {
+  display: grid;
+  gap: 12px;
+}
+
+.history-intro {
+  margin: 0;
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.history-day {
+  overflow: hidden;
+  border: 1px solid rgba(74, 55, 60, 0.08);
+  border-radius: 20px;
+  background: var(--paper);
+}
+
+.history-day h3 {
+  margin: 0;
+  padding: 14px 16px 10px;
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 810;
+  letter-spacing: 0.02em;
+}
+
+.history-day-list {
+  display: grid;
+  padding: 0 14px 5px;
+}
+
+.history-item {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--line);
+}
+
+.history-item:first-child {
+  border-top: 0;
+}
+
+.history-marker {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--check-mark);
+  background: var(--success);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.history-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.history-label {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.94rem;
+  font-weight: 590;
+  line-height: 1.25;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.history-meta {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 690;
+  font-variant-numeric: tabular-nums;
 }
 
 .task-dialog {

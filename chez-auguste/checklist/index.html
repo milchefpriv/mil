@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=11" />
-    <script type="module" src="./app.js?v=12"></script>
+    <link rel="stylesheet" href="./styles.css?v=12" />
+    <script type="module" src="./app.js?v=13"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -134,14 +134,20 @@
     <dialog class="sheet" id="settingsDialog" aria-labelledby="settingsTitle">
       <div class="sheet-handle" aria-hidden="true"></div>
       <header class="sheet-header">
-        <h2 id="settingsTitle">Routine</h2>
+        <div class="sheet-header-leading">
+          <button class="icon-button sheet-back-button" id="backToSettings" type="button" aria-label="Retour aux routines" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <h2 id="settingsTitle">Routine</h2>
+        </div>
         <button class="icon-button close-button" id="closeSettings" type="button" aria-label="Fermer">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
         </button>
       </header>
 
       <div class="sheet-content">
-        <section class="settings-section">
+        <div class="settings-main-view" id="settingsMainView">
+          <section class="settings-section">
           <div class="settings-title-row">
             <div>
               <p class="eyebrow">Routine</p>
@@ -160,9 +166,9 @@
             <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
           </form>
           <button class="secondary-button" id="addMorningToday" type="button">Ajouter à aujourd’hui</button>
-        </section>
+          </section>
 
-        <section class="settings-section">
+          <section class="settings-section">
           <div class="settings-title-row">
             <div>
               <p class="eyebrow">Routine</p>
@@ -181,25 +187,34 @@
             <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
           </form>
           <button class="secondary-button" id="addEveningToday" type="button">Ajouter à aujourd’hui</button>
-        </section>
+          </section>
 
-        <section class="settings-section compact-section">
-          <p class="eyebrow">Données</p>
-          <div class="settings-actions">
-            <button class="plain-action" id="exportData" type="button">
-              <span>Sauvegarder</span><span aria-hidden="true">↓</span>
-            </button>
-            <button class="plain-action file-action" id="importDataButton" type="button">
-              <span>Restaurer</span><span aria-hidden="true">↑</span>
-            </button>
-            <input class="sr-only" id="importData" type="file" accept="application/json,.json" tabindex="-1" aria-label="Choisir une sauvegarde" />
-            <button class="plain-action" id="installApp" type="button" hidden>
-              <span>Installer l’app</span><span aria-hidden="true">+</span>
-            </button>
-            <button class="plain-action danger-action" id="clearCompleted" type="button">
-              <span>Effacer les tâches terminées</span><span aria-hidden="true">×</span>
-            </button>
-          </div>
+          <section class="settings-section compact-section">
+            <p class="eyebrow">Données</p>
+            <div class="settings-actions">
+              <button class="plain-action" id="openHistory" type="button">
+                <span>Historique</span><span aria-hidden="true">›</span>
+              </button>
+              <button class="plain-action" id="exportData" type="button">
+                <span>Sauvegarder</span><span aria-hidden="true">↓</span>
+              </button>
+              <button class="plain-action file-action" id="importDataButton" type="button">
+                <span>Restaurer</span><span aria-hidden="true">↑</span>
+              </button>
+              <input class="sr-only" id="importData" type="file" accept="application/json,.json" tabindex="-1" aria-label="Choisir une sauvegarde" />
+              <button class="plain-action" id="installApp" type="button" hidden>
+                <span>Installer l’app</span><span aria-hidden="true">+</span>
+              </button>
+              <button class="plain-action danger-action" id="clearCompleted" type="button">
+                <span>Retirer les tâches terminées</span><span aria-hidden="true">×</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <section class="history-view" id="historyView" aria-labelledby="settingsTitle" hidden>
+          <p class="history-intro" id="historySummary"></p>
+          <div class="history-list" id="historyList"></div>
         </section>
       </div>
     </dialog>

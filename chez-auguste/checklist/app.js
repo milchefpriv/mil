@@ -16,6 +16,31 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const SUPABASE_URL = "https://eoewkjfgqivrkkgpjsrk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
   const SHARED_SECTION = "checklist";
+  const HISTORY_TIME_ZONE = "Europe/Paris";
+  const HISTORY_DAY_KEY_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: HISTORY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const HISTORY_DAY_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: HISTORY_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const HISTORY_CALENDAR_DATE_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: HISTORY_TIME_ZONE,
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const HISTORY_TIME_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: HISTORY_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const CLIENT_INSTANCE_ID = crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -49,8 +74,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     emptyAddMaintenance: document.querySelector("#emptyAddMaintenance"),
     taskTemplate: document.querySelector("#taskTemplate"),
     settingsDialog: document.querySelector("#settingsDialog"),
+    settingsContent: document.querySelector("#settingsDialog .sheet-content"),
+    settingsTitle: document.querySelector("#settingsTitle"),
+    settingsMainView: document.querySelector("#settingsMainView"),
     openSettings: document.querySelector("#openSettings"),
     closeSettings: document.querySelector("#closeSettings"),
+    backToSettings: document.querySelector("#backToSettings"),
+    openHistory: document.querySelector("#openHistory"),
+    historyView: document.querySelector("#historyView"),
+    historySummary: document.querySelector("#historySummary"),
+    historyList: document.querySelector("#historyList"),
     morningTemplateList: document.querySelector("#morningTemplateList"),
     eveningTemplateList: document.querySelector("#eveningTemplateList"),
     autoMorning: document.querySelector("#autoMorning"),
@@ -84,6 +117,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   const state = {
     tasks: [],
+    history: [],
     templates: [],
     occurrences: [],
     settings: { ...DEFAULT_SETTINGS },
@@ -155,6 +189,30 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return shiftDateKey(todayKey(), 1);
   }
 
+  function historyDateKey(date = new Date()) {
+    const parts = Object.fromEntries(
+      HISTORY_DAY_KEY_FORMATTER
+        .formatToParts(date)
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value]),
+    );
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+
+  function historyDayLabel(date) {
+    const key = historyDateKey(date);
+    const currentKey = historyDateKey(new Date());
+    const calendarDate = HISTORY_CALENDAR_DATE_FORMATTER.format(date);
+    if (key === currentKey) return `Aujourd’hui · ${calendarDate}`;
+    if (key === shiftDateKey(currentKey, -1)) return `Hier · ${calendarDate}`;
+    const label = HISTORY_DAY_FORMATTER.format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  function historyTimeLabel(date) {
+    return HISTORY_TIME_FORMATTER.format(date).replace(":", " h ");
+  }
+
   function openDatabase() {
     if (!("indexedDB" in window)) return Promise.resolve(null);
     return new Promise((resolve) => {
@@ -197,12 +255,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const parsed = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "{}");
       return {
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+        history: Array.isArray(parsed.history) ? parsed.history : [],
         templates: Array.isArray(parsed.templates) ? parsed.templates : [],
         settings: Array.isArray(parsed.settings) ? parsed.settings : [],
         occurrences: Array.isArray(parsed.occurrences) ? parsed.occurrences : [],
       };
     } catch {
-      return { tasks: [], templates: [], settings: [], occurrences: [] };
+      return { tasks: [], history: [], templates: [], settings: [], occurrences: [] };
     }
   }
 
@@ -237,6 +296,65 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return new Promise((resolve, reject) => {
       const transaction = database.transaction(storeName, "readwrite");
       transaction.objectStore(storeName).put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+    });
+  }
+
+  async function putTaskWithHistory(task, historyEntry = null) {
+    const database = await getDatabase();
+    if (!database) {
+      const data = readFallback();
+      const taskIndex = data.tasks.findIndex((item) => item.id === task.id);
+      if (taskIndex >= 0) data.tasks[taskIndex] = task;
+      else data.tasks.push(task);
+      if (historyEntry) {
+        const historyIndex = data.history.findIndex((item) => item.id === historyEntry.id);
+        if (historyIndex >= 0) data.history[historyIndex] = historyEntry;
+        else data.history.push(historyEntry);
+        const compatibilityRecord = historyCompatibilityRecord(historyEntry);
+        const occurrenceIndex = data.occurrences.findIndex(
+          (item) => item.id === compatibilityRecord.id,
+        );
+        if (occurrenceIndex >= 0) data.occurrences[occurrenceIndex] = compatibilityRecord;
+        else data.occurrences.push(compatibilityRecord);
+      }
+      writeFallback(data);
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      const storeNames = historyEntry ? ["tasks", "occurrences"] : ["tasks"];
+      const transaction = database.transaction(storeNames, "readwrite");
+      transaction.objectStore("tasks").put(task);
+      if (historyEntry) {
+        transaction.objectStore("occurrences").put(historyCompatibilityRecord(historyEntry));
+      }
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+    });
+  }
+
+  async function putHistoryRecord(historyEntry) {
+    const database = await getDatabase();
+    if (!database) {
+      const data = readFallback();
+      const index = data.history.findIndex((item) => item.id === historyEntry.id);
+      if (index >= 0) data.history[index] = historyEntry;
+      else data.history.push(historyEntry);
+      const compatibilityRecord = historyCompatibilityRecord(historyEntry);
+      const occurrenceIndex = data.occurrences.findIndex(
+        (item) => item.id === compatibilityRecord.id,
+      );
+      if (occurrenceIndex >= 0) data.occurrences[occurrenceIndex] = compatibilityRecord;
+      else data.occurrences.push(compatibilityRecord);
+      writeFallback(data);
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction("occurrences", "readwrite");
+      transaction.objectStore("occurrences").put(historyCompatibilityRecord(historyEntry));
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
@@ -306,11 +424,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function replaceAllData(nextState) {
     const database = await getDatabase();
     if (!database) {
+      const history = nextState.history || [];
       writeFallback({
         tasks: nextState.tasks,
+        history,
         templates: nextState.templates,
         settings: [nextState.settings],
-        occurrences: nextState.occurrences || [],
+        occurrences: [
+          ...(nextState.occurrences || []),
+          ...history.map(historyCompatibilityRecord),
+        ],
       });
       return;
     }
@@ -320,6 +443,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const transaction = database.transaction(storeNames, "readwrite");
       for (const storeName of storeNames) transaction.objectStore(storeName).clear();
       for (const task of nextState.tasks) transaction.objectStore("tasks").put(task);
+      for (const historyEntry of nextState.history || []) {
+        transaction.objectStore("occurrences").put(historyCompatibilityRecord(historyEntry));
+      }
       for (const template of nextState.templates) transaction.objectStore("templates").put(template);
       for (const occurrence of nextState.occurrences || []) {
         transaction.objectStore("occurrences").put(occurrence);
@@ -475,7 +601,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       version: 1,
       tasks: state.tasks,
       templates: state.templates,
-      occurrences: state.occurrences,
+      // L'historique voyage dans le champ déjà connu des anciennes versions de la PWA.
+      occurrences: [
+        ...state.occurrences,
+        ...state.history.map(historyCompatibilityRecord),
+      ],
       settings: {
         autoMorning: state.settings.autoMorning,
         autoEvening: state.settings.autoEvening,
@@ -486,11 +616,19 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function payloadFingerprint(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return "";
+    const occurrenceRecords = Array.isArray(payload.occurrences) ? payload.occurrences : [];
+    const history = mergeCompletionHistory(
+      Array.isArray(payload.history) ? payload.history : [],
+      occurrenceRecords.filter(isHistoryRecord),
+    );
     const normalized = {
       version: 1,
       tasks: Array.isArray(payload.tasks) ? payload.tasks : [],
       templates: Array.isArray(payload.templates) ? payload.templates : [],
-      occurrences: Array.isArray(payload.occurrences) ? payload.occurrences : [],
+      occurrences: [
+        ...occurrenceRecords.map(normalizeOccurrence).filter(Boolean),
+        ...history.map(historyCompatibilityRecord),
+      ],
       settings: {
         autoMorning: Boolean(payload.settings?.autoMorning),
         autoEvening: Boolean(payload.settings?.autoEvening),
@@ -528,15 +666,31 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       return;
     }
     const fingerprint = payloadFingerprint(payload);
-    if (!fingerprint || fingerprint === remoteFingerprint) return;
+    const needsCompatibilityRewrite =
+      payload.version !== 1 || Object.prototype.hasOwnProperty.call(payload, "history");
+    if (!fingerprint) return;
+    if (fingerprint === remoteFingerprint) {
+      if (needsCompatibilityRewrite) scheduleSharedSave();
+      return;
+    }
 
     const quickTarget = state.settings.quickTarget;
+    const remoteOccurrenceRecords = Array.isArray(payload.occurrences)
+      ? payload.occurrences
+      : [];
+    const normalizedRemoteHistory = mergeCompletionHistory(
+      Array.isArray(payload.history) ? payload.history : [],
+      remoteOccurrenceRecords.filter(isHistoryRecord),
+    );
+    const history = mergeCompletionHistory(normalizedRemoteHistory, state.history);
+    const shouldRepublishHistory =
+      needsCompatibilityRewrite ||
+      JSON.stringify(history) !== JSON.stringify(normalizedRemoteHistory);
     const nextState = {
       tasks: payload.tasks.map(normalizeTask).filter((task) => task.label),
+      history,
       templates: payload.templates.map(normalizeTemplate).filter((template) => template.label),
-      occurrences: Array.isArray(payload.occurrences)
-        ? payload.occurrences.map(normalizeOccurrence).filter(Boolean)
-        : [],
+      occurrences: remoteOccurrenceRecords.map(normalizeOccurrence).filter(Boolean),
       settings: normalizeSettings({
         ...payload.settings,
         quickTarget,
@@ -547,6 +701,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     remoteFingerprint = fingerprint;
     lastCommittedAt = Math.max(lastCommittedAt, Date.parse(row.updated_at) || 0);
     await loadState({ runAutomatic: false });
+    if (shouldRepublishHistory) scheduleSharedSave();
     syncChannel?.postMessage({ type: "refresh", at: Date.now() });
   }
 
@@ -577,6 +732,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       remoteFingerprint = payloadFingerprint(data.payload);
       lastCommittedAt = Date.parse(data.updated_at) || Date.now();
       syncWarningShown = false;
+      window.setTimeout(() => {
+        if (sharedReady && !sharedDirty && !sharedSaving && navigator.onLine) {
+          void refreshSharedState();
+        }
+      }, 1400);
     } catch (error) {
       console.error("Synchronisation différée.", error);
       sharedDirty = true;
@@ -694,6 +854,163 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     };
   }
 
+  function historySnapshotId(snapshot) {
+    // Le snapshot dans l’identifiant permet aux anciennes PWA de le relayer sans le comprendre.
+    const encodedSnapshot = encodeURIComponent(JSON.stringify({
+      version: 1,
+      taskId: snapshot.taskId,
+      label: snapshot.label,
+      section: snapshot.section,
+      moment: snapshot.moment,
+      dueDate: snapshot.dueDate,
+      completedAt: snapshot.completedAt,
+    }));
+    return `history:${encodedSnapshot}`;
+  }
+
+  function decodeHistoryRecord(record) {
+    const id = typeof record?.id === "string" ? record.id : "";
+    let encodedSnapshot = "";
+    let reopenedAt = null;
+    if (id.startsWith("history-reopened:")) {
+      const encodedRecord = id.slice("history-reopened:".length);
+      const separatorIndex = encodedRecord.lastIndexOf(":");
+      if (separatorIndex < 0) return null;
+      encodedSnapshot = encodedRecord.slice(0, separatorIndex);
+      try {
+        reopenedAt = decodeURIComponent(encodedRecord.slice(separatorIndex + 1));
+      } catch {
+        return null;
+      }
+    } else if (id.startsWith("history:")) {
+      encodedSnapshot = id.slice("history:".length);
+    } else {
+      return null;
+    }
+
+    try {
+      const snapshot = JSON.parse(decodeURIComponent(encodedSnapshot));
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+      return {
+        ...snapshot,
+        id: `history:${encodedSnapshot}`,
+        reopenedAt,
+        updatedAt: reopenedAt || snapshot.completedAt,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function historyCompatibilityRecord(entry) {
+    const encodedSnapshot = entry.id.slice("history:".length);
+    return {
+      id: entry.reopenedAt
+        ? `history-reopened:${encodedSnapshot}:${encodeURIComponent(entry.reopenedAt)}`
+        : entry.id,
+      dismissedAt: entry.updatedAt,
+    };
+  }
+
+  function completionHistoryEntry(task) {
+    if (!task?.completedAt) return null;
+    return normalizeHistoryEntry({
+      taskId: task.id,
+      label: task.label,
+      section: task.section,
+      moment: task.moment,
+      dueDate: task.dueDate,
+      completedAt: task.completedAt,
+      reopenedAt: null,
+      updatedAt: task.completedAt,
+    });
+  }
+
+  function reopenedHistoryEntry(task, reopenedAt) {
+    if (!task?.completedAt) return null;
+    const existingEntry = state.history.find(
+      (entry) => entry.taskId === task.id && entry.completedAt === task.completedAt,
+    );
+    return normalizeHistoryEntry({
+      ...(existingEntry || completionHistoryEntry(task)),
+      reopenedAt,
+      updatedAt: reopenedAt,
+    });
+  }
+
+  function isHistoryRecord(record) {
+    return record?.recordType === "completion-history" ||
+      (typeof record?.id === "string" &&
+        (record.id.startsWith("history:") || record.id.startsWith("history-reopened:")));
+  }
+
+  function normalizeHistoryEntry(entry) {
+    const decodedRecord = decodeHistoryRecord(entry);
+    const source = decodedRecord ? { ...decodedRecord, ...entry } : entry;
+    const completedAt = typeof source?.completedAt === "string" ? source.completedAt : "";
+    if (!Number.isFinite(Date.parse(completedAt))) return null;
+    const taskId = typeof source?.taskId === "string" && source.taskId
+      ? source.taskId
+      : "ancienne-tache";
+    const label = typeof source?.label === "string" ? source.label.trim().slice(0, 180) : "";
+    if (!label) return null;
+    const section = ["bring", "maintenance"].includes(source?.section)
+      ? source.section
+      : "daily";
+    const moment = ["morning", "evening", "any"].includes(source?.moment)
+      ? source.moment
+      : "any";
+    const reopenedAt = typeof source?.reopenedAt === "string" && Number.isFinite(Date.parse(source.reopenedAt))
+      ? source.reopenedAt
+      : null;
+    const updatedAt = typeof source?.updatedAt === "string" && Number.isFinite(Date.parse(source.updatedAt))
+      ? source.updatedAt
+      : reopenedAt || completedAt;
+    const normalized = {
+      recordType: "completion-history",
+      taskId,
+      label,
+      section,
+      moment: section === "daily" ? moment : "any",
+      dueDate: DATE_PATTERN.test(source?.dueDate || "")
+        ? source.dueDate
+        : toDateKey(new Date(completedAt)),
+      completedAt,
+      reopenedAt,
+      updatedAt,
+    };
+    return { ...normalized, id: historySnapshotId(normalized) };
+  }
+
+  function historyIdentityKey(entry) {
+    return JSON.stringify([entry.taskId, entry.completedAt]);
+  }
+
+  function mergeCompletionHistory(...collections) {
+    const merged = new Map();
+    for (const collection of collections) {
+      for (const rawEntry of collection || []) {
+        const entry = normalizeHistoryEntry(rawEntry);
+        if (!entry) continue;
+        const identityKey = historyIdentityKey(entry);
+        const previous = merged.get(identityKey);
+        const entryReopened = Boolean(entry.reopenedAt);
+        const previousReopened = Boolean(previous?.reopenedAt);
+        if (
+          !previous ||
+          (entryReopened && !previousReopened) ||
+          (entryReopened === previousReopened && Date.parse(entry.updatedAt) >= Date.parse(previous.updatedAt))
+        ) {
+          merged.set(identityKey, entry);
+        }
+      }
+    }
+    return [...merged.values()].sort((a, b) => {
+      const timeDifference = Date.parse(a.completedAt) - Date.parse(b.completedAt);
+      return timeDifference || a.id.localeCompare(b.id);
+    });
+  }
+
   function normalizeEstimateMinutes(value) {
     const minutes = Number(value);
     return Number.isInteger(minutes) && minutes >= 1 && minutes <= 720 ? minutes : null;
@@ -721,6 +1038,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function normalizeOccurrence(occurrence) {
+    if (isHistoryRecord(occurrence)) return null;
     if (typeof occurrence?.id !== "string" || !occurrence.id) return null;
     return {
       id: occurrence.id,
@@ -750,12 +1068,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const database = await getDatabase();
     if (!database) return;
     const fallback = readFallback();
-    const hasFallback = ["tasks", "templates", "settings", "occurrences"].some(
+    const hasFallback = ["tasks", "history", "templates", "settings", "occurrences"].some(
       (key) => fallback[key].length,
     );
     if (!hasFallback) return;
 
-    const [tasks, templates, settings, occurrences] = await Promise.all([
+    const [tasks, templates, settings, occurrenceRecords] = await Promise.all([
       getAllRecords("tasks"),
       getAllRecords("templates"),
       getAllRecords("settings"),
@@ -769,10 +1087,19 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       );
     const merged = {
       tasks: mergeById(tasks, fallback.tasks, normalizeTask).filter((task) => task.label),
+      history: mergeCompletionHistory(
+        occurrenceRecords.filter(isHistoryRecord),
+        fallback.history,
+        fallback.occurrences.filter(isHistoryRecord),
+      ),
       templates: mergeById(templates, fallback.templates, normalizeTemplate).filter(
         (template) => template.label,
       ),
-      occurrences: mergeById(occurrences, fallback.occurrences, normalizeOccurrence).filter(Boolean),
+      occurrences: mergeById(
+        occurrenceRecords.filter((record) => !isHistoryRecord(record)),
+        fallback.occurrences,
+        normalizeOccurrence,
+      ).filter(Boolean),
       settings: settingsCandidates.at(-1) || { ...DEFAULT_SETTINGS },
     };
     await replaceAllData(merged);
@@ -785,7 +1112,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   async function loadState({ runAutomatic = true } = {}) {
     try {
-      const [tasks, templates, settings, occurrences] = await Promise.all([
+      const fallbackHistory = readFallback().history;
+      const [tasks, templates, settings, occurrenceRecords] = await Promise.all([
         getAllRecords("tasks"),
         getAllRecords("templates"),
         getAllRecords("settings"),
@@ -793,10 +1121,27 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       ]);
 
       state.tasks = tasks.map(normalizeTask).filter((task) => task.label);
+      state.history = mergeCompletionHistory(
+        occurrenceRecords.filter(isHistoryRecord),
+        fallbackHistory,
+      );
       state.templates = templates.map(normalizeTemplate).filter((template) => template.label);
-      state.occurrences = occurrences.map(normalizeOccurrence).filter(Boolean);
+      state.occurrences = occurrenceRecords
+        .filter((record) => !isHistoryRecord(record))
+        .map(normalizeOccurrence)
+        .filter(Boolean);
       state.settings = normalizeSettings(settings.find((item) => item.id === "preferences"));
       state.lastDateKey = todayKey();
+
+      const knownHistoryKeys = new Set(state.history.map(historyIdentityKey));
+      const backfilledHistory = state.tasks
+        .map(completionHistoryEntry)
+        .filter((entry) => entry && !knownHistoryKeys.has(historyIdentityKey(entry)));
+      if (backfilledHistory.length) {
+        await Promise.all(backfilledHistory.map(putHistoryRecord));
+        state.history = mergeCompletionHistory(state.history, backfilledHistory);
+        announceChange();
+      }
 
       if (runAutomatic) await runAutomaticRoutines();
       renderAll();
@@ -1328,6 +1673,95 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     container.replaceChildren(fragment);
   }
 
+  function historyContext(entry) {
+    if (entry.section === "bring") return "Courses";
+    if (entry.section === "maintenance") return "Entretien";
+    if (entry.moment === "morning") return "Matin";
+    if (entry.moment === "evening") return "Soir";
+    return "";
+  }
+
+  function renderHistory() {
+    const entries = state.history.filter((entry) => !entry.reopenedAt).sort((a, b) => {
+      const timeDifference = Date.parse(b.completedAt) - Date.parse(a.completedAt);
+      return timeDifference || b.id.localeCompare(a.id);
+    });
+    elements.historySummary.textContent = entries.length
+      ? `${entries.length} tâche${entries.length > 1 ? "s" : ""} rayée${entries.length > 1 ? "s" : ""}`
+      : "Aucune tâche rayée pour le moment.";
+
+    const fragment = document.createDocumentFragment();
+    const groups = new Map();
+    for (const entry of entries) {
+      const completedDate = new Date(entry.completedAt);
+      const key = historyDateKey(completedDate);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(entry);
+    }
+
+    for (const groupedEntries of groups.values()) {
+      const group = document.createElement("section");
+      group.className = "history-day";
+
+      const heading = document.createElement("h3");
+      heading.textContent = historyDayLabel(new Date(groupedEntries[0].completedAt));
+
+      const list = document.createElement("div");
+      list.className = "history-day-list";
+      list.setAttribute("role", "list");
+
+      for (const entry of groupedEntries) {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.setAttribute("role", "listitem");
+
+        const marker = document.createElement("span");
+        marker.className = "history-marker";
+        marker.setAttribute("aria-hidden", "true");
+        marker.textContent = "✓";
+
+        const copy = document.createElement("span");
+        copy.className = "history-copy";
+
+        const label = document.createElement("span");
+        label.className = "history-label";
+        label.textContent = entry.label;
+
+        const meta = document.createElement("span");
+        meta.className = "history-meta";
+        const context = historyContext(entry);
+        meta.textContent = `Rayée à ${historyTimeLabel(new Date(entry.completedAt))}${context ? ` · ${context}` : ""}`;
+
+        copy.append(label, meta);
+        item.append(marker, copy);
+        list.append(item);
+      }
+
+      group.append(heading, list);
+      fragment.append(group);
+    }
+
+    elements.historyList.replaceChildren(fragment);
+  }
+
+  function showSettingsHome({ restoreFocus = false } = {}) {
+    elements.settingsTitle.textContent = "Routine";
+    elements.backToSettings.hidden = true;
+    elements.settingsMainView.hidden = false;
+    elements.historyView.hidden = true;
+    if (restoreFocus) requestAnimationFrame(() => elements.openHistory.focus());
+  }
+
+  function showHistoryView() {
+    renderHistory();
+    elements.settingsTitle.textContent = "Historique";
+    elements.backToSettings.hidden = false;
+    elements.settingsMainView.hidden = true;
+    elements.historyView.hidden = false;
+    elements.settingsContent.scrollTop = 0;
+    requestAnimationFrame(() => elements.backToSettings.focus());
+  }
+
   function renderTemplates(routine) {
     const container = routine === "morning" ? elements.morningTemplateList : elements.eveningTemplateList;
     const templates = state.templates
@@ -1395,6 +1829,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.autoEvening.checked = state.settings.autoEvening;
     renderQuickTarget();
     updateEstimateControls();
+    if (!elements.historyView.hidden) renderHistory();
   }
 
   function renderQuickTarget() {
@@ -1561,14 +1996,20 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function toggleTask(id) {
     const task = state.tasks.find((item) => item.id === id);
     if (!task) return;
+    const changedAt = new Date().toISOString();
+    const completedAt = task.completedAt ? null : changedAt;
     const nextTask = {
       ...task,
-      completedAt: task.completedAt ? null : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      completedAt,
+      updatedAt: changedAt,
     };
+    const historyEntry = completedAt
+      ? completionHistoryEntry(nextTask)
+      : reopenedHistoryEntry(task, changedAt);
     try {
-      await putRecord("tasks", nextTask);
+      await putTaskWithHistory(nextTask, historyEntry);
       state.tasks = state.tasks.map((item) => (item.id === id ? nextTask : item));
+      state.history = mergeCompletionHistory(state.history, [historyEntry]);
       announceChange();
       renderAll();
       requestAnimationFrame(() => {
@@ -1822,7 +2263,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function openSettingsForRoutine(routine) {
-    if (!elements.settingsDialog.open) elements.settingsDialog.showModal();
+    if (!elements.settingsDialog.open) {
+      showSettingsHome();
+      elements.settingsDialog.showModal();
+    } else if (!elements.historyView.hidden) {
+      showSettingsHome();
+    }
     requestAnimationFrame(() => {
       const form = document.querySelector(`[data-template-form="${routine}"]`);
       form?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1865,9 +2311,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function exportData() {
     const payload = {
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       tasks: state.tasks,
+      history: state.history,
       templates: state.templates,
       settings: state.settings,
       occurrences: state.occurrences,
@@ -1888,20 +2335,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (![1, 2].includes(payload?.version) || !Array.isArray(payload.tasks) || !Array.isArray(payload.templates)) {
+      if (![1, 2, 3].includes(payload?.version) || !Array.isArray(payload.tasks) || !Array.isArray(payload.templates)) {
         throw new Error("Format non reconnu");
       }
 
+      const occurrenceRecords = Array.isArray(payload.occurrences)
+        ? payload.occurrences
+        : [];
+      const importedHistory = mergeCompletionHistory(
+        Array.isArray(payload.history) ? payload.history : [],
+        occurrenceRecords.filter(isHistoryRecord),
+      );
       const nextState = {
         tasks: payload.tasks.map(normalizeTask).filter((task) => task.label),
+        history: payload.version === 3
+          ? importedHistory
+          : mergeCompletionHistory(state.history, importedHistory),
         templates: payload.templates.map(normalizeTemplate).filter((template) => template.label),
-        occurrences: Array.isArray(payload.occurrences)
-          ? payload.occurrences.map(normalizeOccurrence).filter(Boolean)
-          : [],
+        occurrences: occurrenceRecords.map(normalizeOccurrence).filter(Boolean),
         settings: normalizeSettings(payload.settings),
       };
       const previousState = {
         tasks: [...state.tasks],
+        history: [...state.history],
         templates: [...state.templates],
         occurrences: [...state.occurrences],
         settings: { ...state.settings },
@@ -1937,7 +2393,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       showToast("Aucune tâche terminée");
       return;
     }
-    const confirmed = window.confirm(`Effacer ${completed.length} tâche${completed.length > 1 ? "s" : ""} terminée${completed.length > 1 ? "s" : ""} ?`);
+    const confirmed = window.confirm(
+      `Retirer ${completed.length} tâche${completed.length > 1 ? "s" : ""} terminée${completed.length > 1 ? "s" : ""} ? Elles resteront dans l’historique.`,
+    );
     if (!confirmed) return;
     try {
       const tombstones = await deleteCompletedRecords(completed);
@@ -1950,7 +2408,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       announceChange();
       renderAll();
       if (elements.settingsDialog.open) elements.settingsDialog.close();
-      showToast("Tâches terminées effacées", "Annuler", async () => {
+      showToast("Tâches retirées · historique conservé", "Annuler", async () => {
         try {
           await restoreCompletedRecords(completed);
           const currentTaskMap = new Map(state.tasks.map((task) => [task.id, task]));
@@ -2104,9 +2562,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.addMorningToday.addEventListener("click", () => generateRoutine("morning"));
     elements.addEveningToday.addEventListener("click", () => generateRoutine("evening"));
 
-    elements.openSettings.addEventListener("click", () => elements.settingsDialog.showModal());
+    elements.openSettings.addEventListener("click", () => {
+      showSettingsHome();
+      elements.settingsDialog.showModal();
+      elements.settingsContent.scrollTop = 0;
+    });
+    elements.openHistory.addEventListener("click", showHistoryView);
+    elements.backToSettings.addEventListener("click", () => showSettingsHome({ restoreFocus: true }));
     elements.closeSettings.addEventListener("click", () => elements.settingsDialog.close());
     elements.settingsDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.settingsDialog, event));
+    elements.settingsDialog.addEventListener("close", () => showSettingsHome());
 
     for (const form of document.querySelectorAll("[data-template-form]")) {
       form.addEventListener("submit", async (event) => {
@@ -2252,7 +2717,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function refreshSharedState() {
     try {
       const row = await loadSharedRow();
-      if (row && (Date.parse(row.updated_at) || 0) > lastCommittedAt) {
+      const fingerprint = row ? payloadFingerprint(row.payload) : "";
+      if (row && fingerprint && fingerprint !== remoteFingerprint) {
         if (taskReorderLocked()) queuePendingRemoteRow(row);
         else await applySharedRow(row);
       }
