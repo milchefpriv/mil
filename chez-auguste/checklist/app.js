@@ -1627,9 +1627,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function taskMeta(task) {
     const parts = [];
-    if (task.section === "daily" && task.dueDate < todayKey() && !task.completedAt) {
-      parts.push("En retard");
-    }
     if (task.moment === "morning") parts.push("Matin");
     if (task.moment === "evening") parts.push("Soir");
     return parts.join(" · ");
@@ -1647,10 +1644,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       row.dataset.taskId = task.id;
       row.classList.toggle("is-bring-item", isBring);
       row.classList.toggle("is-complete", Boolean(task.completedAt));
-      row.classList.toggle(
-        "is-overdue",
-        task.section === "daily" && task.dueDate < todayKey() && !task.completedAt,
-      );
       row.querySelector(".task-label").textContent = task.label;
       const meta = isBring ? "" : taskMeta(task);
       row.querySelector(".task-meta").textContent = meta;

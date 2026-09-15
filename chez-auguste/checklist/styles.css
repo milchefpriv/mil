@@ -603,10 +603,6 @@ body.is-task-reordering * {
   color: var(--muted);
 }
 
-.task-row.is-overdue:not(.is-complete) .task-meta {
-  color: var(--danger);
-}
-
 .task-more {
   display: grid;
   width: 40px;
