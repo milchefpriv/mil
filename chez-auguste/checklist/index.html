@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=13" />
-    <script type="module" src="./app.js?v=14"></script>
+    <link rel="stylesheet" href="./styles.css?v=14" />
+    <script type="module" src="./app.js?v=15"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -25,27 +25,79 @@
           <span class="wordmark">Chez Auguste</span>
           <span class="current-date" id="currentDate"></span>
         </div>
-        <button class="routine-menu-button" id="openSettings" type="button">Routine</button>
+        <div class="topbar-actions">
+          <div class="sync-status-wrap">
+            <div class="sync-status" id="syncStatus" role="status" aria-live="polite" aria-atomic="true">Connexion…</div>
+            <span class="sr-only" id="syncStatusDetail" aria-live="polite">Connexion au serveur en cours.</span>
+          </div>
+          <button class="routine-menu-button" id="openSettings" type="button">Routine</button>
+        </div>
       </header>
 
-      <div class="days-grid">
-        <section class="day-card" aria-labelledby="todayTitle">
-          <div class="day-heading">
-            <h1 id="todayTitle">À faire aujourd’hui</h1>
-            <span class="day-progress" id="todayProgress" aria-live="polite"></span>
-          </div>
-          <div class="task-list" id="todayList" role="list"></div>
-          <button class="empty-add" id="emptyAddToday" type="button">+ Ajouter</button>
-        </section>
+      <h1 class="sr-only">Checklist Chez Auguste</h1>
 
-        <section class="day-card tomorrow-card" aria-labelledby="tomorrowTitle">
-          <div class="day-heading">
-            <h2 id="tomorrowTitle">À faire demain</h2>
-            <span class="day-progress" id="tomorrowProgress" aria-live="polite"></span>
-          </div>
-          <div class="task-list" id="tomorrowList" role="list"></div>
-          <button class="empty-add" id="emptyAddTomorrow" type="button">+ Ajouter</button>
-        </section>
+      <div class="days-grid">
+        <div class="service-boards">
+          <section class="service-board service-board-cuisine" data-area="cuisine" aria-labelledby="cuisineBoardTitle">
+            <header class="service-board-header">
+              <div>
+                <span class="service-board-kicker">Équipe</span>
+                <h2 id="cuisineBoardTitle">Cuisine</h2>
+              </div>
+              <span class="service-board-badge" aria-hidden="true">C</span>
+            </header>
+
+            <div class="service-board-days">
+              <section class="day-card" aria-labelledby="cuisineTodayTitle">
+                <div class="day-heading">
+                  <h3 id="cuisineTodayTitle">Aujourd’hui</h3>
+                  <span class="day-progress" id="cuisineTodayProgress" aria-live="polite"></span>
+                </div>
+                <div class="task-list" id="cuisineTodayList" data-area="cuisine" data-list="today" role="list"></div>
+                <button class="empty-add" id="emptyAddCuisineToday" data-area="cuisine" data-list="today" type="button">+ Ajouter</button>
+              </section>
+
+              <section class="day-card tomorrow-card" aria-labelledby="cuisineTomorrowTitle">
+                <div class="day-heading">
+                  <h3 id="cuisineTomorrowTitle">Demain</h3>
+                  <span class="day-progress" id="cuisineTomorrowProgress" aria-live="polite"></span>
+                </div>
+                <div class="task-list" id="cuisineTomorrowList" data-area="cuisine" data-list="tomorrow" role="list"></div>
+                <button class="empty-add" id="emptyAddCuisineTomorrow" data-area="cuisine" data-list="tomorrow" type="button">+ Ajouter</button>
+              </section>
+            </div>
+          </section>
+
+          <section class="service-board service-board-salle" data-area="salle" aria-labelledby="salleBoardTitle">
+            <header class="service-board-header">
+              <div>
+                <span class="service-board-kicker">Équipe</span>
+                <h2 id="salleBoardTitle">Salle</h2>
+              </div>
+              <span class="service-board-badge" aria-hidden="true">S</span>
+            </header>
+
+            <div class="service-board-days">
+              <section class="day-card" aria-labelledby="salleTodayTitle">
+                <div class="day-heading">
+                  <h3 id="salleTodayTitle">Aujourd’hui</h3>
+                  <span class="day-progress" id="salleTodayProgress" aria-live="polite"></span>
+                </div>
+                <div class="task-list" id="salleTodayList" data-area="salle" data-list="today" role="list"></div>
+                <button class="empty-add" id="emptyAddSalleToday" data-area="salle" data-list="today" type="button">+ Ajouter</button>
+              </section>
+
+              <section class="day-card tomorrow-card" aria-labelledby="salleTomorrowTitle">
+                <div class="day-heading">
+                  <h3 id="salleTomorrowTitle">Demain</h3>
+                  <span class="day-progress" id="salleTomorrowProgress" aria-live="polite"></span>
+                </div>
+                <div class="task-list" id="salleTomorrowList" data-area="salle" data-list="tomorrow" role="list"></div>
+                <button class="empty-add" id="emptyAddSalleTomorrow" data-area="salle" data-list="tomorrow" type="button">+ Ajouter</button>
+              </section>
+            </div>
+          </section>
+        </div>
 
         <section class="collapsible-section" aria-labelledby="maintenanceTitle">
           <h2 class="collapsible-heading" id="maintenanceTitle">
@@ -56,7 +108,7 @@
               aria-expanded="false"
               aria-controls="maintenancePanel"
             >
-              <span>Entretien / Rénovation</span>
+              <span>Entretien / innovation</span>
               <span class="collapsible-toggle-end">
                 <span class="day-progress" id="maintenanceProgress" aria-live="polite"></span>
                 <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
@@ -100,8 +152,8 @@
 
     <form class="quick-add" id="quickAddForm" autocomplete="off">
       <div class="quick-add-inner">
-        <button class="target-button" id="quickTarget" type="button" aria-label="Changer le jour">
-          Aujourd’hui
+        <button class="target-button" id="quickTarget" type="button" aria-label="Changer la liste">
+          Cuisine · Aujourd’hui
         </button>
         <label class="sr-only" for="quickInput">Ajouter une tâche</label>
         <input
@@ -234,9 +286,11 @@
         <fieldset class="list-fieldset" id="taskListFieldset">
           <legend>Liste</legend>
           <div class="segmented-control list-control">
-            <label><input type="radio" name="task-list" value="today" /><span>Aujourd’hui</span></label>
-            <label><input type="radio" name="task-list" value="tomorrow" /><span>Demain</span></label>
-            <label><input type="radio" name="task-list" value="maintenance" /><span>Rénovation</span></label>
+            <label><input type="radio" name="task-list" value="cuisineToday" /><span>Cuisine · Aujourd’hui</span></label>
+            <label><input type="radio" name="task-list" value="cuisineTomorrow" /><span>Cuisine · Demain</span></label>
+            <label><input type="radio" name="task-list" value="salleToday" /><span>Salle · Aujourd’hui</span></label>
+            <label><input type="radio" name="task-list" value="salleTomorrow" /><span>Salle · Demain</span></label>
+            <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
             <label><input type="radio" name="task-list" value="bring" /><span>Courses</span></label>
           </div>
         </fieldset>

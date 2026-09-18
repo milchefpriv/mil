@@ -83,7 +83,7 @@ label[for]:focus-visible {
 }
 
 .app-shell {
-  width: min(100%, 920px);
+  width: min(100%, 1120px);
   margin: 0 auto;
   padding: max(22px, env(safe-area-inset-top)) 18px calc(118px + var(--safe-bottom));
 }
@@ -92,12 +92,14 @@ label[for]:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
   min-height: 52px;
   margin-bottom: 18px;
 }
 
 .identity {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -113,6 +115,87 @@ label[for]:focus-visible {
   font-size: 0.83rem;
   font-weight: 600;
   text-transform: capitalize;
+}
+
+.topbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.sync-status-wrap {
+  display: flex;
+  min-width: 0;
+}
+
+.sync-status {
+  display: inline-flex;
+  max-width: 150px;
+  min-height: 32px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  font-size: 0.72rem;
+  font-weight: 740;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.sync-status[data-state="synced"],
+.sync-status.is-synced {
+  border-color: color-mix(in srgb, var(--success) 24%, var(--line));
+  color: var(--success);
+}
+
+.sync-status[data-state="pending"],
+.sync-status[data-state="syncing"],
+.sync-status[data-state="conflict"],
+.sync-status.is-pending,
+.sync-status.is-syncing {
+  color: #9a6824;
+}
+
+.sync-status[data-state="conflict"] {
+  border-color: color-mix(in srgb, #b86b1f 38%, var(--line));
+  background: color-mix(in srgb, #fff0dc 72%, var(--paper));
+}
+
+.sync-status[data-state="offline"],
+.sync-status[data-state="error"],
+.sync-status[data-state="storage"],
+.sync-status.is-offline,
+.sync-status.is-error {
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--line));
+  color: var(--danger);
+}
+
+.sync-status[data-state="syncing"]::before,
+.sync-status.is-syncing::before {
+  animation: sync-pulse 1.25s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.38;
+    transform: scale(0.72);
+  }
 }
 
 .routine-menu-button {
@@ -183,7 +266,99 @@ label[for]:focus-visible {
 
 .days-grid {
   display: grid;
+  gap: 16px;
+}
+
+.service-boards {
+  display: grid;
+  gap: 16px;
+}
+
+.service-board {
+  --board-accent: var(--brand);
+  --board-soft: var(--brand-soft);
+  min-width: 0;
+  padding: 13px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--board-accent) 18%, var(--line));
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--board-soft) 62%, var(--paper)), var(--paper) 38%);
+  box-shadow: 0 14px 42px rgba(52, 31, 36, 0.065);
+}
+
+.service-board-salle {
+  --board-accent: #936329;
+  --board-soft: #f8efe1;
+}
+
+.service-board-header {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
   gap: 14px;
+  padding: 2px 5px 12px 7px;
+}
+
+.service-board-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--board-accent);
+  font-size: 0.66rem;
+  font-weight: 840;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.service-board-header h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.42rem, 4vw, 1.72rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.service-board-badge {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--board-accent) 22%, transparent);
+  border-radius: 13px;
+  color: var(--board-accent);
+  background: color-mix(in srgb, var(--board-soft) 75%, var(--paper));
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.service-board-days {
+  display: grid;
+  gap: 10px;
+}
+
+.service-board .day-card {
+  padding: 15px 10px 8px;
+  border-color: color-mix(in srgb, var(--board-accent) 11%, var(--line));
+  border-radius: 19px;
+  box-shadow: 0 5px 18px rgba(52, 31, 36, 0.035);
+}
+
+.service-board .tomorrow-card {
+  background: color-mix(in srgb, var(--paper) 82%, var(--board-soft));
+}
+
+.service-board .day-progress,
+.service-board .empty-add,
+.service-board .task-meta,
+.service-board .task-estimate {
+  color: var(--board-accent);
+}
+
+.service-board .task-estimate {
+  background: color-mix(in srgb, var(--board-soft) 76%, var(--paper));
 }
 
 .day-card {
@@ -408,7 +583,8 @@ label[for]:focus-visible {
 }
 
 .day-heading h1,
-.day-heading h2 {
+.day-heading h2,
+.day-heading h3 {
   min-width: 0;
   margin: 0;
   font-size: clamp(1.12rem, 3.8vw, 1.32rem);
@@ -1288,8 +1464,11 @@ dialog::backdrop {
 }
 
 .list-control span {
-  padding: 0 5px;
+  min-height: 48px;
+  padding: 6px 7px;
   font-size: 0.76rem;
+  line-height: 1.18;
+  text-align: center;
 }
 
 .task-estimate-control {
@@ -1564,22 +1743,18 @@ dialog::backdrop {
   font-size: 1.15rem;
 }
 
-@media (min-width: 760px) {
+@media (min-width: 900px) {
   .app-shell {
     padding-top: 36px;
   }
 
-  .days-grid {
+  .service-boards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
 
-  .day-card {
+  .service-board .day-card {
     min-height: 170px;
-  }
-
-  .collapsible-section {
-    grid-column: 1 / -1;
   }
 
   .collapsible-card {
@@ -1598,6 +1773,35 @@ dialog::backdrop {
     padding-left: 10px;
   }
 
+  .topbar {
+    gap: 9px;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .sync-status {
+    max-width: 104px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .routine-menu-button {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .service-board {
+    padding: 10px;
+    border-radius: 24px;
+  }
+
+  .service-board-header {
+    padding-right: 5px;
+    padding-left: 6px;
+  }
+
   .target-button {
     max-width: 88px;
     padding-right: 9px;
@@ -1612,6 +1816,19 @@ dialog::backdrop {
     padding-right: 12px;
     padding-left: 12px;
     transform: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .wordmark {
+    font-size: 1.32rem;
+  }
+
+  .sync-status {
+    max-width: 80px;
+    padding-right: 7px;
+    padding-left: 7px;
+    font-size: 0.66rem;
   }
 }
 
@@ -1654,6 +1871,11 @@ dialog::backdrop {
 
   .quick-add-inner {
     background: rgba(33, 28, 30, 0.92);
+  }
+
+  .service-board-salle {
+    --board-accent: #d4a05f;
+    --board-soft: #392d20;
   }
 
   .switch::after,
