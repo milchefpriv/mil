@@ -2530,6 +2530,10 @@ body {
   font-weight: 900;
 }
 
+.order-summary-button.empty .order-summary-meta i {
+  display: none;
+}
+
 .order-summary-meta em {
   font-size: 15px;
   font-style: normal;
@@ -3106,6 +3110,25 @@ async function loadInput(fallback) {
 	}))).filter((entry) => Boolean(entry.item)).sort((a, b) => {
 		return input.categories.findIndex((item) => item.id === a.rule.category) - input.categories.findIndex((item) => item.id === b.rule.category) || String(a.item?.name || "").localeCompare(String(b.item?.name || ""), "fr");
 	});
+	const quotaLabel = (rule) => {
+		const choices = Number(rule.choices) || 0;
+		const sample = rule.products.find((config) => config.enabled !== false);
+		const qty = Number(sample?.qty) || 0;
+		const total = choices * qty;
+		const number = (value) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value);
+		if (rule.category === "salades") return "<b>" + choices + "</b> salade" + (choices > 1 ? "s" : "") + (qty ? " · " + number(qty) + " g/pers." : "");
+		if (rule.category === "sandwichs") return "<b>" + choices + "</b> recettes · " + number(total) + " sandwich" + (total > 1 ? "s" : "") + "/pers.";
+		if (rule.category === "plats-chauds" && choices > 1) return "<b>" + choices + "</b> recettes · " + number(total) + " portion" + (total > 1 ? "s" : "") + "/pers.";
+		const labels = {
+			verrines: ["verrine", "verrines"],
+			bouchees: ["pièce cocktail", "pièces cocktail"],
+			"plats-chauds": ["plat chaud", "plats chauds"],
+			desserts: ["dessert", "desserts"],
+			"live-cooking": ["live cooking", "live cooking"]
+		};
+		const label = labels[rule.category] || [category(rule.category).label.toLowerCase(), category(rule.category).label.toLowerCase()];
+		return "<b>" + choices + "</b> " + (choices > 1 ? label[1] : label[0]);
+	};
 	const formulaVisualEntries = (item) => state.mode === "ready" ? readyEntries(item) : (item?.rules || []).flatMap((rule) => rule.enabled === false ? [] : rule.products.filter((config) => config.enabled !== false).map((config) => ({
 		rule,
 		config,
@@ -3214,7 +3237,7 @@ async function loadInput(fallback) {
 				return "<article class=\"product-card ready-recipe-card\">" + visual(recipe, true) + "<div class=\"product-copy\"><small>" + h(category(entry.rule.category).label) + "</small><h4>" + h(recipe.name) + "</h4><footer><span>" + h(entry.config.qty) + " " + h(entry.config.unit) + " / personne</span></footer></div></article>";
 			}).join("") + "</div></div>" : "";
 			const customDetail = selected && state.mode === "custom" ? "<section class=\"inline-composition\" id=\"composition\" aria-labelledby=\"composition-title\"><div class=\"section-head inline-composition-head\"><div><span class=\"eyebrow\">3 · LA COMPOSITION</span><h2 id=\"composition-title\">Composez " + h(offer.name) + "</h2></div><p id=\"composition-copy\"></p></div><div id=\"composition-list\"></div></section>" : "";
-			const quotas = state.mode === "ready" ? entries.slice(0, 4).map((entry) => "<li class=\"formula-dish-title\" style=\"--tone:" + h(category(entry.rule.category).color) + "\">" + h(entry.item.name) + "</li>").join("") + (entries.length > 4 ? "<li class=\"formula-dish-more\">＋ " + (entries.length - 4) + " autres recettes</li>" : "") : item.rules.filter((rule) => rule.enabled !== false && !rule.optional).map((rule) => "<li><b>" + rule.choices + "</b> " + h(category(rule.category).label.toLowerCase()) + "</li>").join("");
+			const quotas = state.mode === "ready" ? entries.slice(0, 4).map((entry) => "<li class=\"formula-dish-title\" style=\"--tone:" + h(category(entry.rule.category).color) + "\">" + h(entry.item.name) + "</li>").join("") + (entries.length > 4 ? "<li class=\"formula-dish-more\">＋ " + (entries.length - 4) + " autres recettes</li>" : "") : item.rules.filter((rule) => rule.enabled !== false && !rule.optional).map((rule) => "<li>" + quotaLabel(rule) + "</li>").join("");
 			return "<article class=\"formula-shell " + (selected ? "selected" : "") + "\"><button class=\"formula-card\" data-formula=\"" + h(item.id) + "\" aria-pressed=\"" + selected + "\" aria-expanded=\"" + selected + "\"><span class=\"formula-gallery\">" + visualCells + (allVisualProducts.length > 4 ? "<b class=\"formula-gallery-more\">＋" + (allVisualProducts.length - 4) + "</b>" : "") + "</span><span class=\"formula-copy\"><span class=\"formula-kicker\">" + (item.recommended ? "La plus choisie" : state.mode === "ready" ? "Formule prête" : "À composer") + "</span><h3>" + h(offer.name) + "</h3><strong>" + money(ttc(offer.price)) + "<small> TTC / personne</small></strong><p>" + h(offer.description) + "</p><ul>" + quotas + "</ul></span></button>" + fixedDetail + customDetail + "</article>";
 		}).join("");
 		document.querySelectorAll("[data-formula]").forEach((button) => {
@@ -3430,12 +3453,13 @@ async function loadInput(fallback) {
 		const offer = presentation(current);
 		const statusData = progress();
 		document.querySelectorAll("#guests").forEach((node) => node.value = String(state.guests));
-		document.querySelectorAll("[data-total]").forEach((node) => node.textContent = money(totalTTC()) + " TTC");
+		document.querySelectorAll("[data-total]").forEach((node) => node.textContent = current ? money(totalTTC()) + " TTC" : "—");
 		const summaryStatus = document.querySelector("#summary-status");
 		const summaryButton = document.querySelector(".order-summary-button");
 		if (summaryStatus) summaryStatus.textContent = !current ? "Choisissez une formule" : state.mode === "ready" ? offer.name + " · complète" : ready() ? offer.name + " · terminée" : offer.name + " · " + statusData.selected + "/" + statusData.required + " recettes";
 		if (summaryButton) {
 			summaryButton.classList.toggle("complete", ready());
+			summaryButton.classList.toggle("empty", !current);
 			summaryButton.setAttribute("aria-label", "Voir le résumé de ma commande. " + (summaryStatus?.textContent || "Commande en cours"));
 		}
 		const guestInput = document.querySelector("#guests");
