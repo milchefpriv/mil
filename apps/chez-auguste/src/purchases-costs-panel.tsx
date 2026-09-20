@@ -19,6 +19,7 @@ type SupplierInvoice = {
   totalTtc: number | null;
   status: string;
   documentType: string;
+  gmailMessageId: string;
 };
 
 type SupplierInvoiceLine = {
@@ -79,6 +80,14 @@ const TABLES = {
   products: "auguste_supplier_products",
 } as const;
 const WORKSPACE_ID = "a617e000-0000-4000-8000-000000000001";
+const DIALOG_FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
   food: "Cuisine",
@@ -163,6 +172,7 @@ function normalizeInvoice(row: DbRow, index: number): SupplierInvoice {
     totalTtc: readNumber(row, ["total_ttc", "gross_amount", "amount_ttc", "total"]),
     status: readString(row, ["status", "processing_status", "extraction_status"], "parsed"),
     documentType: readString(row, ["document_type", "type"], "invoice"),
+    gmailMessageId: readString(row, ["gmail_message_id"]),
   };
 }
 
@@ -240,6 +250,16 @@ function formatUnitPrice(value: number | null, unit: string) {
   return `${formatted} / ${unit || "unité"}`;
 }
 
+function formatQuantity(value: number | null, unit: string) {
+  if (value === null) return "—";
+  const quantity = value.toLocaleString("fr-FR", { maximumFractionDigits: 3 });
+  return `${quantity} ${unit || "unité"}`;
+}
+
+function gmailMessageUrl(messageId: string) {
+  return `https://mail.google.com/mail/u/?authuser=mil.chef.priv%40gmail.com#all/${encodeURIComponent(messageId)}`;
+}
+
 function statusLabel(status: string) {
   const normalized = normalizeSearch(status).replace(/\s/g, "_");
   if (["validated", "valid", "approved", "complete", "completed"].includes(normalized)) return "Validée";
@@ -302,6 +322,37 @@ function Icon({ name }: { name: "cart" | "trend" | "invoice" | "alert" | "refres
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h2l2 10h10l2-7H6m2 11a1 1 0 1 0 0 .1m9-.1a1 1 0 1 0 0 .1" /></svg>;
 }
 
+function InvoiceRow({
+  invoice,
+  lineCount,
+  amountHt,
+  onOpen,
+}: {
+  invoice: SupplierInvoice;
+  lineCount: number;
+  amountHt: number;
+  onOpen: (trigger: HTMLButtonElement) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="invoice-row"
+      onClick={(event) => onOpen(event.currentTarget)}
+      aria-label={`Voir la facture ${invoice.invoiceNumber} de ${invoice.supplier}`}
+    >
+      <span className="invoice-icon"><Icon name="invoice" /></span>
+      <span className="invoice-main">
+        <strong>{invoice.supplier}</strong>
+        <small>{invoice.invoiceNumber} · {lineCount} ligne{lineCount > 1 ? "s" : ""}</small>
+        <small className="invoice-open-label">Voir la facture <span aria-hidden="true">→</span></small>
+      </span>
+      <time dateTime={invoiceDate(invoice)}>{formatDate(invoiceDate(invoice))}</time>
+      <span className={`invoice-status ${statusClass(invoice.status)}`}>{statusLabel(invoice.status)}</span>
+      <strong className="invoice-total">{euro.format(amountHt)}<small> HT</small></strong>
+    </button>
+  );
+}
+
 export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   const [view, setView] = useState<PurchasesView>("overview");
   const [snapshot, setSnapshot] = useState<PurchasesSnapshot>({ invoices: [], lines: [], products: [] });
@@ -311,8 +362,18 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<ProductCategory | "all">("all");
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
   const requestSequenceRef = useRef(0);
   const mountedRef = useRef(true);
+  const invoiceDialogRef = useRef<HTMLElement | null>(null);
+  const invoiceTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const openInvoice = useCallback((invoiceId: string, trigger: HTMLButtonElement) => {
+    invoiceTriggerRef.current = trigger;
+    setSelectedInvoiceId(invoiceId);
+  }, []);
+
+  const closeInvoice = useCallback(() => setSelectedInvoiceId(""), []);
 
   const loadPurchases = useCallback(async (background = false) => {
     const requestId = ++requestSequenceRef.current;
@@ -418,6 +479,72 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
     lines.forEach((line) => counts.set(line.invoiceId, (counts.get(line.invoiceId) ?? 0) + 1));
     return counts;
   }, [lines]);
+
+  const selectedInvoice = selectedInvoiceId ? invoiceById.get(selectedInvoiceId) ?? null : null;
+  const selectedInvoiceLines = useMemo(
+    () => selectedInvoiceId
+      ? lines
+        .filter((line) => line.invoiceId === selectedInvoiceId)
+        .sort((left, right) => left.lineNumber - right.lineNumber)
+      : [],
+    [lines, selectedInvoiceId],
+  );
+
+  useEffect(() => {
+    if (selectedInvoiceId && !invoiceById.has(selectedInvoiceId)) closeInvoice();
+  }, [closeInvoice, invoiceById, selectedInvoiceId]);
+
+  useEffect(() => {
+    if (!selectedInvoiceId) return;
+    const dialog = invoiceDialogRef.current;
+    if (!dialog) return;
+    const trigger = invoiceTriggerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusableElements = () => [...dialog.querySelectorAll<HTMLElement>(DIALOG_FOCUSABLE_SELECTOR)]
+      .filter((element) => !element.hasAttribute("hidden") && element.getClientRects().length > 0);
+    const focusFrame = window.requestAnimationFrame(() => {
+      const initialTarget = dialog.querySelector<HTMLElement>("[data-invoice-initial-focus]") ?? focusableElements()[0] ?? dialog;
+      initialTarget.focus();
+    });
+    const containFocus = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeInvoice();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = focusableElements();
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable.at(-1) ?? first;
+      const activeElement = document.activeElement;
+      if (event.shiftKey && (activeElement === first || !dialog.contains(activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (activeElement === last || !dialog.contains(activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", containFocus);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", containFocus);
+      window.requestAnimationFrame(() => {
+        if (invoiceTriggerRef.current !== trigger) return;
+        if (trigger?.isConnected) trigger.focus();
+        invoiceTriggerRef.current = null;
+      });
+    };
+  }, [closeInvoice, selectedInvoiceId]);
 
   const productTrends = useMemo<ProductTrend[]>(() => {
     const historyByProduct = new Map<string, PricePoint[]>();
@@ -589,7 +716,7 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   }
 
   if (!hasData) {
-    return <section className="purchases-state empty"><span className="purchases-state-mark"><Icon name="invoice" /></span><strong>Aucune facture intégrée pour le moment</strong><p>Les factures reçues seront affichées ici dès que l’import automatique sera branché.</p><button type="button" onClick={() => void loadPurchases()}>Actualiser</button></section>;
+    return <section className="purchases-state empty"><span className="purchases-state-mark"><Icon name="invoice" /></span><strong>Aucune facture intégrée pour le moment</strong><p>Seules les vraies factures PDF sont intégrées ici. Une confirmation de commande sans facture jointe n’est pas importée.</p><button type="button" onClick={() => void loadPurchases()}>Actualiser</button></section>;
   }
 
   return (
@@ -601,7 +728,7 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
           <p>Suivez les factures, les hausses de prix et les postes qui fragilisent la marge.</p>
         </div>
         <div className="purchases-live-status">
-          <span className={liveStatus === "live" ? "" : "offline"}><i />{liveStatus === "live" ? "Actualisé en direct" : liveStatus === "connecting" ? "Connexion au direct…" : "Actualisation manuelle"}</span>
+          <span className={liveStatus === "live" ? "" : "offline"}><i />{liveStatus === "live" ? "Données synchronisées" : liveStatus === "connecting" ? "Connexion au direct…" : "Actualisation manuelle"}</span>
           <button type="button" onClick={() => void loadPurchases(true)} disabled={refreshing} aria-label="Actualiser les achats"><Icon name="refresh" />{refreshing ? "Actualisation…" : "Actualiser"}</button>
         </div>
       </div>
@@ -694,13 +821,13 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
         <section className="purchase-card recent-invoices">
           <div className="purchase-section-heading"><div><p className="eyebrow">Derniers imports</p><h3>Factures récentes</h3></div><button type="button" onClick={() => setView("invoices")}>Voir l’historique →</button></div>
           <div className="invoice-list compact">
-            {invoices.slice(0, 5).map((invoice) => <article className="invoice-row" key={invoice.id}>
-              <span className="invoice-icon"><Icon name="invoice" /></span>
-              <div className="invoice-main"><strong>{invoice.supplier}</strong><small>{invoice.invoiceNumber} · {lineCounts.get(invoice.id) ?? 0} ligne{(lineCounts.get(invoice.id) ?? 0) > 1 ? "s" : ""}</small></div>
-              <time dateTime={invoiceDate(invoice)}>{formatDate(invoiceDate(invoice))}</time>
-              <span className={`invoice-status ${statusClass(invoice.status)}`}>{statusLabel(invoice.status)}</span>
-              <strong className="invoice-total">{euro.format(invoiceAmountHt(invoice))}<small> HT</small></strong>
-            </article>)}
+            {invoices.slice(0, 5).map((invoice) => <InvoiceRow
+              key={invoice.id}
+              invoice={invoice}
+              lineCount={lineCounts.get(invoice.id) ?? 0}
+              amountHt={invoiceAmountHt(invoice)}
+              onOpen={(trigger) => openInvoice(invoice.id, trigger)}
+            />)}
           </div>
         </section>
       </>}
@@ -736,15 +863,63 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
           <div><span>Lignes analysées</span><strong>{lines.length}</strong></div>
         </div>
         <div className="invoice-list">
-          {invoices.map((invoice) => <article className="invoice-row" key={invoice.id}>
-            <span className="invoice-icon"><Icon name="invoice" /></span>
-            <div className="invoice-main"><strong>{invoice.supplier}</strong><small>{invoice.invoiceNumber} · {lineCounts.get(invoice.id) ?? 0} ligne{(lineCounts.get(invoice.id) ?? 0) > 1 ? "s" : ""}</small></div>
-            <time dateTime={invoiceDate(invoice)}>{formatDate(invoiceDate(invoice))}</time>
-            <span className={`invoice-status ${statusClass(invoice.status)}`}>{statusLabel(invoice.status)}</span>
-            <strong className="invoice-total">{euro.format(invoiceAmountHt(invoice))}<small> HT</small></strong>
-          </article>)}
+          {invoices.map((invoice) => <InvoiceRow
+            key={invoice.id}
+            invoice={invoice}
+            lineCount={lineCounts.get(invoice.id) ?? 0}
+            amountHt={invoiceAmountHt(invoice)}
+            onOpen={(trigger) => openInvoice(invoice.id, trigger)}
+          />)}
         </div>
       </section>}
+
+      {selectedInvoice && <div className="invoice-detail-backdrop" role="presentation" onMouseDown={(event) => {
+        if (event.currentTarget === event.target) closeInvoice();
+      }}>
+        <section ref={invoiceDialogRef} className="invoice-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="invoice-detail-title" aria-describedby="invoice-detail-note" tabIndex={-1}>
+          <header className="invoice-detail-header">
+            <div>
+              <p className="eyebrow">Facture fournisseur</p>
+              <h3 id="invoice-detail-title">{selectedInvoice.supplier}</h3>
+              <p>{selectedInvoice.invoiceNumber} · {formatDate(invoiceDate(selectedInvoice))}</p>
+            </div>
+            <button type="button" className="invoice-detail-close" onClick={closeInvoice} aria-label="Fermer la facture" data-invoice-initial-focus>×</button>
+          </header>
+
+          <div className="invoice-detail-summary">
+            <div><span>Statut</span><strong className={`invoice-status ${statusClass(selectedInvoice.status)}`}>{statusLabel(selectedInvoice.status)}</strong></div>
+            <div><span>Total HT</span><strong>{euro.format(invoiceAmountHt(selectedInvoice))}</strong></div>
+            <div><span>Total TTC</span><strong>{selectedInvoice.totalTtc === null ? "—" : euro.format(isCreditInvoice(selectedInvoice) ? -Math.abs(selectedInvoice.totalTtc) : selectedInvoice.totalTtc)}</strong></div>
+          </div>
+
+          <div className="invoice-detail-section-heading">
+            <div><p className="eyebrow">Détail extrait</p><h4>Produits facturés</h4></div>
+            <span>{selectedInvoiceLines.length} ligne{selectedInvoiceLines.length > 1 ? "s" : ""}</span>
+          </div>
+
+          {selectedInvoiceLines.length > 0 ? <div className="invoice-detail-lines" role="table" aria-label={`Lignes de la facture ${selectedInvoice.invoiceNumber}`}>
+            <div className="invoice-detail-line invoice-detail-line-head" role="row"><span role="columnheader">Produit</span><span role="columnheader">Quantité</span><span role="columnheader">Prix unitaire HT</span><span role="columnheader">Total HT</span></div>
+            {selectedInvoiceLines.map((line) => <article className="invoice-detail-line" role="row" key={line.id}>
+              <div role="cell" aria-label={`Produit : ${line.description}${line.supplierReference ? `, référence ${line.supplierReference}` : ""}`}><strong>{line.description}</strong>{line.supplierReference && <small>Réf. {line.supplierReference}</small>}</div>
+              <span role="cell" data-label="Quantité" aria-label={`Quantité : ${formatQuantity(line.quantity, line.unit)}`}>{formatQuantity(line.quantity, line.unit)}</span>
+              <span role="cell" data-label="Prix unitaire HT" aria-label={`Prix unitaire HT : ${line.unitPriceHt === null ? "non renseigné" : euro.format(line.unitPriceHt)}`}>{line.unitPriceHt === null ? "—" : euro.format(line.unitPriceHt)}</span>
+              <strong role="cell" data-label="Total HT" aria-label={`Total HT : ${line.totalHt === null ? "non renseigné" : euro.format(isCreditInvoice(selectedInvoice) ? -Math.abs(line.totalHt) : line.totalHt)}`}>{line.totalHt === null ? "—" : euro.format(isCreditInvoice(selectedInvoice) ? -Math.abs(line.totalHt) : line.totalHt)}</strong>
+            </article>)}
+          </div> : <div className="invoice-detail-empty">
+            <Icon name="invoice" />
+            <strong>Détail en cours d’analyse</strong>
+            <p>La facture est enregistrée, mais ses lignes ne sont pas encore disponibles.</p>
+          </div>}
+
+          <footer className="invoice-detail-footer">
+            <span id="invoice-detail-note">Données extraites lors de l’import de la facture.{selectedInvoice.gmailMessageId ? " L’original s’ouvre dans Gmail." : ""}</span>
+            <div className="invoice-detail-actions">
+              {selectedInvoice.gmailMessageId && <a href={gmailMessageUrl(selectedInvoice.gmailMessageId)} target="_blank" rel="noreferrer" title="Ouvrir le message source dans Gmail">Ouvrir le PDF original</a>}
+              <button type="button" onClick={closeInvoice}>Fermer</button>
+            </div>
+          </footer>
+        </section>
+      </div>}
     </section>
   );
 }
