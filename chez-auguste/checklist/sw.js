@@ -1,13 +1,13 @@
 "use strict";
 
-const BUILD_ID = "16";
+const BUILD_ID = "17";
 const CACHE_NAME = `auguste-checklist-v${BUILD_ID}`;
 const CACHE_PREFIX = "auguste-checklist-";
 const INDEX_URL = new URL("./index.html", self.location.href).href;
 const CORE_SHELL = [
   "./index.html",
   "./styles.css?v=14",
-  "./app.js?v=15",
+  "./app.js?v=16",
   "./manifest.webmanifest",
   "../assets/supabase-D_AYc1Jo.js",
 ];

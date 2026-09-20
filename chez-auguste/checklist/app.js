@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-09-18-durable-sync-v2";
+  const APP_BUILD_ID = "2026-09-20-live-sync-v3";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = [
     "cuisineToday",
@@ -28,6 +28,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const MUTATIONS_TABLE = "auguste_checklist_mutations";
   const LEGACY_MIGRATION_KEY = "durable-sync-v2-imported";
   const REVISION_META_PREFIX = "sync-head:";
+  const FALLBACK_SYNC_INTERVAL_MS = 15_000;
   const HISTORY_TIME_ZONE = "Europe/Paris";
   const HISTORY_DAY_KEY_FORMATTER = new Intl.DateTimeFormat("fr-FR", {
     timeZone: HISTORY_TIME_ZONE,
@@ -159,6 +160,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   let sharedSaving = false;
   let sharedSaveTimer = null;
   let sharedChannel = null;
+  let sharedChannelStatus = "CLOSED";
   let syncInFlight = null;
   let syncAgain = false;
   let pendingRemoteRefresh = false;
@@ -178,6 +180,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+    },
+    realtime: {
+      // A Web Worker keeps heartbeats reliable when iOS throttles the page.
+      worker: "Worker" in window,
+      heartbeatIntervalMs: 15_000,
+      heartbeatCallback: (status) => {
+        if (status !== "timeout" && status !== "disconnected") return;
+        sharedChannelStatus = "CONNECTING";
+        scheduleSharedSave(0);
+        void updateSyncStatus();
+      },
     },
   });
 
@@ -1465,6 +1478,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
     const count = outbox.length;
     const conflictCount = outbox.filter((mutation) => mutation.conflict).length;
+    const realtimeConnecting = sharedReady && sharedChannelStatus !== "SUBSCRIBED";
     const status = forcedState || (
       !navigator.onLine
         ? "offline"
@@ -1474,10 +1488,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
             ? "conflict"
           : count
             ? "pending"
-            : "synced"
+            : realtimeConnecting
+              ? "connecting"
+              : "synced"
     );
     const labels = {
       offline: "Hors ligne",
+      connecting: "Connexion…",
       syncing: "Synchronisation…",
       pending: `${count} à envoyer`,
       conflict: `${conflictCount} conflit${conflictCount > 1 ? "s" : ""} protégé${conflictCount > 1 ? "s" : ""}`,
@@ -1492,7 +1509,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         ? `${conflictCount} modification${conflictCount > 1 ? "s sont" : " est"} conservée${conflictCount > 1 ? "s" : ""} sans écraser la version d’un autre appareil.`
         : count
           ? `${count} modification${count > 1 ? "s" : ""} conservée${count > 1 ? "s" : ""} localement en attente du serveur.`
-        : "Toutes les modifications sont confirmées par le serveur.";
+          : "Toutes les modifications sont confirmées par le serveur.";
+      if (status === "connecting") {
+        elements.syncStatusDetail.textContent =
+          "Connexion en direct en cours. Les données restent sauvegardées et sont vérifiées automatiquement.";
+      }
       if (status === "storage") {
         elements.syncStatusDetail.textContent =
           "Écriture désactivée : ce navigateur ne fournit pas le stockage sécurisé requis.";
@@ -1635,34 +1656,70 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     sharedSaveTimer = window.setTimeout(() => void synchronizeSharedState(), delay);
   }
 
+  function handleRemoteChecklistChange() {
+    if (taskReorderLocked()) pendingRemoteRefresh = true;
+    else scheduleSharedSave(25);
+  }
+
   function subscribeToSharedState() {
-    if (sharedChannel) void supabase.removeChannel(sharedChannel);
-    sharedChannel = supabase
-      .channel(`chez-auguste-v2:${SHARED_SECTION}:${CLIENT_INSTANCE_ID}`)
+    if (!sharedReady || !navigator.onLine || sharedChannel) return;
+    sharedChannelStatus = "CONNECTING";
+    void updateSyncStatus();
+
+    const channel = supabase
+      .channel(`chez-auguste-v3:${SHARED_SECTION}:${CLIENT_INSTANCE_ID}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: ITEMS_TABLE,
           filter: `workspace=eq.${SHARED_SECTION}`,
         },
-        () => {
-          if (taskReorderLocked()) pendingRemoteRefresh = true;
-          else scheduleSharedSave(80);
-        },
+        handleRemoteChecklistChange,
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: ITEMS_TABLE,
+          filter: `workspace=eq.${SHARED_SECTION}`,
+        },
+        handleRemoteChecklistChange,
+      );
+    sharedChannel = channel;
+    channel
       .subscribe((status, error) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          console.error("Canal de synchronisation indisponible.", error);
-          scheduleSharedSave(2000);
+        if (sharedChannel !== channel) return;
+        sharedChannelStatus = status;
+        if (status === "SUBSCRIBED") {
+          // Always reconcile once after joining: an event may have happened
+          // while the phone was asleep or while the socket was reconnecting.
+          scheduleSharedSave(0);
+          return;
         }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          console.error("Canal de synchronisation indisponible.", error);
+          // Supabase rejoins automatically with backoff. REST reconciliation
+          // keeps the list current while the socket is being repaired.
+          sharedChannelStatus = "CONNECTING";
+          scheduleSharedSave(0);
+          void updateSyncStatus();
+          return;
+        }
+        void updateSyncStatus();
       });
   }
 
+  function ensureRealtimeSubscription() {
+    if (!sharedReady || !navigator.onLine) return;
+    if (!sharedChannel) subscribeToSharedState();
+  }
+
   async function initializeSharedState() {
-    subscribeToSharedState();
     sharedReady = true;
+    subscribeToSharedState();
     await synchronizeSharedState();
   }
 
@@ -3681,15 +3738,31 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         if (sharedReady) void synchronizeSharedState();
         return;
       }
+      ensureRealtimeSubscription();
       if (state.lastDateKey !== todayKey()) loadState();
       else if (sharedReady) void refreshSharedState();
       else renderAll();
     });
 
     window.addEventListener("online", () => {
-      if (sharedReady) void refreshSharedState();
+      if (!sharedReady) return;
+      ensureRealtimeSubscription();
+      void refreshSharedState();
     });
-    window.addEventListener("offline", () => void updateSyncStatus());
+    window.addEventListener("offline", () => {
+      sharedChannelStatus = "CONNECTING";
+      void updateSyncStatus();
+    });
+    window.addEventListener("focus", () => {
+      if (!sharedReady) return;
+      ensureRealtimeSubscription();
+      void refreshSharedState();
+    });
+    window.addEventListener("pageshow", () => {
+      if (!sharedReady) return;
+      ensureRealtimeSubscription();
+      void refreshSharedState();
+    });
     window.addEventListener("pagehide", () => {
       if (sharedReady) void synchronizeSharedState();
     });
@@ -3723,7 +3796,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!("serviceWorker" in navigator)) return;
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("./sw.js?v=16", {
+        const registration = await navigator.serviceWorker.register("./sw.js?v=17", {
           updateViaCache: "none",
         });
         await registration.update();
@@ -3735,12 +3808,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     else window.addEventListener("load", register, { once: true });
   }
 
-  async function refreshSharedState() {
+  async function refreshSharedState({ skipIfBusy = false } = {}) {
     if (taskReorderLocked()) {
       pendingRemoteRefresh = true;
       return;
     }
-    await synchronizeSharedState();
+    if (skipIfBusy && syncInFlight) return;
+    scheduleSharedSave(0);
   }
 
   async function openApplication() {
@@ -3761,8 +3835,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     window.setInterval(() => {
       if (state.lastDateKey !== todayKey()) loadState();
-      if (sharedReady && document.visibilityState === "visible") void refreshSharedState();
-    }, 30_000);
+      if (sharedReady && document.visibilityState === "visible") {
+        ensureRealtimeSubscription();
+        void refreshSharedState({ skipIfBusy: true });
+      }
+    }, FALLBACK_SYNC_INTERVAL_MS);
   }
 
   async function start() {
