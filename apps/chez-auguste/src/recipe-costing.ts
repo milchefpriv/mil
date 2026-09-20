@@ -12,10 +12,27 @@ export type RecipeIngredientPrice = {
   referenceUnitPriceHt: number;
   currentUnitPriceHt: number;
   latestInvoiceDate: string | null;
+  supplierName: string | null;
+  supplierProductLabel: string | null;
+  isApproximation: boolean;
+};
+
+export type RecipeIngredientCostLine = {
+  ingredientName: string;
+  quantity: number;
+  recipeUnit: "g" | "ml" | "piece" | null;
+  hasInvoicePrice: boolean;
+  currentUnitPriceHt: number | null;
+  currentCost: number | null;
+  latestInvoiceDate: string | null;
+  supplierName: string | null;
+  supplierProductLabel: string | null;
+  isApproximation: boolean;
 };
 
 export type RecipeCostBreakdown = {
   liveCost: number;
+  rawLiveCost: number;
   manualBaseCost: number;
   knownCurrentCost: number;
   knownReferenceCost: number;
@@ -23,6 +40,7 @@ export type RecipeCostBreakdown = {
   matchedIngredientCount: number;
   ingredientCount: number;
   latestInvoiceDate: string | null;
+  lines: RecipeIngredientCostLine[];
 };
 
 type DbRow = Record<string, unknown>;
@@ -100,13 +118,16 @@ function parsePriceRow(row: DbRow): RecipeIngredientPrice | null {
     referenceUnitPriceHt,
     currentUnitPriceHt,
     latestInvoiceDate: latestInvoiceDate || null,
+    supplierName: readString(row, ["supplier_name"]) || null,
+    supplierProductLabel: readString(row, ["supplier_product_label"]) || null,
+    isApproximation: row.is_approximation === true,
   };
 }
 
 export async function loadRecipeIngredientPrices(): Promise<RecipeIngredientPrice[]> {
   const { data, error } = await supabase
     .from(RECIPE_PRICE_VIEW)
-    .select("normalized_alias,ingredient_unit,reference_unit_price_ht,latest_unit_price_ht,latest_invoice_date")
+    .select("normalized_alias,ingredient_unit,reference_unit_price_ht,latest_unit_price_ht,latest_invoice_date,supplier_name,supplier_product_label,is_approximation")
     .eq("workspace_id", WORKSPACE_ID);
   if (error) throw error;
   return ((data ?? []) as unknown as DbRow[]).map(parsePriceRow).filter((row): row is RecipeIngredientPrice => Boolean(row));
@@ -130,17 +151,44 @@ export function calculateRecipeCost(
   let matchedIngredientCount = 0;
   let latestInvoiceDate: string | null = null;
 
-  currentIngredients.forEach((ingredient) => {
-    if (!Number.isFinite(ingredient.quantity) || ingredient.quantity <= 0) return;
+  const lines = currentIngredients.map((ingredient): RecipeIngredientCostLine => {
+    const recipeUnit = normalizeRecipeUnit(ingredient.unit);
     const key = priceKey(ingredient.name, ingredient.unit);
     const price = key ? pricesByIngredient.get(key) : undefined;
-    if (!price) return;
+    const hasValidQuantity = Number.isFinite(ingredient.quantity) && ingredient.quantity > 0;
+    if (!price || !hasValidQuantity) {
+      return {
+        ingredientName: ingredient.name,
+        quantity: Number.isFinite(ingredient.quantity) ? Math.max(ingredient.quantity, 0) : 0,
+        recipeUnit,
+        hasInvoicePrice: Boolean(price),
+        currentUnitPriceHt: price?.currentUnitPriceHt ?? null,
+        currentCost: price ? 0 : null,
+        latestInvoiceDate: price?.latestInvoiceDate ?? null,
+        supplierName: price?.supplierName ?? null,
+        supplierProductLabel: price?.supplierProductLabel ?? null,
+        isApproximation: price?.isApproximation ?? false,
+      };
+    }
 
-    knownCurrentCost += ingredient.quantity * price.currentUnitPriceHt;
+    const currentCost = ingredient.quantity * price.currentUnitPriceHt;
+    knownCurrentCost += currentCost;
     matchedIngredientCount += 1;
     if (price.latestInvoiceDate && (!latestInvoiceDate || price.latestInvoiceDate > latestInvoiceDate)) {
       latestInvoiceDate = price.latestInvoiceDate;
     }
+    return {
+      ingredientName: ingredient.name,
+      quantity: ingredient.quantity,
+      recipeUnit,
+      hasInvoicePrice: true,
+      currentUnitPriceHt: price.currentUnitPriceHt,
+      currentCost,
+      latestInvoiceDate: price.latestInvoiceDate,
+      supplierName: price.supplierName,
+      supplierProductLabel: price.supplierProductLabel,
+      isApproximation: price.isApproximation,
+    };
   });
 
   referenceIngredients.forEach((ingredient) => {
@@ -151,15 +199,18 @@ export function calculateRecipeCost(
   });
 
   const estimatedRemainder = Math.max(safeBaseCost - knownReferenceCost, 0);
+  const rawLiveCost = knownCurrentCost + estimatedRemainder;
   return {
-    liveCost: roundCost(knownCurrentCost + estimatedRemainder),
+    liveCost: roundCost(rawLiveCost),
+    rawLiveCost,
     manualBaseCost: safeBaseCost,
     knownCurrentCost,
     knownReferenceCost,
     estimatedRemainder,
     matchedIngredientCount,
-    ingredientCount: currentIngredients.length,
+    ingredientCount: currentIngredients.filter((ingredient) => Number.isFinite(ingredient.quantity) && ingredient.quantity > 0).length,
     latestInvoiceDate,
+    lines,
   };
 }
 
