@@ -17,10 +17,18 @@ import PurchasesCostsPanel from "./purchases-costs-panel";
 import TraceabilityPanel from "./traceability-panel";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
+  calculateRecipeCost,
+  loadRecipeIngredientPrices,
+  manualBaseCostForTarget,
+  type RecipeCostBreakdown,
+  type RecipeIngredientPrice,
+} from "./recipe-costing";
+import {
   isNonEmptyPayload,
   loadSharedState,
   saveSharedState,
   sharedPayloadFingerprint,
+  supabase,
   subscribeToSharedState,
   type SharedPayload,
 } from "./shared-state";
@@ -46,6 +54,8 @@ type Dish = {
   signature?: boolean;
   allergens: string[];
   tags: string[];
+  manualBaseCost?: number;
+  invoiceCosting?: RecipeCostBreakdown;
 };
 
 type IngredientLine = {
@@ -356,7 +366,9 @@ function DishAdminCard({
             </>
           ) : (
             <>
-              <p className="economics-note">Estimations de départ — corrigez-les avec vos vrais achats et votre prix de vente.</p>
+              <p className="economics-note">{dish.invoiceCosting?.matchedIngredientCount
+                ? `Dernière facture appliquée à ${dish.invoiceCosting.matchedIngredientCount}/${dish.invoiceCosting.ingredientCount} ingrédients — le reste conserve l’estimation existante.`
+                : "Estimation de départ — elle sera actualisée automatiquement dès qu’un ingrédient correspond à un achat."}</p>
               <div className="dish-economics editable">
                 <label><span>Coût matière / portion</span><div><input type="number" min="0" step="0.01" value={dish.cost} onChange={(event) => onUpdateEconomics?.("cost", event.target.value)} /><b>€</b></div></label>
                 <label><span>Prix vendu sur la carte</span><div><input type="number" min="0" step="0.5" value={dish.price} onChange={(event) => onUpdateEconomics?.("price", event.target.value)} /><b>€</b></div></label>
@@ -851,6 +863,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [economicOverrides, setEconomicOverrides] = useState<Record<string, { cost: number; price: number }>>({});
   const [dishContentOverrides, setDishContentOverrides] = useState<Record<string, DishContentOverride>>({});
   const [technicalOverrides, setTechnicalOverrides] = useState<Record<string, TechnicalOverride>>({});
+  const [recipeIngredientPrices, setRecipeIngredientPrices] = useState<RecipeIngredientPrice[]>([]);
   const [periodSelections, setPeriodSelections] = useState<Record<string, string[]>>({});
   const [savedMenus, setSavedMenus] = useState<SavedMenu[]>([]);
   const [lastSavedCard, setLastSavedCard] = useState<CardSnapshot | null>(null);
@@ -1054,6 +1067,49 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   }, [userId]);
 
   useEffect(() => {
+    let active = true;
+    let refreshTimer: number | undefined;
+    let requestSequence = 0;
+
+    async function refreshRecipePrices() {
+      const requestId = ++requestSequence;
+      try {
+        const prices = await loadRecipeIngredientPrices();
+        if (active && requestId === requestSequence) setRecipeIngredientPrices(prices);
+      } catch (error) {
+        // The historical recipe estimate remains usable if the live price view is temporarily unavailable.
+        console.warn("Les derniers prix facturés n’ont pas pu être appliqués aux recettes.", error);
+      }
+    }
+
+    function scheduleRefresh() {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => void refreshRecipePrices(), 450);
+    }
+
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") scheduleRefresh();
+    }
+
+    void refreshRecipePrices();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const channel = supabase
+      .channel(`auguste-recipe-costs:${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auguste_supplier_invoices" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auguste_supplier_invoice_lines" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auguste_supplier_product_mappings" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auguste_catalog_item_aliases" }, scheduleRefresh)
+      .subscribe();
+
+    return () => {
+      active = false;
+      window.clearTimeout(refreshTimer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  useEffect(() => {
     const isStandalone = document.documentElement.dataset.augusteStandalone === "true";
     if (isStandalone) {
       const frame = window.requestAnimationFrame(() => {
@@ -1147,11 +1203,33 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     return () => window.clearTimeout(timeout);
   }, [notice]);
 
-  const allDishes = useMemo(() => [...customDishes, ...dishes].map((dish) => ({
-    ...dish,
-    ...(dishContentOverrides[dish.id] || {}),
-    ...(economicOverrides[dish.id] || {}),
-  })), [customDishes, dishContentOverrides, economicOverrides]);
+  const allDishes = useMemo(() => [...customDishes, ...dishes].map((dish) => {
+    const mergedDish: Dish = {
+      ...dish,
+      ...(dishContentOverrides[dish.id] || {}),
+      ...(economicOverrides[dish.id] || {}),
+    };
+    const manualBaseCost = mergedDish.cost;
+    const referenceIngredients = buildTechnicalIngredients(mergedDish);
+    const currentIngredients = technicalOverrides[dish.id]?.ingredients ?? referenceIngredients;
+    const invoiceCosting = calculateRecipeCost(manualBaseCost, currentIngredients, referenceIngredients, recipeIngredientPrices);
+    return {
+      ...mergedDish,
+      manualBaseCost,
+      cost: invoiceCosting.liveCost,
+      invoiceCosting,
+    };
+  }), [customDishes, dishContentOverrides, economicOverrides, recipeIngredientPrices, technicalOverrides]);
+  useEffect(() => {
+    if (!detail) return;
+    const updatedDish = allDishes.find((dish) => dish.id === detail.id);
+    if (updatedDish) setDetail(updatedDish);
+  }, [allDishes, detail?.id]);
+  useEffect(() => {
+    if (!technicalDish) return;
+    const updatedDish = allDishes.find((dish) => dish.id === technicalDish.id);
+    if (updatedDish) setTechnicalDish(updatedDish);
+  }, [allDishes, technicalDish?.id]);
   const allAccompanimentIdeas = useMemo(() => [...ACCOMPANIMENT_IDEAS, ...customAccompanimentIdeas], [customAccompanimentIdeas]);
   const validatedDishes = useMemo(() => {
     if (!lastSavedCard) return [];
@@ -1209,12 +1287,15 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   function updateDishEconomics(dish: Dish, field: "cost" | "price", rawValue: string) {
     const parsed = Number(rawValue.replace(",", "."));
     if (!Number.isFinite(parsed) || parsed < 0) return;
+    const currentBaseCost = economicOverrides[dish.id]?.cost ?? dish.manualBaseCost ?? dish.cost;
+    const nextBaseCost = field === "cost" && dish.invoiceCosting
+      ? manualBaseCostForTarget(parsed, dish.invoiceCosting)
+      : currentBaseCost;
     setEconomicOverrides((current) => ({
       ...current,
       [dish.id]: {
-        cost: current[dish.id]?.cost ?? dish.cost,
-        price: current[dish.id]?.price ?? dish.price,
-        [field]: parsed,
+        cost: nextBaseCost,
+        price: field === "price" ? parsed : current[dish.id]?.price ?? dish.price,
       },
     }));
   }
@@ -1421,10 +1502,21 @@ export default function Home({ userId, onSignOut }: HomeProps) {
 
   function updateTechnicalCost(rawValue: string) {
     if (!technicalDish) return;
-    const cost = Number(rawValue.replace(",", "."));
-    if (!Number.isFinite(cost) || cost < 0) return;
-    setTechnicalDish((current) => current ? { ...current, cost } : current);
-    setEconomicOverrides((current) => ({ ...current, [technicalDish.id]: { cost, price: current[technicalDish.id]?.price ?? technicalDish.price } }));
+    const targetCost = Number(rawValue.replace(",", "."));
+    if (!Number.isFinite(targetCost) || targetCost < 0) return;
+    const referenceIngredients = buildTechnicalIngredients(technicalDish);
+    const currentBreakdown = technicalDish.invoiceCosting
+      ?? calculateRecipeCost(technicalDish.manualBaseCost ?? technicalDish.cost, technicalIngredients, referenceIngredients, recipeIngredientPrices);
+    const manualBaseCost = manualBaseCostForTarget(targetCost, currentBreakdown);
+    const invoiceCosting = calculateRecipeCost(manualBaseCost, technicalIngredients, referenceIngredients, recipeIngredientPrices);
+    setTechnicalDish((current) => current ? { ...current, cost: invoiceCosting.liveCost, manualBaseCost, invoiceCosting } : current);
+    setEconomicOverrides((current) => ({
+      ...current,
+      [technicalDish.id]: {
+        cost: manualBaseCost,
+        price: current[technicalDish.id]?.price ?? technicalDish.price,
+      },
+    }));
   }
 
   function updateIngredient(index: number, change: Partial<IngredientLine>) {
@@ -1996,13 +2088,13 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <div className="technical-heading"><div><div className="technical-heading-line"><p className="eyebrow">Fiche technique</p><select value={technicalDish.course} onChange={(event) => updateTechnicalDishField("course", event.target.value as Course)} aria-label="Type de recette">{COURSE_ORDER.map((course) => <option key={course}>{course}</option>)}</select></div><input className="technical-title-input" id="technical-title" value={technicalDish.name} onChange={(event) => updateTechnicalDishField("name", event.target.value)} aria-label="Nom de la recette" /><textarea className="technical-description-input" value={technicalDish.description} onChange={(event) => updateTechnicalDishField("description", event.target.value)} aria-label="Description de la recette" /></div><span>Sauvegarde automatique</span></div>
             <div className="technical-toolbar">
               <div><span>Nombre de portions</span><div className="technical-stepper"><button type="button" onClick={() => setTechnicalPortions((value) => Math.max(1, value - 1))}>−</button><input type="number" min="1" value={technicalPortions} onChange={(event) => setTechnicalPortions(Math.max(1, Number(event.target.value) || 1))} aria-label="Nombre de portions" /><button type="button" onClick={() => setTechnicalPortions((value) => value + 1)}>+</button></div></div>
-              <div className="technical-summary"><div><span>Coût total estimé</span><strong>{euro.format(technicalDish.cost * technicalPortions)}</strong></div><label><span>Coût par portion (€)</span><input type="number" min="0" step="0.01" value={technicalDish.cost} onChange={(event) => updateTechnicalCost(event.target.value)} /></label><label><span>Temps de mise en place (min)</span><input type="number" min="1" value={technicalDish.prep} onChange={(event) => updateTechnicalDishField("prep", Math.max(1, Number(event.target.value) || 1))} /></label></div>
+              <div className="technical-summary"><div><span>{technicalDish.invoiceCosting?.matchedIngredientCount ? "Coût total actualisé" : "Coût total estimé"}</span><strong>{euro.format(technicalDish.cost * technicalPortions)}</strong></div><label><span>Coût par portion (€)</span><input type="number" min="0" step="0.01" value={technicalDish.cost} onChange={(event) => updateTechnicalCost(event.target.value)} /></label><label><span>Temps de mise en place (min)</span><input type="number" min="1" value={technicalDish.prep} onChange={(event) => updateTechnicalDishField("prep", Math.max(1, Number(event.target.value) || 1))} /></label></div>
             </div>
             <div className="technical-grid">
               <section className="ingredient-sheet"><div className="technical-section-title"><h3>Ingrédients</h3><span>Pour {technicalPortions} portions</span></div><div className="ingredient-table editable-ingredient-table"><div className="ingredient-row ingredient-head"><span>Produit</span><span>Quantité</span><span>Unité</span><span /></div>{technicalIngredients.map((ingredient, index) => <div className="ingredient-row" key={index}><input value={ingredient.name} onChange={(event) => updateIngredient(index, { name: event.target.value })} aria-label={`Nom de l’ingrédient ${index + 1}`} /><input type="number" min="0" step="0.1" value={Math.round(ingredient.quantity * technicalPortions * 10) / 10} onChange={(event) => updateIngredient(index, { quantity: Math.max(0, Number(event.target.value) || 0) / technicalPortions })} aria-label={`Quantité de ${ingredient.name}`} /><select value={ingredient.unit} onChange={(event) => updateIngredient(index, { unit: event.target.value as IngredientLine["unit"] })} aria-label={`Unité de ${ingredient.name}`}><option>g</option><option>ml</option><option>pièce</option></select><button type="button" onClick={() => removeIngredient(index)} aria-label={`Supprimer ${ingredient.name}`}>×</button></div>)}</div><button type="button" className="add-sheet-line" onClick={addIngredient}>+ Ajouter un ingrédient</button></section>
               <section className="method-sheet"><div className="technical-section-title"><h3>Déroulé</h3><span>{technicalSteps.length} étapes</span></div><ol>{technicalSteps.map((step, index) => <li key={index}><i>{index + 1}</i><textarea value={step} onChange={(event) => updateStep(index, event.target.value)} aria-label={`Étape ${index + 1}`} /><button type="button" onClick={() => removeStep(index)} aria-label={`Supprimer l’étape ${index + 1}`}>×</button></li>)}</ol><button type="button" className="add-sheet-line" onClick={addStep}>+ Ajouter une étape</button></section>
             </div>
-            <div className="technical-footer"><label><span>Allergènes déclarés</span><input value={technicalDish.allergens.join(", ")} onChange={(event) => updateTechnicalDishField("allergens", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))} placeholder="Gluten, lait, œuf…" /></label><p>Toutes les modifications sont enregistrées automatiquement sur cet appareil. Les grammages restent à valider par le chef avant utilisation en production.</p></div>
+            <div className="technical-footer"><label><span>Allergènes déclarés</span><input value={technicalDish.allergens.join(", ")} onChange={(event) => updateTechnicalDishField("allergens", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))} placeholder="Gluten, lait, œuf…" /></label><p>{technicalDish.invoiceCosting?.matchedIngredientCount ? `${technicalDish.invoiceCosting.matchedIngredientCount}/${technicalDish.invoiceCosting.ingredientCount} ingrédients sont valorisés au dernier prix facturé ; les autres restent dans la part estimée. ` : "Le coût reste estimé tant qu’aucun ingrédient ne correspond à un achat. "}Les modifications sont enregistrées automatiquement.</p></div>
           </section>
         </div>
       )}

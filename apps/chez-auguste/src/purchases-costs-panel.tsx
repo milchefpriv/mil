@@ -644,7 +644,7 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
 
         {unresolvedMappingCount > 0 && <div className="purchase-mapping-note">
           <span>{unresolvedMappingCount}</span>
-          <div><strong>Produit{unresolvedMappingCount > 1 ? "s" : ""} à rapprocher</strong><small>Le prix est suivi, mais il n’alimente aucune recette tant que le conditionnement ou la correspondance n’est pas confirmé.</small></div>
+          <div><strong>Produit{unresolvedMappingCount > 1 ? "s" : ""} sans correspondance recette</strong><small>Dès qu’un produit de facture correspond à un ingrédient, son dernier prix alimente automatiquement la recette. Ces produits restent provisoirement couverts par l’estimation existante.</small></div>
         </div>}
 
         <div className="purchases-overview-grid">
