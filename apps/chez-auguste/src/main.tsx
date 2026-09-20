@@ -29,6 +29,8 @@ function AuthGate() {
   const [password, setPassword] = useState("");
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState("");
+  const sessionUserId = session?.user.id ?? null;
+  const sessionEmail = session?.user.email?.toLocaleLowerCase("fr-FR") ?? null;
 
   useEffect(() => {
     let active = true;
@@ -50,12 +52,12 @@ function AuthGate() {
 
   useEffect(() => {
     let active = true;
-    if (!session) {
+    if (!sessionUserId) {
       setAccessStatus("idle");
       return () => { active = false; };
     }
 
-    if (session.user.email?.toLocaleLowerCase("fr-FR") !== AUGUSTE_AUTH_EMAIL) {
+    if (sessionEmail !== AUGUSTE_AUTH_EMAIL) {
       setError("Entrez le mot de passe Chez Auguste.");
       setAccessStatus("idle");
       void signOutLocally();
@@ -77,7 +79,9 @@ function AuthGate() {
       });
 
     return () => { active = false; };
-  }, [session]);
+  // A token refresh replaces the Session object without changing the user.
+  // Depending on the stable identity keeps Home mounted and preserves the open area.
+  }, [sessionEmail, sessionUserId]);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
