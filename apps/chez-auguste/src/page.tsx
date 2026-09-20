@@ -70,6 +70,7 @@ type ShoppingPlanLine = { dish: Dish; portions: number };
 
 type DishContentOverride = Partial<Pick<Dish, "name" | "course" | "description" | "prep" | "allergens">>;
 type TechnicalOverride = { ingredients: IngredientLine[]; steps: string[] };
+type EconomicOverride = Partial<Pick<Dish, "cost" | "price">> & { manualCostOverride?: boolean };
 
 type SavedMenu = {
   id: string;
@@ -323,23 +324,62 @@ function formatIngredientUnitPrice(price: number, unit: "g" | "ml" | "piece" | n
   return `${ingredientUnitPrice.format(price)}/pièce`;
 }
 
-function formatInvoiceDate(value: string | null) {
+function formatPriceDate(value: string | null) {
   if (!value) return "date inconnue";
   const parsed = new Date(`${value}T12:00:00`);
   return Number.isNaN(parsed.getTime()) ? value : shortInvoiceDate.format(parsed);
 }
 
-function getMargin(dish: Dish) { return Math.round(((dish.price - dish.cost) / dish.price) * 100); }
-
-function isInvoiceCostBreakdownFloor(costing?: RecipeCostBreakdown | null) {
-  return Boolean(costing
-    && costing.matchedIngredientCount > 0
-    && costing.matchedIngredientCount < costing.ingredientCount
-    && costing.estimatedRemainder <= 0.005);
+function isStaleMarketDate(value: string | null) {
+  if (!value) return true;
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) || Date.now() - parsed.getTime() > 30 * 24 * 60 * 60 * 1000;
 }
 
-function isInvoiceCostFloor(dish: Dish) {
-  return isInvoiceCostBreakdownFloor(dish.invoiceCosting);
+function getMargin(dish: Dish) { return Math.round(((dish.price - dish.cost) / dish.price) * 100); }
+
+function isRecipeCostBreakdownFloor(costing?: RecipeCostBreakdown | null) {
+  return Boolean(costing
+    && costing.pricedIngredientCount < costing.ingredientCount
+    && costing.manualAdjustment <= 0.005);
+}
+
+function isRecipeCostFloor(dish: Dish) {
+  return isRecipeCostBreakdownFloor(dish.invoiceCosting);
+}
+
+function marketConfidenceLabel(value: RecipeIngredientCostLine["marketConfidence"]) {
+  if (value === "high") return "forte";
+  if (value === "medium") return "moyenne";
+  if (value === "low") return "prudente";
+  return "non précisée";
+}
+
+function safeExternalUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function recipeCostingNote(costing?: RecipeCostBreakdown) {
+  if (!costing) return "Le coût sera calculé à partir des factures et, à défaut, d’une estimation marché.";
+
+  const missingCount = Math.max(costing.ingredientCount - costing.pricedIngredientCount, 0);
+  const parts = [
+    costing.invoiceIngredientCount ? `${costing.invoiceIngredientCount} prix facturé${costing.invoiceIngredientCount > 1 ? "s" : ""}` : "",
+    costing.marketIngredientCount ? `${costing.marketIngredientCount} estimation${costing.marketIngredientCount > 1 ? "s" : ""} marché` : "",
+    costing.manualAdjustment > 0.005 ? "ajustement manuel explicite" : "",
+    missingCount ? `${missingCount} sans prix` : "",
+  ].filter(Boolean);
+
+  const priority = costing.marketIngredientCount
+    ? "Chaque nouvelle facture rapprochée remplace automatiquement l’estimation marché correspondante."
+    : "Les coûts suivent les derniers prix facturés.";
+  return `${parts.join(" · ") || "Aucun prix disponible"}. ${priority}`;
 }
 
 function IngredientCostDetail({
@@ -351,28 +391,37 @@ function IngredientCostDetail({
   portions: number;
   hasGlobalEstimate: boolean;
 }) {
-  if (!line?.hasInvoicePrice || line.currentUnitPriceHt === null || line.currentCost === null) {
+  if (!line || line.priceOrigin === "missing" || line.currentUnitPriceHt === null || line.currentCost === null) {
     return (
       <div className="ingredient-cost-detail missing">
-        <div className="ingredient-cost-missing"><span>Sans prix facture</span><strong>Non chiffré</strong></div>
-        <small>{hasGlobalEstimate ? "Une estimation globale subsiste, sans pouvoir être attribuée à cette ligne." : "Non inclus dans le coût minimum affiché."}</small>
+        <div className="ingredient-cost-missing"><span>Aucune référence de prix</span><strong>Non chiffré</strong></div>
+        <small>{hasGlobalEstimate ? "Un ajustement manuel subsiste, sans pouvoir être attribué à cet ingrédient." : "Cette ligne n’est pas incluse dans le coût minimum affiché."}</small>
       </div>
     );
   }
 
-  const source = [
-    line.supplierName,
-    line.supplierProductLabel,
-    `facture du ${formatInvoiceDate(line.latestInvoiceDate)}`,
-  ].filter(Boolean).join(" · ");
+  const isMarket = line.priceOrigin === "market" || (!line.hasInvoicePrice && line.hasMarketEstimate);
+  const sourceUrl = isMarket ? safeExternalUrl(line.marketSourceUrl) : null;
+  const staleMarketPrice = isMarket && isStaleMarketDate(line.priceDate);
+  const source = isMarket
+    ? [line.marketSourceLabel, line.marketRuleLabel, `${sourceUrl ? "référence du" : "calibré le"} ${formatPriceDate(line.priceDate)}`].filter(Boolean).join(" · ")
+    : [line.supplierName, line.supplierProductLabel, `facture du ${formatPriceDate(line.priceDate)}`].filter(Boolean).join(" · ");
 
   return (
-    <div className={`ingredient-cost-detail ${line.isApproximation ? "approximate" : "priced"}`}>
+    <div className={`ingredient-cost-detail ${isMarket ? "market" : "invoice"}`}>
       <div className="ingredient-cost-formula">
         <span>{formatIngredientFormulaQuantity(line.quantity * portions, line.recipeUnit)} × {formatIngredientUnitPrice(line.currentUnitPriceHt, line.recipeUnit)} HT</span>
         <strong>= {ingredientUnitPrice.format(line.currentCost * portions)}</strong>
       </div>
-      <small><b>{line.isApproximation ? "Prix rapproché" : "Dernière facture"}</b> · {source}</small>
+      <div className="ingredient-cost-source">
+        <div>
+          <b>{isMarket ? "Estimation marché" : line.isApproximation ? "Facture rapprochée" : "Dernière facture"}</b>
+          {isMarket && <span className={`cost-confidence ${line.marketConfidence ?? "unknown"}`}>Confiance {marketConfidenceLabel(line.marketConfidence)}</span>}
+          {staleMarketPrice && <span className="cost-confidence stale">À actualiser</span>}
+        </div>
+        <small>{source || (isMarket ? "Référence marché non précisée" : "Référence facture non précisée")}</small>
+        {sourceUrl && <a href={sourceUrl} target="_blank" rel="noreferrer">Voir la source ↗</a>}
+      </div>
     </div>
   );
 }
@@ -452,11 +501,7 @@ function DishAdminCard({
             </>
           ) : (
             <>
-              <p className="economics-note">{dish.invoiceCosting?.matchedIngredientCount
-                ? isInvoiceCostFloor(dish)
-                  ? `Dernière facture appliquée à ${dish.invoiceCosting.matchedIngredientCount}/${dish.invoiceCosting.ingredientCount} ingrédients — coût minimum connu, avant les ingrédients encore sans prix.`
-                  : `Dernière facture appliquée à ${dish.invoiceCosting.matchedIngredientCount}/${dish.invoiceCosting.ingredientCount} ingrédients — le reste conserve l’estimation existante.`
-                : "Estimation de départ — elle sera actualisée automatiquement dès qu’un ingrédient correspond à un achat."}</p>
+              <p className={`economics-note ${isRecipeCostFloor(dish) ? "warning" : ""}`}>{recipeCostingNote(dish.invoiceCosting)}</p>
               <div className="dish-economics editable">
                 <label><span>Coût matière / portion</span><div><input type="number" min="0" step="0.01" value={dish.cost} onChange={(event) => onUpdateEconomics?.("cost", event.target.value)} /><b>€</b></div></label>
                 <label><span>Prix vendu sur la carte</span><div><input type="number" min="0" step="0.5" value={dish.price} onChange={(event) => onUpdateEconomics?.("price", event.target.value)} /><b>€</b></div></label>
@@ -948,7 +993,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [selected, setSelected] = useState<string[]>([]);
   const [customDishes, setCustomDishes] = useState<Dish[]>([]);
   const [customAccompanimentIdeas, setCustomAccompanimentIdeas] = useState<AccompanimentIdea[]>([]);
-  const [economicOverrides, setEconomicOverrides] = useState<Record<string, { cost: number; price: number }>>({});
+  const [economicOverrides, setEconomicOverrides] = useState<Record<string, EconomicOverride>>({});
   const [dishContentOverrides, setDishContentOverrides] = useState<Record<string, DishContentOverride>>({});
   const [technicalOverrides, setTechnicalOverrides] = useState<Record<string, TechnicalOverride>>({});
   const [recipeIngredientPrices, setRecipeIngredientPrices] = useState<RecipeIngredientPrice[]>([]);
@@ -1187,6 +1232,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       .on("postgres_changes", { event: "*", schema: "public", table: "auguste_supplier_invoice_lines" }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "auguste_supplier_product_mappings" }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "auguste_catalog_item_aliases" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auguste_market_price_estimates" }, scheduleRefresh)
       .subscribe();
 
     return () => {
@@ -1300,7 +1346,13 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     const manualBaseCost = mergedDish.cost;
     const referenceIngredients = buildTechnicalIngredients(mergedDish);
     const currentIngredients = technicalOverrides[dish.id]?.ingredients ?? referenceIngredients;
-    const invoiceCosting = calculateRecipeCost(manualBaseCost, currentIngredients, referenceIngredients, recipeIngredientPrices);
+    const invoiceCosting = calculateRecipeCost(
+      manualBaseCost,
+      currentIngredients,
+      referenceIngredients,
+      recipeIngredientPrices,
+      { preserveManualAdjustment: dish.id.startsWith("custom-") || economicOverrides[dish.id]?.manualCostOverride === true },
+    );
     return {
       ...mergedDish,
       manualBaseCost,
@@ -1354,14 +1406,23 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       technicalIngredients,
       buildTechnicalIngredients(technicalDish),
       recipeIngredientPrices,
+      { preserveManualAdjustment: technicalDish.id.startsWith("custom-") || economicOverrides[technicalDish.id]?.manualCostOverride === true },
     )
     : null;
   const technicalExactTotal = technicalCosting ? roundCurrency(technicalCosting.liveCost * technicalPortions) : 0;
-  const technicalInvoicedTotal = technicalCosting ? roundCurrency(technicalCosting.knownCurrentCost * technicalPortions) : 0;
-  const technicalEstimatedTotal = technicalCosting ? roundCurrency(technicalCosting.estimatedRemainder * technicalPortions) : 0;
-  const technicalRoundingAdjustment = roundCurrency(technicalExactTotal - technicalInvoicedTotal - technicalEstimatedTotal);
-  const technicalMissingCount = technicalCosting ? Math.max(technicalCosting.ingredientCount - technicalCosting.matchedIngredientCount, 0) : 0;
-  const technicalCostIsFloor = isInvoiceCostBreakdownFloor(technicalCosting);
+  const technicalInvoicedTotal = technicalCosting ? roundCurrency(technicalCosting.invoiceCurrentCost * technicalPortions) : 0;
+  const technicalMarketTotal = technicalCosting ? roundCurrency(technicalCosting.marketEstimatedCost * technicalPortions) : 0;
+  const technicalManualAdjustment = technicalCosting ? roundCurrency(technicalCosting.manualAdjustment * technicalPortions) : 0;
+  const technicalRoundingAdjustment = roundCurrency(technicalExactTotal - technicalInvoicedTotal - technicalMarketTotal - technicalManualAdjustment);
+  const technicalMissingCount = technicalCosting ? Math.max(technicalCosting.ingredientCount - technicalCosting.pricedIngredientCount, 0) : 0;
+  const technicalCostIsFloor = isRecipeCostBreakdownFloor(technicalCosting);
+  const technicalCostLabel = technicalCostIsFloor
+    ? "Coût minimum connu HT"
+    : technicalCosting?.invoiceIngredientCount
+      ? technicalCosting.marketIngredientCount ? "Coût actualisé HT" : "Coût facturé HT"
+      : technicalCosting?.marketIngredientCount
+        ? "Coût estimé marché HT"
+        : technicalManualAdjustment > 0.005 ? "Coût manuel HT" : "Coût non chiffré HT";
 
   function toggleDish(dish: Dish) {
     if (selected.includes(dish.id)) { setSelected((current) => current.filter((id) => id !== dish.id)); return; }
@@ -1395,10 +1456,9 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       : currentBaseCost;
     setEconomicOverrides((current) => ({
       ...current,
-      [dish.id]: {
-        cost: nextBaseCost,
-        price: field === "price" ? parsed : current[dish.id]?.price ?? dish.price,
-      },
+      [dish.id]: field === "cost"
+        ? { ...current[dish.id], cost: nextBaseCost, manualCostOverride: true }
+        : { ...current[dish.id], price: parsed },
     }));
   }
 
@@ -1608,15 +1668,28 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     if (!Number.isFinite(targetCost) || targetCost < 0) return;
     const referenceIngredients = buildTechnicalIngredients(technicalDish);
     const currentBreakdown = technicalDish.invoiceCosting
-      ?? calculateRecipeCost(technicalDish.manualBaseCost ?? technicalDish.cost, technicalIngredients, referenceIngredients, recipeIngredientPrices);
+      ?? calculateRecipeCost(
+        technicalDish.manualBaseCost ?? technicalDish.cost,
+        technicalIngredients,
+        referenceIngredients,
+        recipeIngredientPrices,
+        { preserveManualAdjustment: technicalDish.id.startsWith("custom-") || economicOverrides[technicalDish.id]?.manualCostOverride === true },
+      );
     const manualBaseCost = manualBaseCostForTarget(targetCost, currentBreakdown);
-    const invoiceCosting = calculateRecipeCost(manualBaseCost, technicalIngredients, referenceIngredients, recipeIngredientPrices);
+    const invoiceCosting = calculateRecipeCost(
+      manualBaseCost,
+      technicalIngredients,
+      referenceIngredients,
+      recipeIngredientPrices,
+      { preserveManualAdjustment: true },
+    );
     setTechnicalDish((current) => current ? { ...current, cost: invoiceCosting.liveCost, manualBaseCost, invoiceCosting } : current);
     setEconomicOverrides((current) => ({
       ...current,
       [technicalDish.id]: {
+        ...current[technicalDish.id],
         cost: manualBaseCost,
-        price: current[technicalDish.id]?.price ?? technicalDish.price,
+        manualCostOverride: true,
       },
     }));
   }
@@ -2190,13 +2263,54 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <div className="technical-heading"><div><div className="technical-heading-line"><p className="eyebrow">Fiche technique</p><select value={technicalDish.course} onChange={(event) => updateTechnicalDishField("course", event.target.value as Course)} aria-label="Type de recette">{COURSE_ORDER.map((course) => <option key={course}>{course}</option>)}</select></div><input className="technical-title-input" id="technical-title" value={technicalDish.name} onChange={(event) => updateTechnicalDishField("name", event.target.value)} aria-label="Nom de la recette" /><textarea className="technical-description-input" value={technicalDish.description} onChange={(event) => updateTechnicalDishField("description", event.target.value)} aria-label="Description de la recette" /></div><span>Sauvegarde automatique</span></div>
             <div className="technical-toolbar">
               <div><span>Nombre de portions</span><div className="technical-stepper"><button type="button" onClick={() => setTechnicalPortions((value) => Math.max(1, value - 1))}>−</button><input type="number" min="1" value={technicalPortions} onChange={(event) => setTechnicalPortions(Math.max(1, Number(event.target.value) || 1))} aria-label="Nombre de portions" /><button type="button" onClick={() => setTechnicalPortions((value) => value + 1)}>+</button></div></div>
-              <div className="technical-summary"><div><span>{technicalCosting?.matchedIngredientCount ? technicalCostIsFloor ? "Coût minimum facturé HT" : "Coût total actualisé HT" : "Coût total estimé HT"}</span><strong>{euro.format(technicalExactTotal)}</strong></div><label><span>Coût / portion arrondi (€)</span><input type="number" min="0" step="0.01" value={technicalCosting?.liveCost ?? technicalDish.cost} onChange={(event) => updateTechnicalCost(event.target.value)} /></label><label><span>Temps de mise en place (min)</span><input type="number" min="1" value={technicalDish.prep} onChange={(event) => updateTechnicalDishField("prep", Math.max(1, Number(event.target.value) || 1))} /></label></div>
+              <div className="technical-summary"><div><span>{technicalCostLabel}</span><strong>{euro.format(technicalExactTotal)}</strong></div><label><span>Coût / portion arrondi (€)</span><input type="number" min="0" step="0.01" value={technicalCosting?.liveCost ?? technicalDish.cost} onChange={(event) => updateTechnicalCost(event.target.value)} /></label><label><span>Temps de mise en place (min)</span><input type="number" min="1" value={technicalDish.prep} onChange={(event) => updateTechnicalDishField("prep", Math.max(1, Number(event.target.value) || 1))} /></label></div>
             </div>
             <div className="technical-grid">
-              <section className="ingredient-sheet"><div className="technical-section-title"><h3>Ingrédients</h3><span>Pour {technicalPortions} portions</span></div><div className="ingredient-table editable-ingredient-table"><div className="ingredient-row ingredient-head"><span>Produit</span><span>Quantité</span><span>Unité</span><span /></div>{technicalIngredients.map((ingredient, index) => <div className="ingredient-entry" key={index}><div className="ingredient-row"><input value={ingredient.name} onChange={(event) => updateIngredient(index, { name: event.target.value })} aria-label={`Nom de l’ingrédient ${index + 1}`} /><input type="number" min="0" step="0.1" value={Math.round(ingredient.quantity * technicalPortions * 10) / 10} onChange={(event) => updateIngredient(index, { quantity: Math.max(0, Number(event.target.value) || 0) / technicalPortions })} aria-label={`Quantité de ${ingredient.name}`} /><select value={ingredient.unit} onChange={(event) => updateIngredient(index, { unit: event.target.value as IngredientLine["unit"] })} aria-label={`Unité de ${ingredient.name}`}><option>g</option><option>ml</option><option>pièce</option></select><button type="button" onClick={() => removeIngredient(index)} aria-label={`Supprimer ${ingredient.name}`}>×</button></div><IngredientCostDetail line={technicalCosting?.lines[index]} portions={technicalPortions} hasGlobalEstimate={technicalEstimatedTotal > 0.005} /></div>)}</div><div className={`recipe-cost-proof ${technicalCostIsFloor ? "minimum" : ""}`}><div className="recipe-cost-proof-heading"><h4>Comment le total est calculé</h4><span>HT · pour {technicalPortions} portions</span></div>{technicalCosting?.matchedIngredientCount ? <div className="recipe-cost-proof-row"><span>Prix des factures reconnues <small>{technicalCosting.matchedIngredientCount} ingrédient{technicalCosting.matchedIngredientCount > 1 ? "s" : ""}</small></span><strong>{euro.format(technicalInvoicedTotal)}</strong></div> : null}{technicalEstimatedTotal > 0.005 ? <div className="recipe-cost-proof-row estimated"><span>Part estimée non ventilée <small>{technicalMissingCount ? `${technicalMissingCount} ingrédient${technicalMissingCount > 1 ? "s" : ""} sans prix individuel` : "estimation manuelle"}</small></span><strong>+ {euro.format(technicalEstimatedTotal)}</strong></div> : null}{Math.abs(technicalRoundingAdjustment) >= 0.005 ? <div className="recipe-cost-proof-row rounding"><span>Arrondi du coût par portion <small>Le coût carte est enregistré au centime.</small></span><strong>{technicalRoundingAdjustment > 0 ? "+ " : "− "}{euro.format(Math.abs(technicalRoundingAdjustment))}</strong></div> : null}{technicalCostIsFloor ? <div className="recipe-cost-warning"><strong>{technicalMissingCount} ingrédient{technicalMissingCount > 1 ? "s" : ""} non chiffré{technicalMissingCount > 1 ? "s" : ""}</strong><span>Le total est un minimum : ces ingrédients ne sont pas encore inclus.</span></div> : null}<div className="recipe-cost-proof-row total"><span>{technicalCostIsFloor ? "Coût minimum connu" : "Coût matière total"}<small>{technicalCosting?.matchedIngredientCount ? "Derniers prix facturés + estimation restante, arrondis par portion" : "Estimation manuelle actuelle"}</small></span><strong>= {euro.format(technicalExactTotal)}</strong></div></div><button type="button" className="add-sheet-line" onClick={addIngredient}>+ Ajouter un ingrédient</button></section>
+              <section className="ingredient-sheet">
+                <div className="technical-section-title"><h3>Ingrédients</h3><span>Pour {technicalPortions} portions</span></div>
+                <div className="cost-source-legend" aria-label="Légende des sources de prix">
+                  <span className="invoice">Facture</span>
+                  <span className="market">Estimation marché</span>
+                  <span className="missing">Sans prix</span>
+                </div>
+                <div className="ingredient-table editable-ingredient-table">
+                  <div className="ingredient-row ingredient-head"><span>Produit</span><span>Quantité</span><span>Unité</span><span /></div>
+                  {technicalIngredients.map((ingredient, index) => (
+                    <div className="ingredient-entry" key={index}>
+                      <div className="ingredient-row">
+                        <input value={ingredient.name} onChange={(event) => updateIngredient(index, { name: event.target.value })} aria-label={`Nom de l’ingrédient ${index + 1}`} />
+                        <input type="number" min="0" step="0.1" value={Math.round(ingredient.quantity * technicalPortions * 10) / 10} onChange={(event) => updateIngredient(index, { quantity: Math.max(0, Number(event.target.value) || 0) / technicalPortions })} aria-label={`Quantité de ${ingredient.name}`} />
+                        <select value={ingredient.unit} onChange={(event) => updateIngredient(index, { unit: event.target.value as IngredientLine["unit"] })} aria-label={`Unité de ${ingredient.name}`}><option>g</option><option>ml</option><option>pièce</option></select>
+                        <button type="button" onClick={() => removeIngredient(index)} aria-label={`Supprimer ${ingredient.name}`}>×</button>
+                      </div>
+                      <IngredientCostDetail line={technicalCosting?.lines[index]} portions={technicalPortions} hasGlobalEstimate={technicalManualAdjustment > 0.005} />
+                    </div>
+                  ))}
+                </div>
+                <div className={`recipe-cost-proof ${technicalCostIsFloor ? "minimum" : ""}`}>
+                  <div className="recipe-cost-proof-heading"><h4>Comment le total est calculé</h4><span>HT · pour {technicalPortions} portions</span></div>
+                  {technicalCosting?.invoiceIngredientCount ? (
+                    <div className="recipe-cost-proof-row invoice"><span>Sous-total factures <small>{technicalCosting.invoiceIngredientCount} ingrédient{technicalCosting.invoiceIngredientCount > 1 ? "s" : ""} au dernier prix d’achat</small></span><strong>{euro.format(technicalInvoicedTotal)}</strong></div>
+                  ) : null}
+                  {technicalCosting?.marketIngredientCount ? (
+                    <div className="recipe-cost-proof-row market"><span>Sous-total estimations marché <small>{technicalCosting.marketIngredientCount} ingrédient{technicalCosting.marketIngredientCount > 1 ? "s" : ""} sans prix fournisseur rapproché</small></span><strong>+ {euro.format(technicalMarketTotal)}</strong></div>
+                  ) : null}
+                  {Math.abs(technicalManualAdjustment) >= 0.005 ? (
+                    <div className="recipe-cost-proof-row manual"><span>Ajustement manuel <small>Écart conservé avec le coût saisi dans la fiche.</small></span><strong>{technicalManualAdjustment > 0 ? "+ " : "− "}{euro.format(Math.abs(technicalManualAdjustment))}</strong></div>
+                  ) : null}
+                  {Math.abs(technicalRoundingAdjustment) >= 0.005 ? (
+                    <div className="recipe-cost-proof-row rounding"><span>Arrondi du coût par portion <small>Le coût carte est enregistré au centime.</small></span><strong>{technicalRoundingAdjustment > 0 ? "+ " : "− "}{euro.format(Math.abs(technicalRoundingAdjustment))}</strong></div>
+                  ) : null}
+                  {technicalMissingCount ? (
+                    <div className="recipe-cost-warning"><strong>{technicalMissingCount} ingrédient{technicalMissingCount > 1 ? "s" : ""} sans prix</strong><span>{technicalCostIsFloor ? "Le total est un minimum : ces ingrédients ne sont pas encore inclus." : "Ils ne disposent ni d’une facture ni d’une estimation marché individuelle."}</span></div>
+                  ) : null}
+                  <div className="recipe-cost-proof-row total"><span>{technicalCostIsFloor ? "Coût minimum connu" : "Coût matière total"}<small>La facture est toujours prioritaire ; le marché ne sert qu’en l’absence d’achat.</small></span><strong>= {euro.format(technicalExactTotal)}</strong></div>
+                </div>
+                <button type="button" className="add-sheet-line" onClick={addIngredient}>+ Ajouter un ingrédient</button>
+              </section>
               <section className="method-sheet"><div className="technical-section-title"><h3>Déroulé</h3><span>{technicalSteps.length} étapes</span></div><ol>{technicalSteps.map((step, index) => <li key={index}><i>{index + 1}</i><textarea value={step} onChange={(event) => updateStep(index, event.target.value)} aria-label={`Étape ${index + 1}`} /><button type="button" onClick={() => removeStep(index)} aria-label={`Supprimer l’étape ${index + 1}`}>×</button></li>)}</ol><button type="button" className="add-sheet-line" onClick={addStep}>+ Ajouter une étape</button></section>
             </div>
-            <div className="technical-footer"><label><span>Allergènes déclarés</span><input value={technicalDish.allergens.join(", ")} onChange={(event) => updateTechnicalDishField("allergens", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))} placeholder="Gluten, lait, œuf…" /></label><p>{technicalCosting?.matchedIngredientCount ? technicalCostIsFloor ? `${technicalCosting.matchedIngredientCount}/${technicalCosting.ingredientCount} ingrédients sont valorisés au dernier prix facturé. Le montant affiché est un minimum : les autres ne sont pas encore chiffrés. ` : `${technicalCosting.matchedIngredientCount}/${technicalCosting.ingredientCount} ingrédients sont valorisés au dernier prix facturé ; les autres restent dans la part estimée. ` : "Le coût reste estimé tant qu’aucun ingrédient ne correspond à un achat. "}Les modifications sont enregistrées automatiquement.</p></div>
+            <div className="technical-footer"><label><span>Allergènes déclarés</span><input value={technicalDish.allergens.join(", ")} onChange={(event) => updateTechnicalDishField("allergens", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))} placeholder="Gluten, lait, œuf…" /></label><p>{recipeCostingNote(technicalCosting ?? undefined)} Les modifications sont enregistrées automatiquement.</p></div>
           </section>
         </div>
       )}
