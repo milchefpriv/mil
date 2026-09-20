@@ -13,6 +13,7 @@ import {
 } from "./accompaniment-ideas";
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
+import PurchasesCostsPanel from "./purchases-costs-panel";
 import TraceabilityPanel from "./traceability-panel";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
@@ -88,6 +89,7 @@ type HomeProps = {
 type SyncStatus = "loading" | "saving" | "synced" | "offline";
 type MenuMode = "view" | "edit";
 type AppArea = "home" | "sales" | "hygiene";
+type PilotageMode = "cuisine" | "bar" | "purchases";
 
 function isCardSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -830,7 +832,7 @@ function AccompanimentIdeasModal({ ideas, customIdeas, onAddIdea, onDeleteIdea, 
 
 export default function Home({ userId, onSignOut }: HomeProps) {
   const [appArea, setAppArea] = useState<AppArea>("home");
-  const [pilotageMode, setPilotageMode] = useState<"cuisine" | "bar">("cuisine");
+  const [pilotageMode, setPilotageMode] = useState<PilotageMode>("cuisine");
   const [menuMode, setMenuMode] = useState<MenuMode>("view");
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState<Course | "Tous">("Tous");
@@ -923,7 +925,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       }
 
       const savedPilotageMode = window.localStorage.getItem("auguste-pilotage-mode");
-      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine") setPilotageMode(savedPilotageMode);
+      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine" || savedPilotageMode === "purchases") setPilotageMode(savedPilotageMode);
       const saved = window.localStorage.getItem("auguste-menu-draft");
       if (saved) {
         try {
@@ -1782,7 +1784,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     document.getElementById("menu-composer")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function switchPilotage(mode: "cuisine" | "bar") {
+  function switchPilotage(mode: PilotageMode) {
     setPilotageMode(mode);
     window.localStorage.setItem("auguste-pilotage-mode", mode);
   }
@@ -1798,11 +1800,12 @@ export default function Home({ userId, onSignOut }: HomeProps) {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
+      <header className={`topbar ${appArea === "sales" ? "sales-topbar" : ""}`}>
         <button className="brand-lockup brand-home-button" type="button" onClick={() => openArea("home")} aria-label="Retour à l’accueil"><img className="brand-logo" src={BRAND_LOGO_SRC} alt="Chez Auguste — Bouillon Brasserie" /><div className="brand-context"><h1>{areaHeading}</h1><span>{areaContext}</span></div></button>
         {appArea === "sales" && <nav className="pilotage-switcher" aria-label="Choisir l’espace de pilotage">
-          <button type="button" className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
-          <button type="button" className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
+          <button type="button" aria-pressed={pilotageMode === "cuisine"} className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
+          <button type="button" aria-pressed={pilotageMode === "bar"} className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
+          <button type="button" aria-pressed={pilotageMode === "purchases"} className={pilotageMode === "purchases" ? "active" : ""} onClick={() => switchPilotage("purchases")}><span>03</span><strong>Achats & coûts</strong></button>
         </nav>}
         {appArea === "sales" && pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
           <span className={`autosave ${syncStatus}`}><i /> {syncStatus === "loading" ? "Connexion…" : syncStatus === "saving" ? "Sauvegarde…" : syncStatus === "synced" ? "Synchronisé en direct" : "Hors ligne — sauvegardé ici"}</span>
@@ -1821,7 +1824,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <button className="auguste-area-card sales" type="button" onClick={() => openArea("sales")}>
               <span className="auguste-area-number">01</span>
               <span className="auguste-area-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M3 20h18M15 6l3-3 3 3" /></svg></span>
-              <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · production</small></span>
+              <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · achats & coûts</small></span>
               <b aria-hidden="true">→</b>
             </button>
             <button className="auguste-hygiene-button" type="button" onClick={() => openArea("hygiene")}>
@@ -1831,7 +1834,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             </button>
           </div>
         </section>
-      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : <>
+      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : pilotageMode === "purchases" ? <PurchasesCostsPanel userId={userId} /> : <>
       {!ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture de la carte…</p></section> : isEditingMenu ? <>
       <section className="period-bar">
         <div className="period-intro"><p className="eyebrow">Menu en préparation</p><strong>{periodType === "Mois" ? `Carte de ${period.toLowerCase()}` : `Carte ${period.toLowerCase()}`}</strong></div>

@@ -50,8 +50,8 @@ button { color: inherit; }
 .brand-lockup h1 { margin: 0; font: 690 15px/1.1 var(--font-display); letter-spacing: -.02em; }
 .brand-context span { color: var(--muted); font-size: 9px; white-space: nowrap; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
-.pilotage-switcher { position: absolute; left: 50%; transform: translateX(-50%); padding: 3px; border: 1px solid #d5cbbd; border-radius: 12px; background: #eee7dc; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; box-shadow: inset 0 1px 2px rgba(40,30,20,.04); }
-.pilotage-switcher button { min-width: 142px; height: 43px; padding: 0 13px; border: 0; border-radius: 9px; background: transparent; color: #746b61; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: .18s ease; }
+.pilotage-switcher { position: absolute; left: 50%; transform: translateX(-50%); padding: 3px; border: 1px solid #d5cbbd; border-radius: 12px; background: #eee7dc; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; box-shadow: inset 0 1px 2px rgba(40,30,20,.04); }
+.pilotage-switcher button { min-width: 132px; height: 43px; padding: 0 11px; border: 0; border-radius: 9px; background: transparent; color: #746b61; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; transition: .18s ease; }
 .pilotage-switcher button span { color: #a1978c; font-size: 8px; font-weight: 850; letter-spacing: .08em; }
 .pilotage-switcher button strong { font-size: 11px; white-space: nowrap; }
 .pilotage-switcher button.active { background: #fffdfa; color: var(--ink); box-shadow: 0 4px 12px rgba(50,35,20,.1); }
@@ -810,7 +810,7 @@ button { color: inherit; }
   .autosave { display: none; }
   .brand-context { display: none; }
   .pilotage-switcher { position: static; transform: none; margin-left: auto; }
-  .pilotage-switcher button { min-width: 124px; }
+  .pilotage-switcher button { min-width: 112px; }
 }
 
 @media (max-width: 1080px) and (min-width: 881px) {
@@ -833,7 +833,7 @@ button { color: inherit; }
   .brand-lockup h1 { font-size: 16px; }
   .autosave, .ghost-button, .topbar .primary-button { display: none; }
   .pilotage-switcher { margin-left: auto; padding: 2px; border-radius: 10px; }
-  .pilotage-switcher button { min-width: 112px; height: 39px; padding: 0 8px; gap: 5px; }
+  .pilotage-switcher button { min-width: 96px; height: 39px; padding: 0 7px; gap: 5px; }
   .pilotage-switcher button strong { font-size: 10px; }
   .auguste-home { min-height: calc(100vh - 68px); padding: 40px 16px 60px; }
   .auguste-home-grid { grid-template-columns: 1fr; }
