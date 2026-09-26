@@ -96,6 +96,24 @@ export default function DailyZPanel() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  useEffect(() => {
+    const channel = supabase.channel("auguste-sales-purchases-live")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "auguste_daily_z_reports",
+        filter: `workspace_id=eq.${WORKSPACE_ID}`,
+      }, () => { void refresh(); })
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "auguste_supplier_invoices",
+        filter: `workspace_id=eq.${WORKSPACE_ID}`,
+      }, () => { void refresh(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [refresh]);
+
   const months = useMemo<MonthTotal[]>(() => {
     const byMonth = new Map<string, MonthTotal>();
     const get = (key: string) => {
