@@ -1,0 +1,30 @@
+name: Chez Auguste build check
+
+on:
+  pull_request:
+    paths:
+      - "apps/chez-auguste/**"
+      - ".github/workflows/chez-auguste-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/chez-auguste/package-lock.json
+      - run: npm ci
+        working-directory: apps/chez-auguste
+      - run: npm run typecheck
+        working-directory: apps/chez-auguste
+      - run: npm run build
+        working-directory: apps/chez-auguste
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chez-auguste-build
+          path: chez-auguste/
+          if-no-files-found: error
+          retention-days: 3
