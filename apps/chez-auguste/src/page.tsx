@@ -14,6 +14,7 @@ import {
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
 import PurchasesCostsPanel from "./purchases-costs-panel";
+import DailyZPanel from "./daily-z-panel";
 import TraceabilityPanel from "./traceability-panel";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
@@ -101,7 +102,7 @@ type HomeProps = {
 type SyncStatus = "loading" | "saving" | "synced" | "offline";
 type MenuMode = "view" | "edit";
 type AppArea = "home" | "sales" | "hygiene";
-type PilotageMode = "cuisine" | "bar" | "purchases";
+type PilotageMode = "cuisine" | "bar" | "purchases" | "zreports";
 
 function isCardSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -1071,7 +1072,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       }
 
       const savedPilotageMode = window.localStorage.getItem("auguste-pilotage-mode");
-      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine" || savedPilotageMode === "purchases") setPilotageMode(savedPilotageMode);
+      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine" || savedPilotageMode === "purchases" || savedPilotageMode === "zreports") setPilotageMode(savedPilotageMode);
       const saved = window.localStorage.getItem("auguste-menu-draft");
       if (saved) {
         try {
@@ -2073,6 +2074,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
           <button type="button" aria-pressed={pilotageMode === "cuisine"} className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
           <button type="button" aria-pressed={pilotageMode === "bar"} className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
           <button type="button" aria-pressed={pilotageMode === "purchases"} className={pilotageMode === "purchases" ? "active" : ""} onClick={() => switchPilotage("purchases")}><span>03</span><strong>Achats & coûts</strong></button>
+          <button type="button" aria-pressed={pilotageMode === "zreports"} className={pilotageMode === "zreports" ? "active" : ""} onClick={() => switchPilotage("zreports")}><span>04</span><strong>Ventes & achats</strong></button>
         </nav>}
         {appArea === "sales" && pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
           <span className={`autosave ${syncStatus}`}><i /> {syncStatus === "loading" ? "Connexion…" : syncStatus === "saving" ? "Sauvegarde…" : syncStatus === "synced" ? "Synchronisé en direct" : "Hors ligne — sauvegardé ici"}</span>
@@ -2101,7 +2103,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             </button>
           </div>
         </section>
-      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : pilotageMode === "purchases" ? <PurchasesCostsPanel userId={userId} /> : <>
+      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : pilotageMode === "purchases" ? <PurchasesCostsPanel userId={userId} /> : pilotageMode === "zreports" ? <DailyZPanel /> : <>
       {!ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture de la carte…</p></section> : isEditingMenu ? <>
       <section className="period-bar">
         <div className="period-intro"><p className="eyebrow">Menu en préparation</p><strong>{periodType === "Mois" ? `Carte de ${period.toLowerCase()}` : `Carte ${period.toLowerCase()}`}</strong></div>
