@@ -156,16 +156,23 @@ const FOOD_DEFAULTS: Record<string, string> = Object.fromEntries([
 
 const DRINK_DEFAULTS: Record<string, string> = Object.fromEntries([
   ["Espresso", "drink:coffee-espresso"],
+  ["Double espresso", "drink:coffee-double"],
+  ["Déca", "drink:coffee-decaf"],
   ["Allongé", "drink:coffee-long"],
   ["Noisette", "drink:coffee-noisette"],
   ["Crème", "drink:coffee-cream"],
   ["Perrier 33cl", "drink:water-perrier-33"],
   ["Vittel 1L", "drink:water-vittel-100"],
+  ["Vittel 50cl", "drink:water-vittel-50"],
+  ["Pétillante 1L", "drink:water-sparkling-100"],
   ["Coca 33cl", "drink:soft-coca"],
   ["Coca 0 33cl", "drink:soft-coca-zero"],
+  ["Orangina 25cl", "drink:soft-orangina"],
+  ["Limonade 25cl", "drink:soft-limonade"],
   ["Schweppes Tonic 25cl", "drink:soft-tonic"],
   ["Ice Tea 25cl", "drink:soft-ice-tea"],
   ["Diabolo", "drink:soft-diabolo"],
+  ["Pago Orange 20cl", "drink:juice-orange"],
   ["Pago Tomate 20cl", "drink:juice-tomato"],
   ["Pago Pomme 20 cl", "drink:juice-apple"],
   ["Blonde 25cl", "drink:beer-paillette-25"],
@@ -176,6 +183,8 @@ const DRINK_DEFAULTS: Record<string, string> = Object.fromEntries([
   ["Pichet rouge 25cl", "drink:wine-red-25"],
   ["Pichet rouge 50cl", "drink:wine-red-50"],
   ["Verre de blanc", "drink:wine-white-glass"],
+  ["Pichet blanc 25cl", "drink:wine-white-25"],
+  ["Pichet blanc 50cl", "drink:wine-white-50"],
 ].map(([label, target]) => [normalizeRecipeIngredientName(label), target]));
 
 const euro = new Intl.NumberFormat("fr-FR", {
@@ -661,7 +670,7 @@ export default function SalesPurchasesAnalytics({
       </div>
 
       <div className="sales-analysis-banner warning">
-        <strong>Historique incomplet : {data.zReports.length} Z reçu{data.zReports.length > 1 ? "s" : ""}</strong>
+        <strong>Historique incomplet : {data.zReports.length} journée{data.zReports.length > 1 ? "s" : ""} renseignée{data.zReports.length > 1 ? "s" : ""}</strong>
         <span>{data.zReports.length
           ? `Données disponibles du ${formatDate(data.zReports[0].date)} au ${formatDate(data.zReports.at(-1)?.date ?? "")}. Aucun résultat n’est extrapolé aux jours manquants.`
           : "Aucun Z n’est encore disponible : les ventes et consommations théoriques ne peuvent pas être calculées."}</span>

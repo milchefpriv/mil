@@ -13,6 +13,7 @@ type ZSalesLine = {
 type ZReport = {
   id: string;
   report_date: string;
+  source_subject: string;
   revenue_ttc: number;
   revenue_ht: number;
   covers: number;
@@ -73,7 +74,7 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
     setError("");
     const [zResult, invoiceResult] = await Promise.all([
       supabase.from("auguste_daily_z_reports")
-        .select("id,report_date,revenue_ttc,revenue_ht,covers,avg_basket_ttc,sales_lines")
+        .select("id,report_date,source_subject,revenue_ttc,revenue_ht,covers,avg_basket_ttc,sales_lines")
         .eq("workspace_id", WORKSPACE_ID)
         .order("report_date", { ascending: false }),
       supabase.from("auguste_supplier_invoices")
@@ -134,6 +135,9 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
   const currentMonth = months.find((month) => month.key === selectedMonth);
   const monthReports = reports.filter((report) => monthKey(report.report_date) === selectedMonth);
   const activeReport = monthReports.find((report) => report.report_date === selectedDate) ?? monthReports[0];
+  const monthCoverage = monthReports.length
+    ? `du ${dateLabel(monthReports.reduce((earliest, report) => report.report_date < earliest ? report.report_date : earliest, monthReports[0].report_date))} au ${dateLabel(monthReports.reduce((latest, report) => report.report_date > latest ? report.report_date : latest, monthReports[0].report_date))}`
+    : "aucune journée disponible";
   const difference = (currentMonth?.sales ?? 0) - (currentMonth?.purchases ?? 0);
   const chartMonths = [...months].reverse().slice(-8);
   const chartMax = Math.max(1, ...chartMonths.flatMap((month) => [month.sales, month.purchases]));
@@ -141,7 +145,7 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
   return (
     <section className="daily-z" aria-labelledby="daily-z-title">
       <header className="daily-z-heading">
-        <div><p className="eyebrow">Résultats du restaurant</p><h2 id="daily-z-title">{embedded ? "Résumé des Z" : "Ventes & achats"}</h2><p>Les Z de L’Addition sont rapprochés des factures fournisseurs validées.</p></div>
+        <div><p className="eyebrow">Résultats du restaurant</p><h2 id="daily-z-title">{embedded ? "Résumé des Z" : "Ventes & achats"}</h2><p>Les Z et exports produits de L’Addition sont rapprochés des factures fournisseurs validées.</p></div>
         <button className="daily-z-refresh" type="button" onClick={() => { setLoading(true); void refresh(); }}>Actualiser</button>
       </header>
 
@@ -153,13 +157,13 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
           <select id="daily-z-month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); const report = reports.find((item) => monthKey(item.report_date) === event.target.value); setSelectedDate(report?.report_date ?? ""); }}>
             {months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}
           </select>
-          <span>{monthReports.length} Z importé{monthReports.length > 1 ? "s" : ""}</span>
+          <span>{monthReports.length} journée{monthReports.length > 1 ? "s" : ""} renseignée{monthReports.length > 1 ? "s" : ""}</span>
         </div>
 
         <div className="daily-z-kpis">
-          <article><span>Ventes HT</span><strong>{euro.format(currentMonth?.sales ?? 0)}</strong><small>{monthReports.length} jour{monthReports.length > 1 ? "s" : ""} avec ventes</small></article>
-          <article><span>Achats fournisseurs HT</span><strong>{euro.format(currentMonth?.purchases ?? 0)}</strong><small>Factures validées sur la période</small></article>
-          <article className={(difference >= 0 ? "positive" : "negative")}><span>Ventes − achats</span><strong>{euro.format(difference)}</strong><small>{difference >= 0 ? "Ventes supérieures aux achats enregistrés" : "Achats supérieurs aux ventes"}</small></article>
+          <article><span>Ventes HT</span><strong>{euro.format(currentMonth?.sales ?? 0)}</strong><small>{monthReports.length} journée{monthReports.length > 1 ? "s" : ""} · {monthCoverage}</small></article>
+          <article><span>Achats fournisseurs HT</span><strong>{euro.format(currentMonth?.purchases ?? 0)}</strong><small>Factures validées du mois</small></article>
+          <article className={(difference >= 0 ? "positive" : "negative")}><span>Ventes − achats</span><strong>{euro.format(difference)}</strong><small>Écart brut · ventes sur journées renseignées</small></article>
         </div>
 
         <section className="daily-z-card">
@@ -170,7 +174,7 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
               <span>{month.label}</span>
             </div>)}
           </div>
-          <p className="daily-z-note">L’écart ventes − achats est un repère de suivi. Il ne déduit pas les stocks restants, les salaires, le loyer ni les autres charges.</p>
+          <p className="daily-z-note">Les ventes ne couvrent que les journées affichées ({monthCoverage}) ; les jours absents ne sont pas comptés comme zéro. L’écart ventes − achats reste un repère de suivi : il ne déduit ni les stocks restants, ni les salaires, le loyer ou les autres charges.</p>
         </section>
 
         <div className="daily-z-detail-grid">
@@ -178,13 +182,13 @@ export default function DailyZPanel({ embedded = false }: { embedded?: boolean }
             <div className="daily-z-card-title"><div><p className="eyebrow">Rapports reçus</p><h3>Ventes par jour</h3></div></div>
             <div className="daily-z-days">
               {monthReports.map((report) => <button type="button" key={report.id} aria-pressed={activeReport?.id === report.id} className={activeReport?.id === report.id ? "active" : ""} onClick={() => setSelectedDate(report.report_date)}>
-                <span><strong>{dateLabel(report.report_date)}</strong><small>{Number(report.covers || 0).toLocaleString("fr-FR")} couverts</small></span><b>{euro.format(Number(report.revenue_ht || 0))} HT</b>
+                <span><strong>{dateLabel(report.report_date)}</strong><small>{Number(report.covers || 0) > 0 ? `${Number(report.covers).toLocaleString("fr-FR")} couverts` : "Couverts indisponibles"}</small></span><b>{euro.format(Number(report.revenue_ht || 0))} HT</b>
               </button>)}
             </div>
           </section>
 
           <section className="daily-z-card">
-            <div className="daily-z-card-title"><div><p className="eyebrow">{activeReport ? dateLabel(activeReport.report_date) : "Détail"}</p><h3>Produits vendus</h3></div><strong>{activeReport ? euro.format(Number(activeReport.revenue_ttc || 0)) + " TTC" : "—"}</strong></div>
+            <div className="daily-z-card-title"><div><p className="eyebrow">{activeReport ? dateLabel(activeReport.report_date) : "Détail"}</p><h3>Produits vendus</h3>{activeReport?.source_subject?.toLocaleLowerCase("fr-FR").includes("export produits") && <small className="daily-z-source-note">Export L’Addition · CA HT recalculé selon la TVA produit · remises, offerts et couverts absents</small>}</div><strong>{activeReport ? euro.format(Number(activeReport.revenue_ttc || 0)) + " TTC" : "—"}</strong></div>
             {activeReport?.sales_lines?.some((line) => line.product && line.product !== "Produit" && Number.isFinite(Number(line.quantity)) && Number(line.quantity) > 0) ? <div className="daily-z-products">
               {[...activeReport.sales_lines]
                 .filter((line) => line.product && line.product !== "Produit" && Number.isFinite(Number(line.quantity)) && Number(line.quantity) > 0)

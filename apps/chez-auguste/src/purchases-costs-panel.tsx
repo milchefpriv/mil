@@ -483,6 +483,15 @@ export default function PurchasesCostsPanel({
       window.clearTimeout(refreshTimer);
       refreshTimer = window.setTimeout(() => void loadPurchases(true), 450);
     };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") scheduleRefresh();
+    };
+
+    window.addEventListener("focus", scheduleRefresh);
+    window.addEventListener("online", scheduleRefresh);
+    window.addEventListener("pageshow", scheduleRefresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
     const channel = supabase
       .channel(`auguste-purchases:${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLES.invoices }, scheduleRefresh)
@@ -490,13 +499,20 @@ export default function PurchasesCostsPanel({
       .on("postgres_changes", { event: "*", schema: "public", table: TABLES.products }, scheduleRefresh)
       .subscribe((status) => {
         if (!mountedRef.current) return;
-        if (status === "SUBSCRIBED") setLiveStatus("live");
+        if (status === "SUBSCRIBED") {
+          setLiveStatus("live");
+          scheduleRefresh();
+        }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLiveStatus("manual");
       });
 
     return () => {
       mountedRef.current = false;
       window.clearTimeout(refreshTimer);
+      window.removeEventListener("focus", scheduleRefresh);
+      window.removeEventListener("online", scheduleRefresh);
+      window.removeEventListener("pageshow", scheduleRefresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       void supabase.removeChannel(channel);
     };
   }, [loadPurchases, userId]);
