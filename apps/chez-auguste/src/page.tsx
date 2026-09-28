@@ -13,8 +13,11 @@ import {
 } from "./accompaniment-ideas";
 import { TECHNICAL_RECIPES } from "./technical-recipes";
 import BarPilotage from "./bar-pilotage";
-import PurchasesCostsPanel from "./purchases-costs-panel";
-import DailyZPanel from "./daily-z-panel";
+import PurchasesCostsPanel, {
+  type InventoryCounts,
+  type SalesProductMappings,
+  type SalesRecipe,
+} from "./purchases-costs-panel";
 import TraceabilityPanel from "./traceability-panel";
 import brandLogoUrl from "./assets/chez-auguste-logo.png";
 import {
@@ -102,7 +105,7 @@ type HomeProps = {
 type SyncStatus = "loading" | "saving" | "synced" | "offline";
 type MenuMode = "view" | "edit";
 type AppArea = "home" | "sales" | "hygiene";
-type PilotageMode = "cuisine" | "bar" | "purchases" | "zreports";
+type PilotageMode = "cuisine" | "bar" | "purchases";
 
 function isCardSnapshot(value: unknown): value is CardSnapshot {
   if (!value || typeof value !== "object") return false;
@@ -151,9 +154,16 @@ const APP_STORAGE_KEYS = [
   "auguste-technical-sheets",
   "auguste-period-selections-v1",
   "auguste-accompaniment-ideas",
+  "auguste-sales-product-mappings",
+  "auguste-inventory-counts",
 ] as const;
 const BACKUP_DATA_ELEMENT_ID = "auguste-backup-data";
-const OFFLINE_CACHE_NAME = "chez-auguste-offline-v25";
+const CUISINE_PENDING_SYNC_KEY = "auguste-cuisine-pending-sync-v2";
+const PRESERVE_WHEN_REMOTE_IS_OLDER = new Set<string>([
+  "auguste-sales-product-mappings",
+  "auguste-inventory-counts",
+]);
+const OFFLINE_CACHE_NAME = "chez-auguste-offline-v26";
 const BRAND_LOGO_SRC: string = brandLogoUrl;
 
 function isAccompanimentIdea(value: unknown): value is AccompanimentIdea {
@@ -165,6 +175,34 @@ function isAccompanimentIdea(value: unknown): value is AccompanimentIdea {
     && ACCOMPANIMENT_HOLDINGS.some((holding) => holding === idea.holding)
     && ACCOMPANIMENT_DISPATCHES.some((dispatch) => dispatch === idea.dispatch)
     && typeof idea.serviceNote === "string";
+}
+
+function readStoredJson(key: string, fallback: unknown): unknown {
+  try {
+    return JSON.parse(window.localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
+function isSalesProductMappings(value: unknown): value is SalesProductMappings {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Object.entries(value).every(([key, target]) => Boolean(key) && typeof target === "string"),
+  );
+}
+
+function isInventoryCounts(value: unknown): value is InventoryCounts {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const count = entry as { opening?: unknown; closing?: unknown };
+    return [count.opening, count.closing].every((amount) => (
+      amount === null || (typeof amount === "number" && Number.isFinite(amount) && amount >= 0)
+    ));
+  });
 }
 
 function createOriginalCuisineStorage(): Record<string, string> {
@@ -186,6 +224,8 @@ function createOriginalCuisineStorage(): Record<string, string> {
     "auguste-technical-sheets": "{}",
     "auguste-period-selections-v1": "{}",
     "auguste-accompaniment-ideas": "[]",
+    "auguste-sales-product-mappings": "{}",
+    "auguste-inventory-counts": "{}",
   };
 }
 
@@ -997,6 +1037,8 @@ export default function Home({ userId, onSignOut }: HomeProps) {
   const [economicOverrides, setEconomicOverrides] = useState<Record<string, EconomicOverride>>({});
   const [dishContentOverrides, setDishContentOverrides] = useState<Record<string, DishContentOverride>>({});
   const [technicalOverrides, setTechnicalOverrides] = useState<Record<string, TechnicalOverride>>({});
+  const [salesProductMappings, setSalesProductMappings] = useState<SalesProductMappings>({});
+  const [inventoryCounts, setInventoryCounts] = useState<InventoryCounts>({});
   const [recipeIngredientPrices, setRecipeIngredientPrices] = useState<RecipeIngredientPrice[]>([]);
   const [periodSelections, setPeriodSelections] = useState<Record<string, string[]>>({});
   const [savedMenus, setSavedMenus] = useState<SavedMenu[]>([]);
@@ -1050,7 +1092,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         const value = window.localStorage.getItem(key);
         if (typeof value === "string") storage[key] = value;
       });
-      return { version: 1, storage };
+      return { version: 2, storage };
     }
 
     function storageFromPayload(payload: SharedPayload): Record<string, string> | null {
@@ -1067,12 +1109,16 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         APP_STORAGE_KEYS.forEach((key) => {
           const value = storage[key];
           if (typeof value === "string") window.localStorage.setItem(key, value);
-          else window.localStorage.removeItem(key);
+          else if (!PRESERVE_WHEN_REMOTE_IS_OLDER.has(key)) window.localStorage.removeItem(key);
         });
       }
 
       const savedPilotageMode = window.localStorage.getItem("auguste-pilotage-mode");
-      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine" || savedPilotageMode === "purchases" || savedPilotageMode === "zreports") setPilotageMode(savedPilotageMode);
+      if (savedPilotageMode === "bar" || savedPilotageMode === "cuisine" || savedPilotageMode === "purchases") setPilotageMode(savedPilotageMode);
+      if (savedPilotageMode === "zreports") {
+        setPilotageMode("purchases");
+        window.localStorage.setItem("auguste-pilotage-mode", "purchases");
+      }
       const saved = window.localStorage.getItem("auguste-menu-draft");
       if (saved) {
         try {
@@ -1086,24 +1132,26 @@ export default function Home({ userId, onSignOut }: HomeProps) {
           if ([0, 5, 10, 15, 20].includes(data.buffer)) setBuffer(data.buffer);
         } catch { /* Ignore malformed local data. */ }
       }
-      try {
-        const lastCard = JSON.parse(window.localStorage.getItem("auguste-last-card") || "null");
-        const custom = JSON.parse(window.localStorage.getItem("auguste-custom-recipes") || "[]");
-        const archives = JSON.parse(window.localStorage.getItem("auguste-saved-menus") || "[]");
-        const economics = JSON.parse(window.localStorage.getItem("auguste-recipe-economics") || "{}");
-        const content = JSON.parse(window.localStorage.getItem("auguste-recipe-content") || "{}");
-        const technical = JSON.parse(window.localStorage.getItem("auguste-technical-sheets") || "{}");
-        const storedPeriodSelections = JSON.parse(window.localStorage.getItem("auguste-period-selections-v1") || "{}");
-        const storedAccompanimentIdeas = JSON.parse(window.localStorage.getItem("auguste-accompaniment-ideas") || "[]");
-        setLastSavedCard(isCardSnapshot(lastCard) ? lastCard : null);
-        if (Array.isArray(custom)) setCustomDishes(custom);
-        if (Array.isArray(storedAccompanimentIdeas)) setCustomAccompanimentIdeas(storedAccompanimentIdeas.filter(isAccompanimentIdea));
-        if (Array.isArray(archives)) setSavedMenus(archives);
-        if (economics && typeof economics === "object" && !Array.isArray(economics)) setEconomicOverrides(economics);
-        if (content && typeof content === "object" && !Array.isArray(content)) setDishContentOverrides(content);
-        if (technical && typeof technical === "object" && !Array.isArray(technical)) setTechnicalOverrides(migrateLegacyTechnicalSheets(technical));
-        if (storedPeriodSelections && typeof storedPeriodSelections === "object" && !Array.isArray(storedPeriodSelections)) setPeriodSelections(storedPeriodSelections);
-      } catch { /* Ignore malformed local data. */ }
+      const lastCard = readStoredJson("auguste-last-card", null);
+      const custom = readStoredJson("auguste-custom-recipes", []);
+      const archives = readStoredJson("auguste-saved-menus", []);
+      const economics = readStoredJson("auguste-recipe-economics", {});
+      const content = readStoredJson("auguste-recipe-content", {});
+      const technical = readStoredJson("auguste-technical-sheets", {});
+      const storedPeriodSelections = readStoredJson("auguste-period-selections-v1", {});
+      const storedAccompanimentIdeas = readStoredJson("auguste-accompaniment-ideas", []);
+      const storedSalesMappings = readStoredJson("auguste-sales-product-mappings", {});
+      const storedInventoryCounts = readStoredJson("auguste-inventory-counts", {});
+      setLastSavedCard(isCardSnapshot(lastCard) ? lastCard : null);
+      if (Array.isArray(custom)) setCustomDishes(custom);
+      if (Array.isArray(storedAccompanimentIdeas)) setCustomAccompanimentIdeas(storedAccompanimentIdeas.filter(isAccompanimentIdea));
+      if (Array.isArray(archives)) setSavedMenus(archives);
+      if (economics && typeof economics === "object" && !Array.isArray(economics)) setEconomicOverrides(economics as Record<string, EconomicOverride>);
+      if (content && typeof content === "object" && !Array.isArray(content)) setDishContentOverrides(content as Record<string, DishContentOverride>);
+      if (technical && typeof technical === "object" && !Array.isArray(technical)) setTechnicalOverrides(migrateLegacyTechnicalSheets(technical as Record<string, TechnicalOverride>));
+      if (storedPeriodSelections && typeof storedPeriodSelections === "object" && !Array.isArray(storedPeriodSelections)) setPeriodSelections(storedPeriodSelections as Record<string, string[]>);
+      if (isSalesProductMappings(storedSalesMappings)) setSalesProductMappings(storedSalesMappings);
+      if (isInventoryCounts(storedInventoryCounts)) setInventoryCounts(storedInventoryCounts);
     }
 
     let initialized = false;
@@ -1149,13 +1197,23 @@ export default function Home({ userId, onSignOut }: HomeProps) {
           : null;
 
         if (remotePayload) {
-          applyRemoteRow(remoteRow);
+          const hasPendingLocalSync = Boolean(window.localStorage.getItem(CUISINE_PENDING_SYNC_KEY));
+          if (!initialized && hasPendingLocalSync && remoteRow) {
+            syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(remoteRow.payload);
+            applyPayload(localPayload);
+            initialized = true;
+            setReady(true);
+            setSyncStatus("saving");
+          } else {
+            applyRemoteRow(remoteRow);
+          }
         } else if (!initialized) {
           applyPayload(localPayload);
           const savedRow = await saveSharedState("cuisine", localPayload, userId);
           if (!active) return;
           initialized = true;
           syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
+          window.localStorage.removeItem(CUISINE_PENDING_SYNC_KEY);
           setReady(true);
           setSyncStatus("synced");
         }
@@ -1174,6 +1232,11 @@ export default function Home({ userId, onSignOut }: HomeProps) {
     unsubscribe = subscribeToSharedState("cuisine", (row) => {
       if (!active || !isNonEmptyPayload(row.payload) || !storageFromPayload(row.payload)) return;
       realtimeEventVersion += 1;
+      if (!initialized && window.localStorage.getItem(CUISINE_PENDING_SYNC_KEY)) {
+        deferredRemoteRef.current = true;
+        void refreshSharedState(true);
+        return;
+      }
       if (hasUnsavedLocalChanges()) {
         deferredRemoteRef.current = true;
         return;
@@ -1291,14 +1354,20 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       "auguste-technical-sheets": JSON.stringify(technicalOverrides),
       "auguste-period-selections-v1": JSON.stringify(periodSelections),
       "auguste-accompaniment-ideas": JSON.stringify(customAccompanimentIdeas),
+      "auguste-sales-product-mappings": JSON.stringify(salesProductMappings),
+      "auguste-inventory-counts": JSON.stringify(inventoryCounts),
     };
-    const payload = { version: 1, storage };
+    const payload = { version: 2, storage };
     const fingerprint = sharedPayloadFingerprint(payload);
     latestPayloadFingerprintRef.current = fingerprint;
     Object.entries(storage).forEach(([key, value]) => window.localStorage.setItem(key, value));
-    if (fingerprint === syncedPayloadFingerprintRef.current) return;
+    if (fingerprint === syncedPayloadFingerprintRef.current) {
+      window.localStorage.removeItem(CUISINE_PENDING_SYNC_KEY);
+      return;
+    }
 
     setSyncStatus("saving");
+    window.localStorage.setItem(CUISINE_PENDING_SYNC_KEY, fingerprint);
     let cancelled = false;
     let retryTimeout: number | undefined;
     async function persist() {
@@ -1307,6 +1376,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         if (cancelled) return;
         syncedPayloadFingerprintRef.current = sharedPayloadFingerprint(savedRow.payload);
         if (latestPayloadFingerprintRef.current === fingerprint) {
+          window.localStorage.removeItem(CUISINE_PENDING_SYNC_KEY);
           if (deferredRemoteRef.current && refreshSharedStateRef.current) {
             deferredRemoteRef.current = false;
             setSyncStatus("saving");
@@ -1330,7 +1400,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       window.clearTimeout(timeout);
       if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
     };
-  }, [selected, targets, period, periodType, menuTitle, covers, buffer, customDishes, customAccompanimentIdeas, savedMenus, lastSavedCard, economicOverrides, dishContentOverrides, technicalOverrides, periodSelections, ready, userId]);
+  }, [selected, targets, period, periodType, menuTitle, covers, buffer, customDishes, customAccompanimentIdeas, savedMenus, lastSavedCard, economicOverrides, dishContentOverrides, technicalOverrides, periodSelections, salesProductMappings, inventoryCounts, ready, userId]);
 
   useEffect(() => {
     if (!notice) return;
@@ -1361,6 +1431,28 @@ export default function Home({ userId, onSignOut }: HomeProps) {
       invoiceCosting,
     };
   }), [customDishes, dishContentOverrides, economicOverrides, recipeIngredientPrices, technicalOverrides]);
+  const salesRecipes = useMemo<SalesRecipe[]>(() => allDishes.map((dish) => {
+    const costing = dish.invoiceCosting;
+    const missingCount = costing ? Math.max(costing.ingredientCount - costing.pricedIngredientCount, 0) : 0;
+    const costQuality = !costing || costing.ingredientCount === 0
+      ? "Coût carte actuel"
+      : costing.invoiceIngredientCount === costing.ingredientCount
+        ? "100 % factures fournisseurs"
+        : costing.invoiceIngredientCount > 0 && missingCount === 0
+          ? "Factures + estimations marché"
+          : missingCount > 0
+            ? `Coût minimum · ${missingCount} ingrédient${missingCount > 1 ? "s" : ""} non chiffré${missingCount > 1 ? "s" : ""}`
+            : "Estimation marché actuelle";
+    return {
+      id: dish.id,
+      name: dish.name,
+      course: dish.course,
+      costHt: dish.cost,
+      ingredients: technicalOverrides[dish.id]?.ingredients ?? buildTechnicalIngredients(dish),
+      costQuality,
+      costIsFloor: missingCount > 0,
+    };
+  }), [allDishes, technicalOverrides]);
   useEffect(() => {
     if (!detail) return;
     const updatedDish = allDishes.find((dish) => dish.id === detail.id);
@@ -1808,9 +1900,11 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         "auguste-technical-sheets": JSON.stringify(technicalOverrides),
         "auguste-period-selections-v1": JSON.stringify(periodSelections),
         "auguste-accompaniment-ideas": JSON.stringify(customAccompanimentIdeas),
+        "auguste-sales-product-mappings": JSON.stringify(salesProductMappings),
+        "auguste-inventory-counts": JSON.stringify(inventoryCounts),
       };
       const payload = {
-        version: 1,
+        version: 2,
         backupId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         createdAt: new Date().toISOString(),
         storage,
@@ -1859,7 +1953,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         throw new Error("Cette sauvegarde ne contient aucune donnée restaurable.");
       }
       const confirmed = window.confirm(
-        "Importer cette sauvegarde ?\n\nLes recettes, idées d’accompagnement, fiches techniques, menus archivés et la sélection actuels seront remplacés par ceux du fichier.",
+        "Importer cette sauvegarde ?\n\nLes recettes, idées d’accompagnement, fiches techniques, menus archivés, correspondances de ventes, inventaires et la sélection actuels seront remplacés par ceux du fichier.",
       );
       if (!confirmed) return;
       const nextStorage = createOriginalCuisineStorage();
@@ -1868,7 +1962,8 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         if (typeof value === "string") nextStorage[key] = value;
       });
       setSyncStatus("saving");
-      await saveSharedState("cuisine", { version: 1, storage: nextStorage }, userId);
+      await saveSharedState("cuisine", { version: 2, storage: nextStorage }, userId);
+      window.localStorage.removeItem(CUISINE_PENDING_SYNC_KEY);
       APP_STORAGE_KEYS.forEach((key) => {
         const value = nextStorage[key];
         if (typeof value === "string") window.localStorage.setItem(key, value);
@@ -1884,13 +1979,14 @@ export default function Home({ userId, onSignOut }: HomeProps) {
 
   async function restoreOriginalData() {
     const confirmed = window.confirm(
-      "Restaurer les données d’origine ?\n\nCette action effacera les recettes et idées d’accompagnement ajoutées, les modifications des fiches techniques, les menus archivés, la dernière carte sauvegardée et la sélection actuelle sur cet appareil.",
+      "Restaurer les données d’origine ?\n\nCette action effacera les recettes et idées d’accompagnement ajoutées, les modifications des fiches techniques, les menus archivés, les correspondances de ventes, les inventaires, la dernière carte sauvegardée et la sélection actuelle sur cet appareil.",
     );
     if (!confirmed) return;
     const storage = createOriginalCuisineStorage();
     setSyncStatus("saving");
     try {
-      await saveSharedState("cuisine", { version: 1, storage }, userId);
+      await saveSharedState("cuisine", { version: 2, storage }, userId);
+      window.localStorage.removeItem(CUISINE_PENDING_SYNC_KEY);
       APP_STORAGE_KEYS.forEach((key) => window.localStorage.setItem(key, storage[key]));
       window.location.reload();
     } catch (error) {
@@ -2073,8 +2169,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
         {appArea === "sales" && <nav className="pilotage-switcher" aria-label="Choisir l’espace de pilotage">
           <button type="button" aria-pressed={pilotageMode === "cuisine"} className={pilotageMode === "cuisine" ? "active" : ""} onClick={() => switchPilotage("cuisine")}><span>01</span><strong>Pilotage cuisine</strong></button>
           <button type="button" aria-pressed={pilotageMode === "bar"} className={pilotageMode === "bar" ? "active" : ""} onClick={() => switchPilotage("bar")}><span>02</span><strong>Pilotage bar</strong></button>
-          <button type="button" aria-pressed={pilotageMode === "purchases"} className={pilotageMode === "purchases" ? "active" : ""} onClick={() => switchPilotage("purchases")}><span>03</span><strong>Achats & coûts</strong></button>
-          <button type="button" aria-pressed={pilotageMode === "zreports"} className={pilotageMode === "zreports" ? "active" : ""} onClick={() => switchPilotage("zreports")}><span>04</span><strong>Ventes & achats</strong></button>
+          <button type="button" aria-pressed={pilotageMode === "purchases"} className={pilotageMode === "purchases" ? "active" : ""} onClick={() => switchPilotage("purchases")}><span>03</span><strong>Ventes & achats</strong></button>
         </nav>}
         {appArea === "sales" && pilotageMode === "cuisine" && ready && isEditingMenu && <div className="topbar-actions">
           <span className={`autosave ${syncStatus}`}><i /> {syncStatus === "loading" ? "Connexion…" : syncStatus === "saving" ? "Sauvegarde…" : syncStatus === "synced" ? "Synchronisé en direct" : "Hors ligne — sauvegardé ici"}</span>
@@ -2093,7 +2188,7 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             <button className="auguste-area-card sales" type="button" onClick={() => openArea("sales")}>
               <span className="auguste-area-number">01</span>
               <span className="auguste-area-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M3 20h18M15 6l3-3 3 3" /></svg></span>
-              <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · achats & coûts</small></span>
+              <span className="auguste-area-copy"><strong>Pilotage vente</strong><small>Cuisine · bar · ventes & achats</small></span>
               <b aria-hidden="true">→</b>
             </button>
             <button className="auguste-hygiene-button" type="button" onClick={() => openArea("hygiene")}>
@@ -2103,7 +2198,14 @@ export default function Home({ userId, onSignOut }: HomeProps) {
             </button>
           </div>
         </section>
-      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : pilotageMode === "purchases" ? <PurchasesCostsPanel userId={userId} /> : pilotageMode === "zreports" ? <DailyZPanel /> : <>
+      ) : appArea === "hygiene" ? <TraceabilityPanel userId={userId} /> : pilotageMode === "bar" ? <BarPilotage userId={userId} /> : pilotageMode === "purchases" ? !ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture des ventes et achats…</p></section> : <PurchasesCostsPanel
+        userId={userId}
+        recipes={salesRecipes}
+        salesProductMappings={salesProductMappings}
+        onSalesProductMappingsChange={setSalesProductMappings}
+        inventoryCounts={inventoryCounts}
+        onInventoryCountsChange={setInventoryCounts}
+      /> : <>
       {!ready ? <section className="cuisine-loading"><div className="auguste-auth-mark">A</div><p>Ouverture de la carte…</p></section> : isEditingMenu ? <>
       <section className="period-bar">
         <div className="period-intro"><p className="eyebrow">Menu en préparation</p><strong>{periodType === "Mois" ? `Carte de ${period.toLowerCase()}` : `Carte ${period.toLowerCase()}`}</strong></div>

@@ -74,17 +74,21 @@ const externalAsset = /<(?:script|link|img)\b[^>]*(?:src|href)=["'](?:https?:|\/
 const requiredMarkers = [
   "Ajouter un produit carte",
   "Fiche technique",
-  "Sauvegarder la carte",
+  "Valider la carte",
   "Revenir à la dernière carte",
   "Télécharger la carte PDF",
   "Télécharger la carte des boissons",
-  "Imprimer la carte",
+  "Imprimer",
   "Sauvegarder l’outil (.html)",
   "Importer une sauvegarde",
   "Restaurer les données d’origine",
   "Plan de production",
   "Liste de courses & budget",
   "Menus archivés",
+  "Ventes & achats",
+  "Bénéfice brut matière connu",
+  "Perte non mesurable — inventaire requis",
+  "Produits facturés sans correspondance recette certaine",
 ];
 
 if (externalAsset.test(markupOnly)) {

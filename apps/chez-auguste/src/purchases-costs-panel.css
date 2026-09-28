@@ -140,7 +140,7 @@
   border-radius: 14px;
   background: #eae4db;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -316,6 +316,20 @@
   color: #856d4c;
   font-size: 8px;
   line-height: 1.4;
+}
+
+.purchase-mapping-note > button {
+  margin-left: auto;
+  padding: 8px 11px;
+  border: 1px solid #c8aa78;
+  border-radius: 9px;
+  background: #fffaf2;
+  color: #6f5531;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .purchase-card {
@@ -1396,8 +1410,22 @@
     display: none;
   }
 
+  .purchases-tabs {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .purchases-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
   .purchases-tabs button {
+    flex: 0 0 154px;
     padding: 7px 9px;
+    scroll-snap-align: start;
   }
 
   .invoice-list {
@@ -1499,7 +1527,8 @@
   }
 
   .purchases-tabs button {
-    min-width: 0;
+    flex-basis: 132px;
+    min-width: 132px;
     min-height: 58px;
     padding: 7px 3px;
     grid-template-columns: 1fr;
@@ -1547,6 +1576,12 @@
 
   .purchase-mapping-note {
     align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .purchase-mapping-note > button {
+    width: calc(100% - 45px);
+    margin-left: 45px;
   }
 
   .purchase-mapping-note small {

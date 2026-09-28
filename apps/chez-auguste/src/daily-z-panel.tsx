@@ -61,7 +61,7 @@ function invoiceAmount(invoice: InvoiceRow) {
   return invoice.document_type.toLowerCase().includes("credit") ? -amount : amount;
 }
 
-export default function DailyZPanel() {
+export default function DailyZPanel({ embedded = false }: { embedded?: boolean }) {
   const [reports, setReports] = useState<ZReport[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -141,7 +141,7 @@ export default function DailyZPanel() {
   return (
     <section className="daily-z" aria-labelledby="daily-z-title">
       <header className="daily-z-heading">
-        <div><p className="eyebrow">Résultats du restaurant</p><h2 id="daily-z-title">Ventes & achats</h2><p>Les Z de L’Addition sont rapprochés des factures fournisseurs validées.</p></div>
+        <div><p className="eyebrow">Résultats du restaurant</p><h2 id="daily-z-title">{embedded ? "Résumé des Z" : "Ventes & achats"}</h2><p>Les Z de L’Addition sont rapprochés des factures fournisseurs validées.</p></div>
         <button className="daily-z-refresh" type="button" onClick={() => { setLoading(true); void refresh(); }}>Actualiser</button>
       </header>
 
@@ -185,8 +185,11 @@ export default function DailyZPanel() {
 
           <section className="daily-z-card">
             <div className="daily-z-card-title"><div><p className="eyebrow">{activeReport ? dateLabel(activeReport.report_date) : "Détail"}</p><h3>Produits vendus</h3></div><strong>{activeReport ? euro.format(Number(activeReport.revenue_ttc || 0)) + " TTC" : "—"}</strong></div>
-            {activeReport?.sales_lines?.length ? <div className="daily-z-products">
-              {[...activeReport.sales_lines].sort((a, b) => Number(b.total_ht) - Number(a.total_ht)).map((line, index) => <div key={`${line.product}-${index}`}><span><strong>{line.product}</strong><small>{line.category} · {Number(line.quantity).toLocaleString("fr-FR")} vendu{Number(line.quantity) > 1 ? "s" : ""}</small></span><b>{euro.format(Number(line.total_ht || 0))} HT</b></div>)}
+            {activeReport?.sales_lines?.some((line) => line.product && line.product !== "Produit" && Number.isFinite(Number(line.quantity)) && Number(line.quantity) > 0) ? <div className="daily-z-products">
+              {[...activeReport.sales_lines]
+                .filter((line) => line.product && line.product !== "Produit" && Number.isFinite(Number(line.quantity)) && Number(line.quantity) > 0)
+                .sort((a, b) => Number(b.total_ht) - Number(a.total_ht))
+                .map((line, index) => <div key={`${line.product}-${index}`}><span><strong>{line.product}</strong><small>{line.category} · {Number(line.quantity).toLocaleString("fr-FR")} vendu{Number(line.quantity) > 1 ? "s" : ""}</small></span><b>{euro.format(Number(line.total_ht || 0))} HT</b></div>)}
             </div> : <div className="daily-z-empty">Aucun détail disponible pour cette journée.</div>}
           </section>
         </div>

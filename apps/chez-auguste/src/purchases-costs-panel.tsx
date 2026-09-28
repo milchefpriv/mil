@@ -2,9 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./shared-state";
+import DailyZPanel from "./daily-z-panel";
+import SalesPurchasesAnalytics, {
+  type InventoryCounts,
+  type SalesProductMappings,
+  type SalesRecipe,
+} from "./sales-purchases-analytics";
 import "./purchases-costs-panel.css";
 
-type PurchasesView = "overview" | "products" | "invoices";
+export type { InventoryCounts, SalesProductMappings, SalesRecipe } from "./sales-purchases-analytics";
+
+type PurchasesView = "profit" | "materials" | "zreports" | "overview" | "products" | "invoices";
 type ProductCategory = "food" | "beverage" | "non_food";
 type DbRow = Record<string, unknown>;
 
@@ -37,6 +45,9 @@ type SupplierInvoiceLine = {
   createdAt: string;
   lineNumber: number;
   mappingStatus: string;
+  normalizedQuantity: number | null;
+  normalizedUnit: string;
+  normalizedUnitPriceHt: number | null;
 };
 
 type SupplierProduct = {
@@ -72,6 +83,15 @@ type PurchasesSnapshot = {
   invoices: DbRow[];
   lines: DbRow[];
   products: DbRow[];
+};
+
+type PurchasesCostsPanelProps = {
+  userId: string;
+  recipes: SalesRecipe[];
+  salesProductMappings: SalesProductMappings;
+  onSalesProductMappingsChange: (next: SalesProductMappings) => void;
+  inventoryCounts: InventoryCounts;
+  onInventoryCountsChange: (next: InventoryCounts) => void;
 };
 
 const TABLES = {
@@ -199,6 +219,9 @@ function normalizeLine(row: DbRow, index: number): SupplierInvoiceLine {
     createdAt: readDate(row, ["created_at"]),
     lineNumber: readNumber(row, ["line_number", "line_no"]) ?? index,
     mappingStatus: readString(row, ["mapping_status"]),
+    normalizedQuantity: readNumber(row, ["normalized_quantity"]),
+    normalizedUnit: readString(row, ["normalized_unit"]),
+    normalizedUnitPriceHt: readNumber(row, ["normalized_unit_price_ht"]),
   };
 }
 
@@ -353,8 +376,15 @@ function InvoiceRow({
   );
 }
 
-export default function PurchasesCostsPanel({ userId }: { userId: string }) {
-  const [view, setView] = useState<PurchasesView>("overview");
+export default function PurchasesCostsPanel({
+  userId,
+  recipes,
+  salesProductMappings,
+  onSalesProductMappingsChange,
+  inventoryCounts,
+  onInventoryCountsChange,
+}: PurchasesCostsPanelProps) {
+  const [view, setView] = useState<PurchasesView>("profit");
   const [snapshot, setSnapshot] = useState<PurchasesSnapshot>({ invoices: [], lines: [], products: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -367,6 +397,7 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   const mountedRef = useRef(true);
   const invoiceDialogRef = useRef<HTMLElement | null>(null);
   const invoiceTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const tabsRef = useRef<HTMLElement | null>(null);
 
   const openInvoice = useCallback((invoiceId: string, trigger: HTMLButtonElement) => {
     invoiceTriggerRef.current = trigger;
@@ -374,6 +405,11 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   }, []);
 
   const closeInvoice = useCallback(() => setSelectedInvoiceId(""), []);
+
+  useEffect(() => {
+    const activeTab = tabsRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    activeTab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [view]);
 
   const loadPurchases = useCallback(async (background = false) => {
     const requestId = ++requestSequenceRef.current;
@@ -708,38 +744,51 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
   const hasData = invoices.length > 0 || lines.length > 0 || products.length > 0;
 
   if (loading) {
-    return <section className="purchases-state" aria-live="polite"><span className="purchases-state-mark"><Icon name="cart" /></span><strong>Chargement des achats…</strong><p>Lecture des factures et des prix fournisseurs.</p></section>;
-  }
-
-  if (error && !hasData) {
-    return <section className="purchases-state error" role="alert"><span className="purchases-state-mark"><Icon name="alert" /></span><strong>Les achats ne sont pas encore accessibles</strong><p>{error}</p><button type="button" onClick={() => void loadPurchases()}>Réessayer</button></section>;
-  }
-
-  if (!hasData) {
-    return <section className="purchases-state empty"><span className="purchases-state-mark"><Icon name="invoice" /></span><strong>Aucune facture intégrée pour le moment</strong><p>Seules les vraies factures PDF sont intégrées ici. Une confirmation de commande sans facture jointe n’est pas importée.</p><button type="button" onClick={() => void loadPurchases()}>Actualiser</button></section>;
+    return <section className="purchases-state" aria-live="polite"><span className="purchases-state-mark"><Icon name="cart" /></span><strong>Chargement des ventes et achats…</strong><p>Lecture des Z, des factures et des prix fournisseurs.</p></section>;
   }
 
   return (
     <section className="purchases-panel">
       <div className="purchases-hero">
         <div>
-          <p className="eyebrow">Surveillance fournisseurs</p>
-          <h2>Achats & coûts</h2>
-          <p>Suivez les factures, les hausses de prix et les postes qui fragilisent la marge.</p>
+          <p className="eyebrow">Marge et flux matières</p>
+          <h2>Ventes & achats</h2>
+          <p>Reliez les Z, les recettes et les factures pour suivre le bénéfice brut de chaque produit et les écarts de matière.</p>
         </div>
         <div className="purchases-live-status">
-          <span className={liveStatus === "live" ? "" : "offline"}><i />{liveStatus === "live" ? "Données synchronisées" : liveStatus === "connecting" ? "Connexion au direct…" : "Actualisation manuelle"}</span>
+          <span className={liveStatus === "live" ? "" : "offline"}><i />{liveStatus === "live" ? "Factures synchronisées" : liveStatus === "connecting" ? "Connexion au direct…" : "Actualisation manuelle"}</span>
           <button type="button" onClick={() => void loadPurchases(true)} disabled={refreshing} aria-label="Actualiser les achats"><Icon name="refresh" />{refreshing ? "Actualisation…" : "Actualiser"}</button>
         </div>
       </div>
 
-      {error && <div className="purchases-inline-warning" role="status"><Icon name="alert" /><span>La dernière actualisation a échoué. Les données déjà chargées restent affichées.</span></div>}
+      {error && <div className="purchases-inline-warning" role="status"><Icon name="alert" /><span>{hasData ? "La dernière actualisation des factures a échoué. Les données déjà chargées restent affichées." : "Les factures ne sont pas accessibles pour le moment. Les Z et les ventes restent consultables."}</span></div>}
+      {!error && !hasData && <div className="purchases-inline-warning" role="status"><Icon name="invoice" /><span>Aucune facture PDF n’est encore intégrée. Les Z et la rentabilité restent consultables ; les achats apparaîtront dès leur ingestion.</span></div>}
 
-      <nav className="purchases-tabs" role="tablist" aria-label="Vues des achats">
-        <button type="button" role="tab" aria-selected={view === "overview"} className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><span>01</span><strong>Vue d’ensemble</strong><small>Alertes & dépenses</small></button>
-        <button type="button" role="tab" aria-selected={view === "products"} className={view === "products" ? "active" : ""} onClick={() => setView("products")}><span>02</span><strong>Produits</strong><small>{productTrends.length} suivis</small></button>
-        <button type="button" role="tab" aria-selected={view === "invoices"} className={view === "invoices" ? "active" : ""} onClick={() => setView("invoices")}><span>03</span><strong>Factures</strong><small>{invoices.length} reçues</small></button>
+      <nav ref={tabsRef} className="purchases-tabs" role="tablist" aria-label="Vues des ventes et achats">
+        <button type="button" role="tab" aria-selected={view === "profit"} className={view === "profit" ? "active" : ""} onClick={() => setView("profit")}><span>01</span><strong>Rentabilité</strong><small>Bénéfice par produit</small></button>
+        <button type="button" role="tab" aria-selected={view === "materials"} className={view === "materials" ? "active" : ""} onClick={() => setView("materials")}><span>02</span><strong>Matières & pertes</strong><small>Achats vs consommation</small></button>
+        <button type="button" role="tab" aria-selected={view === "zreports"} className={view === "zreports" ? "active" : ""} onClick={() => setView("zreports")}><span>03</span><strong>Z quotidiens</strong><small>Ventes et achats HT</small></button>
+        <button type="button" role="tab" aria-selected={view === "overview"} className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><span>04</span><strong>Synthèse achats</strong><small>Alertes & dépenses</small></button>
+        <button type="button" role="tab" aria-selected={view === "products"} className={view === "products" ? "active" : ""} onClick={() => setView("products")}><span>05</span><strong>Prix fournisseurs</strong><small>{productTrends.length} suivis</small></button>
+        <button type="button" role="tab" aria-selected={view === "invoices"} className={view === "invoices" ? "active" : ""} onClick={() => setView("invoices")}><span>06</span><strong>Factures</strong><small>{invoices.length} reçues</small></button>
       </nav>
+
+      {(view === "profit" || view === "materials") && <SalesPurchasesAnalytics
+        mode={view}
+        userId={userId}
+        recipes={recipes}
+        salesProductMappings={salesProductMappings}
+        onSalesProductMappingsChange={onSalesProductMappingsChange}
+        inventoryCounts={inventoryCounts}
+        onInventoryCountsChange={onInventoryCountsChange}
+        invoices={invoices}
+        lines={lines}
+        products={products}
+        onOpenInvoices={() => setView("invoices")}
+        onShowMaterials={() => setView("materials")}
+      />}
+
+      {view === "zreports" && <DailyZPanel embedded />}
 
       {view === "overview" && <>
         <div className="purchases-kpis">
@@ -772,6 +821,7 @@ export default function PurchasesCostsPanel({ userId }: { userId: string }) {
         {unresolvedMappingCount > 0 && <div className="purchase-mapping-note">
           <span>{unresolvedMappingCount}</span>
           <div><strong>Produit{unresolvedMappingCount > 1 ? "s" : ""} sans correspondance recette</strong><small>Dès qu’un produit de facture correspond à un ingrédient, son dernier prix alimente automatiquement la recette. Sans correspondance certaine, l’écran conserve l’estimation ou affiche au minimum les achats déjà connus.</small></div>
+          <button type="button" onClick={() => setView("materials")}>Voir lesquels</button>
         </div>}
 
         <div className="purchases-overview-grid">
