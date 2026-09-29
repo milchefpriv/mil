@@ -12,6 +12,9 @@ type PasswordLoginResponse = {
 
 const AUGUSTE_AUTH_EMAIL = "chez-auguste@access.invalid";
 
+// Expose the deployed build for support diagnostics without affecting the UI.
+document.documentElement.dataset.augusteBuild = "2026-09-29-white-screen-fix";
+
 function signOutLocally() {
   return supabase.auth.signOut({ scope: "local" });
 }
