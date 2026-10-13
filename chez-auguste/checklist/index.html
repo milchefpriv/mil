@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=14" />
-    <script type="module" src="./app.js?v=16"></script>
+    <link rel="stylesheet" href="./styles.css?v=15" />
+    <script type="module" src="./app.js?v=17"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -155,6 +155,12 @@
         <button class="target-button" id="quickTarget" type="button" aria-label="Changer la liste">
           Cuisine · Aujourd’hui
         </button>
+        <label class="sr-only" for="quickKitchenType">Section cuisine</label>
+        <select class="kitchen-type-select" id="quickKitchenType" aria-label="Section cuisine">
+          <option value="cuisson">Cuisson</option>
+          <option value="decoupe">Découpe</option>
+          <option value="preparation" selected>Préparation</option>
+        </select>
         <label class="sr-only" for="quickInput">Ajouter une tâche</label>
         <input
           id="quickInput"
@@ -293,6 +299,15 @@
             <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
             <label><input type="radio" name="task-list" value="bring" /><span>Courses</span></label>
           </div>
+        </fieldset>
+
+        <fieldset class="kitchen-type-fieldset" id="kitchenTypeFieldset" hidden>
+          <legend>Section cuisine</legend>
+          <select class="kitchen-type-select edit-kitchen-type-select" id="editKitchenType" aria-label="Section cuisine">
+            <option value="cuisson">Cuisson</option>
+            <option value="decoupe">Découpe</option>
+            <option value="preparation">Préparation</option>
+          </select>
         </fieldset>
 
         <fieldset class="moment-fieldset" id="momentFieldset">

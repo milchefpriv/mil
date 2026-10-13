@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-09-20-live-sync-v3";
+  const APP_BUILD_ID = "2026-10-14-kitchen-sections-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = [
     "cuisineToday",
@@ -17,6 +17,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     "maintenance",
     "bring",
   ];
+  const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
+  const KITCHEN_TYPE_LABELS = { cuisson: "Cuisson", decoupe: "Découpe", preparation: "Préparation" };
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
@@ -86,6 +88,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     quickAddForm: document.querySelector("#quickAddForm"),
     quickInput: document.querySelector("#quickInput"),
     quickTarget: document.querySelector("#quickTarget"),
+    quickKitchenType: document.querySelector("#quickKitchenType"),
     quickEstimate: document.querySelector("#quickEstimate"),
     emptyAddCuisineToday: document.querySelector("#emptyAddCuisineToday"),
     emptyAddCuisineTomorrow: document.querySelector("#emptyAddCuisineTomorrow"),
@@ -119,6 +122,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
     taskListFieldset: document.querySelector("#taskListFieldset"),
+    kitchenTypeFieldset: document.querySelector("#kitchenTypeFieldset"),
+    editKitchenType: document.querySelector("#editKitchenType"),
     momentFieldset: document.querySelector("#momentFieldset"),
     editEstimate: document.querySelector("#editEstimate"),
     editEstimateValue: document.querySelector("#editEstimateValue"),
@@ -1750,6 +1755,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     };
   }
 
+  function normalizeKitchenType(value, label = "") {
+    if (KITCHEN_TYPE_ORDER.includes(value)) return value;
+    const normalizedLabel = String(label).toLocaleLowerCase("fr-FR");
+    if (/(couper|tailler|émincer|hacher|écailler|trancher|ciseler)/u.test(normalizedLabel)) return "decoupe";
+    if (/(cuire|cuisson|blanchir|bain[ -]marie|maintien chaud|au four|rôtir|braiser|réchauffer)/u.test(normalizedLabel)) return "cuisson";
+    return "preparation";
+  }
+
   function normalizeTask(task) {
     const label = typeof task?.label === "string" ? task.label.trim().slice(0, 180) : "";
     const dueDate = DATE_PATTERN.test(task?.dueDate || "") ? task.dueDate : todayKey();
@@ -1766,6 +1779,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate,
       section,
       department,
+      kitchenType: department === "cuisine" ? normalizeKitchenType(task?.kitchenType, label) : null,
       moment: section === "bring" ? "any" : moment,
       completedAt: typeof task?.completedAt === "string" ? task.completedAt : null,
       createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
@@ -2662,36 +2676,64 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return parts.join(" · ");
   }
 
-  function renderTaskList(container, tasks, { isBring = false } = {}) {
+  function renderTaskList(container, tasks, { isBring = false, kitchenGroups = false } = {}) {
     const fragment = document.createDocumentFragment();
     const sortedTasks = isBring ? sortBringTasks(tasks) : sortTasks(tasks);
-    for (const task of sortedTasks) {
-      const row = elements.taskTemplate.content.firstElementChild.cloneNode(true);
-      const checkButton = row.querySelector(".check-button");
-      const mainButton = row.querySelector(".task-main");
-      const moreButton = row.querySelector(".task-more");
+    const groups = kitchenGroups
+      ? KITCHEN_TYPE_ORDER.map((type) => ({
+          type,
+          tasks: sortedTasks.filter((task) => normalizeKitchenType(task.kitchenType, task.label) === type),
+        }))
+      : [{ type: null, tasks: sortedTasks }];
 
-      row.dataset.taskId = task.id;
-      row.classList.toggle("is-bring-item", isBring);
-      row.classList.toggle("is-complete", Boolean(task.completedAt));
-      row.querySelector(".task-label").textContent = task.label;
-      const meta = isBring ? "" : taskMeta(task);
-      row.querySelector(".task-meta").textContent = meta;
-      const estimate = row.querySelector(".task-estimate");
-      if (!isBring && task.estimateMinutes) {
-        estimate.hidden = false;
-        row.querySelector(".task-estimate-value").textContent = formatEstimate(task.estimateMinutes);
+    for (const group of groups) {
+      if (kitchenGroups) {
+        const heading = document.createElement("div");
+        heading.className = "kitchen-section-heading";
+        heading.dataset.kitchenType = group.type;
+        heading.setAttribute("role", "heading");
+        heading.setAttribute("aria-level", "4");
+        const marker = document.createElement("span");
+        marker.className = "kitchen-section-dot";
+        marker.setAttribute("aria-hidden", "true");
+        const label = document.createElement("span");
+        label.textContent = KITCHEN_TYPE_LABELS[group.type];
+        const count = document.createElement("span");
+        count.className = "kitchen-section-count";
+        count.textContent = String(group.tasks.length);
+        heading.append(marker, label, count);
+        fragment.append(heading);
       }
-      row.querySelector(".task-details").hidden = isBring || (!meta && !task.estimateMinutes);
-      checkButton.setAttribute(
-        "aria-label",
-        task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
-      );
-      bindTaskReorder(row, mainButton, container);
-      checkButton.addEventListener("click", () => toggleTask(task.id));
-      mainButton.addEventListener("click", () => openTaskEditor(task.id));
-      moreButton.addEventListener("click", () => openTaskEditor(task.id));
-      fragment.append(row);
+
+      for (const task of group.tasks) {
+        const row = elements.taskTemplate.content.firstElementChild.cloneNode(true);
+        const checkButton = row.querySelector(".check-button");
+        const mainButton = row.querySelector(".task-main");
+        const moreButton = row.querySelector(".task-more");
+
+        row.dataset.taskId = task.id;
+        if (kitchenGroups) row.dataset.kitchenType = normalizeKitchenType(task.kitchenType, task.label);
+        row.classList.toggle("is-bring-item", isBring);
+        row.classList.toggle("is-complete", Boolean(task.completedAt));
+        row.querySelector(".task-label").textContent = task.label;
+        const meta = isBring ? "" : taskMeta(task);
+        row.querySelector(".task-meta").textContent = meta;
+        const estimate = row.querySelector(".task-estimate");
+        if (!isBring && task.estimateMinutes) {
+          estimate.hidden = false;
+          row.querySelector(".task-estimate-value").textContent = formatEstimate(task.estimateMinutes);
+        }
+        row.querySelector(".task-details").hidden = isBring || (!meta && !task.estimateMinutes);
+        checkButton.setAttribute(
+          "aria-label",
+          task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
+        );
+        bindTaskReorder(row, mainButton, container);
+        checkButton.addEventListener("click", () => toggleTask(task.id));
+        mainButton.addEventListener("click", () => openTaskEditor(task.id));
+        moreButton.addEventListener("click", () => openTaskEditor(task.id));
+        fragment.append(row);
+      }
     }
     container.replaceChildren(fragment);
   }
@@ -2837,8 +2879,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       month: "long",
     }).format(new Date());
 
-    renderTaskList(elements.cuisineTodayList, cuisineTodayTasks);
-    renderTaskList(elements.cuisineTomorrowList, cuisineTomorrowTasks);
+    renderTaskList(elements.cuisineTodayList, cuisineTodayTasks, { kitchenGroups: true });
+    renderTaskList(elements.cuisineTomorrowList, cuisineTomorrowTasks, { kitchenGroups: true });
     renderTaskList(elements.salleTodayList, salleTodayTasks);
     renderTaskList(elements.salleTomorrowList, salleTomorrowTasks);
     renderTaskList(elements.bringList, bringTasks, { isBring: true });
@@ -2876,6 +2918,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
+    elements.quickKitchenType.hidden = !state.settings.quickTarget.startsWith("cuisine");
     elements.quickEstimate.hidden = state.settings.quickTarget === "bring";
   }
 
@@ -2977,6 +3020,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: dueTomorrow ? tomorrowKey() : todayKey(),
       section,
       department,
+      kitchenType: department === "cuisine" ? normalizeKitchenType(elements.quickKitchenType.value) : null,
       moment: "any",
       completedAt: null,
       createdAt: now,
@@ -3066,6 +3110,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function updateEditorDestination() {
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     elements.taskListFieldset.hidden = false;
+    const isCuisineList = selectedList?.value?.startsWith("cuisine");
+    elements.kitchenTypeFieldset.hidden = !isCuisineList;
     elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
     elements.editEstimate.hidden = selectedList?.value === "bring";
   }
@@ -3077,6 +3123,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
       task.section === "bring" ? "Modifier — Liste de courses" : "Modifier";
     elements.editTaskLabel.value = task.label;
+    elements.editKitchenType.value = normalizeKitchenType(task.kitchenType, task.label);
     const taskList = taskListForTask(task);
     const selectedList = elements.editTaskForm.querySelector(
       `input[name="task-list"][value="${taskList}"]`,
@@ -3110,6 +3157,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: taskList.endsWith("Tomorrow") ? tomorrowKey() : todayKey(),
       section: isDaily ? "daily" : taskList,
       department: isDaily ? department : null,
+      kitchenType: isDaily && department === "cuisine"
+        ? normalizeKitchenType(elements.editKitchenType.value, cleanLabel)
+        : null,
       moment: isDaily ? selectedMoment?.value || "any" : "any",
       estimateMinutes: taskList === "bring" ? null : state.editEstimateMinutes,
       manualPosition: previousTaskList === taskList ? task.manualPosition : null,

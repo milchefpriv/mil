@@ -1891,3 +1891,123 @@ dialog::backdrop {
     background: rgba(0, 0, 0, 0.58);
   }
 }
+
+
+.kitchen-section-heading {
+  --kitchen-color: #3983ce;
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 6px 8px 4px;
+  border-top: 1px solid var(--line);
+  color: var(--kitchen-color);
+  font-size: 0.76rem;
+  font-weight: 820;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.kitchen-section-heading:first-child {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.kitchen-section-heading[data-kitchen-type="cuisson"] {
+  --kitchen-color: #dc7b16;
+}
+
+.kitchen-section-heading[data-kitchen-type="decoupe"] {
+  --kitchen-color: #268653;
+}
+
+.kitchen-section-heading[data-kitchen-type="preparation"] {
+  --kitchen-color: #3983ce;
+}
+
+.kitchen-section-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--kitchen-color);
+}
+
+.kitchen-section-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+.kitchen-type-fieldset {
+  min-width: 0;
+  margin: 15px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.kitchen-type-fieldset legend {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 760;
+}
+
+.kitchen-type-select {
+  min-width: 90px;
+  height: 38px;
+  padding: 0 26px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.kitchen-type-select option[value="cuisson"] {
+  color: #dc7b16;
+}
+
+.kitchen-type-select option[value="decoupe"] {
+  color: #268653;
+}
+
+.kitchen-type-select option[value="preparation"] {
+  color: #3983ce;
+}
+
+.quick-add .kitchen-type-select {
+  width: 102px;
+  min-width: 80px;
+  padding-right: 20px;
+}
+
+.quick-add-inner {
+  grid-template-columns: auto auto minmax(0, 1fr) 42px 46px;
+}
+
+@media (max-width: 420px) {
+  .quick-add-inner {
+    grid-template-columns: minmax(64px, auto) 84px minmax(0, 1fr) 36px 38px;
+    gap: 4px;
+  }
+
+  .quick-add .target-button {
+    max-width: 84px;
+  }
+
+  .quick-add .kitchen-type-select {
+    width: 84px;
+    min-width: 0;
+    padding-right: 16px;
+    padding-left: 7px;
+    font-size: 0.7rem;
+  }
+
+  .kitchen-section-heading {
+    min-height: 30px;
+  }
+}
