@@ -2892,6 +2892,45 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     ["desserts", "Desserts"],
   ];
 
+  const WEEKLY_PREP_STARTER_ITEMS = [
+    ["weekly-prep-mayo", "Mayonnaise", "bases", "", "", ""],
+    ["weekly-prep-cocktail", "Sauce cocktail", "bases", "", "", ""],
+    ["weekly-prep-vinaigrette", "Vinaigrette", "bases", "", "", ""],
+    ["weekly-prep-croutons", "Croûtons", "bases", "", "3 boîtes", ""],
+    ["weekly-prep-hareng", "Hareng", "entrees", "Entrée hareng-pommes de terre", "1 boîte", ""],
+    ["weekly-prep-potatoes", "Pommes de terre cuites", "entrees", "Entrée hareng-pommes de terre", "6 pièces", ""],
+    ["weekly-prep-eggs", "Œufs mimosa : cuire et écaler", "entrees", "Œufs mimosa", "50 écalés + 50 cuits", ""],
+    ["weekly-prep-terrine", "Conditionner la terrine", "entrees", "Terrine", "", ""],
+    ["weekly-prep-cornichons", "Couper les cornichons", "entrees", "Terrine", "1 boîte", ""],
+    ["weekly-prep-leek-green", "Préparer le vert de poireau", "entrees", "Poireaux vinaigrette", "1 boîte", ""],
+    ["weekly-prep-fries", "Préparer les frites", "plats", "Croques et tartare", "1 bac froid + 1 bac moyen à blanchir", ""],
+    ["weekly-prep-stew", "Préparer le mijoté", "plats", "Bœuf bourguignon", "1 gastro", ""],
+    ["weekly-prep-tartare", "Mise en place du tartare", "plats", "Tartare au couteau", "Câpres, persil, oignon", ""],
+    ["weekly-prep-croques", "Monter les croques", "plats", "Croque-monsieur", "20 pièces", ""],
+    ["weekly-prep-mousse", "Préparer la mousse", "desserts", "Mousse au chocolat", "20 portions + 2 poches congelées", ""],
+    ["weekly-prep-creme-brulee", "Préparer les crèmes", "desserts", "Crème brûlée", "10 portions", ""],
+    ["weekly-prep-panna-cotta", "Préparer la panna cotta", "desserts", "Panna cotta spéculoos", "", ""],
+  ];
+
+  async function ensureWeeklyPrepStarterItems() {
+    const knownIds = new Set(state.tasks.map((task) => task.id));
+    const now = new Date().toISOString();
+    let inserted = 0;
+    for (const [id, label, prepCategory, prepDish, prepQuantity, refillDay] of WEEKLY_PREP_STARTER_ITEMS) {
+      if (knownIds.has(id)) continue;
+      const task = normalizeTask({
+        id, label, section: "weeklyPrep", prepCategory, prepDish, prepQuantity, refillDay,
+        dueDate: todayKey(), completedAt: null, createdAt: now, updatedAt: now,
+        position: Date.now() + inserted,
+      });
+      await putRecord("tasks", task);
+      state.tasks.push(task);
+      knownIds.add(id);
+      inserted += 1;
+    }
+    if (inserted) announceChange();
+  }
+
   function mondayKey(key = todayKey()) {
     const date = dateFromKey(key);
     date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
@@ -4115,6 +4154,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       return;
     }
     await initializeSharedState();
+    await ensureWeeklyPrepStarterItems();
     await runAutomaticRoutines();
     renderAll();
 
