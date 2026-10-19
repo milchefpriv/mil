@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-14-kitchen-sections-v1";
+  const APP_BUILD_ID = "2026-10-19-weekly-prep-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = [
     "cuisineToday",
