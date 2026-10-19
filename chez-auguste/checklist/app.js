@@ -85,6 +85,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     salleTomorrowProgress: document.querySelector("#salleTomorrowProgress"),
     bringProgress: document.querySelector("#bringProgress"),
     maintenanceProgress: document.querySelector("#maintenanceProgress"),
+    weeklyPrepToggle: document.querySelector("#weeklyPrepToggle"),
+    weeklyPrepPanel: document.querySelector("#weeklyPrepPanel"),
+    weeklyPrepWeek: document.querySelector("#weeklyPrepWeek"),
+    weeklyPrepProgress: document.querySelector("#weeklyPrepProgress"),
+    weeklyPrepLists: document.querySelector("#weeklyPrepLists"),
+    weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
+    weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
+    weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
+    weeklyPrepLabel: document.querySelector("#weeklyPrepLabel"),
+    weeklyPrepDish: document.querySelector("#weeklyPrepDish"),
+    weeklyPrepQuantity: document.querySelector("#weeklyPrepQuantity"),
+    weeklyPrepRefillDay: document.querySelector("#weeklyPrepRefillDay"),
+    weeklyPrepSubmit: document.querySelector("#weeklyPrepSubmit"),
+    weeklyPrepCancel: document.querySelector("#weeklyPrepCancel"),
+    weeklyPrepReset: document.querySelector("#weeklyPrepReset"),
     quickAddForm: document.querySelector("#quickAddForm"),
     quickInput: document.querySelector("#quickInput"),
     quickTarget: document.querySelector("#quickTarget"),
@@ -1767,7 +1782,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const label = typeof task?.label === "string" ? task.label.trim().slice(0, 180) : "";
     const dueDate = DATE_PATTERN.test(task?.dueDate || "") ? task.dueDate : todayKey();
     const moment = ["morning", "evening", "any"].includes(task?.moment) ? task.moment : "any";
-    const section = ["bring", "maintenance"].includes(task?.section) ? task.section : "daily";
+    const section = ["bring", "maintenance", "weeklyPrep"].includes(task?.section) ? task.section : "daily";
     const department = section === "daily" && task?.department === "salle"
       ? "salle"
       : section === "daily"
@@ -1788,7 +1803,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       manualPosition: Number.isFinite(task?.manualPosition) ? task.manualPosition : null,
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
       occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
-      estimateMinutes: section === "bring" ? null : normalizeEstimateMinutes(task?.estimateMinutes),
+      estimateMinutes: section === "bring" || section === "weeklyPrep" ? null : normalizeEstimateMinutes(task?.estimateMinutes),
+      prepCategory: section === "weeklyPrep" && ["bases", "entrees", "plats", "desserts"].includes(task?.prepCategory) ? task.prepCategory : (section === "weeklyPrep" ? "bases" : null),
+      prepDish: section === "weeklyPrep" && typeof task?.prepDish === "string" ? task.prepDish.trim().slice(0, 120) : null,
+      prepQuantity: section === "weeklyPrep" && typeof task?.prepQuantity === "string" ? task.prepQuantity.trim().slice(0, 80) : null,
+      refillDay: section === "weeklyPrep" && ["", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].includes(task?.refillDay) ? task.refillDay : "",
       _syncRevision: syncRevision(task?._syncRevision),
     };
   }
@@ -2865,6 +2884,210 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     container.replaceChildren(fragment);
   }
 
+
+  const WEEKLY_PREP_CATEGORIES = [
+    ["bases", "Bases"],
+    ["entrees", "Entrées"],
+    ["plats", "Plats"],
+    ["desserts", "Desserts"],
+  ];
+
+  function mondayKey(key = todayKey()) {
+    const date = dateFromKey(key);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    return toDateKey(date);
+  }
+
+  function weeklyPrepTasks() {
+    return sortTasks(state.tasks.filter((task) => task.section === "weeklyPrep"));
+  }
+
+  function resetWeeklyPrepForm() {
+    elements.weeklyPrepForm.reset();
+    elements.weeklyPrepEditId.value = "";
+    elements.weeklyPrepSubmit.textContent = "Ajouter la préparation";
+    elements.weeklyPrepCancel.hidden = true;
+  }
+
+  function renderWeeklyPrep() {
+    const tasks = weeklyPrepTasks();
+    const completed = tasks.filter((task) => task.completedAt).length;
+    const monday = dateFromKey(mondayKey());
+    const dateFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" });
+    elements.weeklyPrepWeek.textContent = "Semaine du " + dateFormatter.format(monday) + " · services du mardi au samedi";
+    elements.weeklyPrepProgress.textContent = tasks.length ? completed + "/" + tasks.length : "";
+    const fragment = document.createDocumentFragment();
+
+    for (const [category, title] of WEEKLY_PREP_CATEGORIES) {
+      const group = document.createElement("section");
+      group.className = "weekly-prep-group";
+      group.dataset.prepCategory = category;
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const groupTasks = tasks.filter((task) => task.prepCategory === category);
+      const count = document.createElement("span");
+      count.className = "weekly-prep-count";
+      count.textContent = String(groupTasks.length);
+      heading.append(count);
+      group.append(heading);
+
+      if (!groupTasks.length) {
+        const empty = document.createElement("p");
+        empty.className = "weekly-prep-empty";
+        empty.textContent = "Aucune préparation ajoutée.";
+        group.append(empty);
+      }
+
+      for (const task of groupTasks) {
+        const row = document.createElement("article");
+        row.className = "weekly-prep-item";
+        row.dataset.prepId = task.id;
+        row.classList.toggle("is-complete", Boolean(task.completedAt));
+
+        const check = document.createElement("button");
+        check.type = "button";
+        check.className = "weekly-prep-check";
+        check.dataset.prepAction = "toggle";
+        check.setAttribute("aria-label", (task.completedAt ? "Réouvrir : " : "Terminer : ") + task.label);
+        check.setAttribute("aria-pressed", String(Boolean(task.completedAt)));
+        check.textContent = task.completedAt ? "✓" : "";
+
+        const details = document.createElement("div");
+        details.className = "weekly-prep-details";
+        const label = document.createElement("strong");
+        label.textContent = task.label;
+        details.append(label);
+        const metaParts = [];
+        if (task.prepDish) metaParts.push(task.prepDish);
+        if (task.prepQuantity) metaParts.push(task.prepQuantity);
+        if (task.refillDay) metaParts.push("À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"));
+        if (metaParts.length) {
+          const meta = document.createElement("span");
+          meta.className = "weekly-prep-meta";
+          meta.textContent = metaParts.join(" · ");
+          details.append(meta);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "weekly-prep-actions";
+        for (const [action, text, labelText] of [
+          ["edit", "Modifier", "Modifier " + task.label],
+          ["delete", "×", "Supprimer " + task.label],
+        ]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = action === "delete" ? "weekly-prep-delete" : "weekly-prep-edit";
+          button.dataset.prepAction = action;
+          button.setAttribute("aria-label", labelText);
+          button.textContent = text;
+          actions.append(button);
+        }
+        row.append(check, details, actions);
+        group.append(row);
+      }
+      fragment.append(group);
+    }
+    elements.weeklyPrepLists.replaceChildren(fragment);
+  }
+
+  async function saveWeeklyPrepItem(event) {
+    event.preventDefault();
+    const label = elements.weeklyPrepLabel.value.trim().slice(0, 180);
+    if (!label) return;
+    const id = elements.weeklyPrepEditId.value;
+    const existing = id ? state.tasks.find((task) => task.id === id && task.section === "weeklyPrep") : null;
+    const now = new Date().toISOString();
+    const task = normalizeTask({
+      ...(existing || {}),
+      id: existing?.id || makeId("task"),
+      label,
+      section: "weeklyPrep",
+      prepCategory: elements.weeklyPrepCategory.value,
+      prepDish: elements.weeklyPrepDish.value.trim(),
+      prepQuantity: elements.weeklyPrepQuantity.value.trim(),
+      refillDay: elements.weeklyPrepRefillDay.value,
+      dueDate: todayKey(),
+      completedAt: existing?.completedAt || null,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+      position: existing?.position || Date.now(),
+    });
+    try {
+      await putRecord("tasks", task);
+      state.tasks = existing
+        ? state.tasks.map((item) => item.id === task.id ? task : item)
+        : [...state.tasks, task];
+      resetWeeklyPrepForm();
+      announceChange();
+      renderAll();
+      showToast(existing ? "Préparation modifiée" : "Préparation ajoutée");
+    } catch (error) {
+      console.error(error);
+      showToast("Préparation non enregistrée");
+    }
+  }
+
+  async function handleWeeklyPrepAction(event) {
+    const button = event.target.closest("[data-prep-action]");
+    if (!button) return;
+    const row = button.closest("[data-prep-id]");
+    const task = state.tasks.find((item) => item.id === row?.dataset.prepId && item.section === "weeklyPrep");
+    if (!task) return;
+    const now = new Date().toISOString();
+
+    try {
+      if (button.dataset.prepAction === "toggle") {
+        const nextTask = { ...task, completedAt: task.completedAt ? null : now, updatedAt: now };
+        await putRecord("tasks", nextTask);
+        state.tasks = state.tasks.map((item) => item.id === task.id ? nextTask : item);
+      } else if (button.dataset.prepAction === "edit") {
+        elements.weeklyPrepEditId.value = task.id;
+        elements.weeklyPrepCategory.value = task.prepCategory || "bases";
+        elements.weeklyPrepLabel.value = task.label;
+        elements.weeklyPrepDish.value = task.prepDish || "";
+        elements.weeklyPrepQuantity.value = task.prepQuantity || "";
+        elements.weeklyPrepRefillDay.value = task.refillDay || "";
+        elements.weeklyPrepSubmit.textContent = "Enregistrer";
+        elements.weeklyPrepCancel.hidden = false;
+        elements.weeklyPrepLabel.focus();
+        elements.weeklyPrepForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      } else if (button.dataset.prepAction === "delete") {
+        if (!window.confirm("Supprimer « " + task.label + " » du plan de préparation ?")) return;
+        await deleteRecord("tasks", task.id, task);
+        state.tasks = state.tasks.filter((item) => item.id !== task.id);
+      }
+      announceChange();
+      renderAll();
+    } catch (error) {
+      console.error(error);
+      showToast("Modification non enregistrée");
+    }
+  }
+
+  async function resetWeeklyPrepWeek() {
+    const tasks = weeklyPrepTasks().filter((task) => task.completedAt);
+    if (!tasks.length) {
+      showToast("Aucune préparation terminée à réouvrir");
+      return;
+    }
+    const count = tasks.length;
+    if (!window.confirm("Réouvrir les " + count + " préparation" + (count > 1 ? "s" : "") + " terminée" + (count > 1 ? "s" : "") + " ?")) return;
+    const now = new Date().toISOString();
+    try {
+      const updates = tasks.map((task) => ({ ...task, completedAt: null, updatedAt: now }));
+      await Promise.all(updates.map((task) => putRecord("tasks", task)));
+      const updatedById = new Map(updates.map((task) => [task.id, task]));
+      state.tasks = state.tasks.map((task) => updatedById.get(task.id) || task);
+      announceChange();
+      renderAll();
+      showToast("Préparations réouvertes");
+    } catch (error) {
+      console.error(error);
+      showToast("Réinitialisation non enregistrée");
+    }
+  }
+
   function renderAll() {
     const cuisineTodayTasks = tasksForToday("cuisine");
     const cuisineTomorrowTasks = tasksForTomorrow("cuisine");
@@ -2885,6 +3108,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     renderTaskList(elements.salleTomorrowList, salleTomorrowTasks);
     renderTaskList(elements.bringList, bringTasks, { isBring: true });
     renderTaskList(elements.maintenanceList, maintenanceTasks);
+    renderWeeklyPrep();
     elements.cuisineTodayProgress.textContent = progressText(cuisineTodayTasks);
     elements.cuisineTomorrowProgress.textContent = progressText(cuisineTomorrowTasks);
     elements.salleTodayProgress.textContent = progressText(salleTodayTasks);
@@ -3486,7 +3710,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function clearCompletedTasks() {
-    const completed = state.tasks.filter((task) => task.completedAt);
+    const completed = state.tasks.filter((task) => task.completedAt && task.section !== "weeklyPrep");
     if (!completed.length) {
       showToast("Aucune tâche terminée");
       return;
@@ -3644,6 +3868,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.maintenanceToggle.addEventListener("click", () => {
       setMaintenanceOpen(!state.maintenanceOpen);
     });
+
+    elements.weeklyPrepToggle.addEventListener("click", () => {
+      const isOpen = elements.weeklyPrepToggle.getAttribute("aria-expanded") === "true";
+      elements.weeklyPrepToggle.setAttribute("aria-expanded", String(!isOpen));
+      elements.weeklyPrepPanel.hidden = isOpen;
+    });
+
+    elements.weeklyPrepForm.addEventListener("submit", saveWeeklyPrepItem);
+    elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
+    elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
+    elements.weeklyPrepReset.addEventListener("click", resetWeeklyPrepWeek);
 
     elements.emptyAddCuisineToday.addEventListener("click", () => {
       selectQuickTargetAndFocus("cuisineToday");
