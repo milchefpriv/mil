@@ -7,16 +7,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-19-weekly-prep-v1";
+  const APP_BUILD_ID = "2026-10-19-checklist-no-salle-tomorrow-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-  const QUICK_TARGET_ORDER = [
-    "cuisineToday",
-    "cuisineTomorrow",
-    "salleToday",
-    "salleTomorrow",
-    "maintenance",
-    "bring",
-  ];
+  const QUICK_TARGET_ORDER = ["cuisineToday", "maintenance", "bring"];
   const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
   const KITCHEN_TYPE_LABELS = { cuisson: "Cuisson", decoupe: "Découpe", preparation: "Préparation" };
   const REORDER_HOLD_DELAY = 450;
@@ -3172,12 +3165,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function renderQuickTarget() {
     const targets = {
       cuisineToday: ["Cuisine · Auj.", "Ajouter à Cuisine aujourd’hui. Appuyer pour changer de liste"],
-      cuisineTomorrow: ["Cuisine · Dem.", "Ajouter à Cuisine demain. Appuyer pour changer de liste"],
-      salleToday: ["Salle · Auj.", "Ajouter à Salle aujourd’hui. Appuyer pour changer de liste"],
-      salleTomorrow: ["Salle · Dem.", "Ajouter à Salle demain. Appuyer pour changer de liste"],
       maintenance: ["Innovation", "Ajouter à Entretien / innovation. Appuyer pour changer de liste"],
       bring: ["Courses", "Ajouter à la liste de courses. Appuyer pour changer de liste"],
     };
+    if (!targets[state.settings.quickTarget]) state.settings.quickTarget = "cuisineToday";
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);

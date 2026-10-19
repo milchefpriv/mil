@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css?v=16" />
-    <script type="module" src="./app.js?v=18"></script>
+    <script type="module" src="./app.js?v=19"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -57,7 +57,7 @@
                 <button class="empty-add" id="emptyAddCuisineToday" data-area="cuisine" data-list="today" type="button">+ Ajouter</button>
               </section>
 
-              <section class="day-card tomorrow-card" aria-labelledby="cuisineTomorrowTitle">
+              <section class="day-card tomorrow-card" aria-labelledby="cuisineTomorrowTitle" hidden>
                 <div class="day-heading">
                   <h3 id="cuisineTomorrowTitle">Demain</h3>
                   <span class="day-progress" id="cuisineTomorrowProgress" aria-live="polite"></span>
@@ -68,7 +68,7 @@
             </div>
           </section>
 
-          <section class="service-board service-board-salle" data-area="salle" aria-labelledby="salleBoardTitle">
+          <section class="service-board service-board-salle" data-area="salle" aria-labelledby="salleBoardTitle" hidden>
             <header class="service-board-header">
               <div>
                 <span class="service-board-kicker">Équipe</span>
@@ -347,9 +347,6 @@
           <legend>Liste</legend>
           <div class="segmented-control list-control">
             <label><input type="radio" name="task-list" value="cuisineToday" /><span>Cuisine · Aujourd’hui</span></label>
-            <label><input type="radio" name="task-list" value="cuisineTomorrow" /><span>Cuisine · Demain</span></label>
-            <label><input type="radio" name="task-list" value="salleToday" /><span>Salle · Aujourd’hui</span></label>
-            <label><input type="radio" name="task-list" value="salleTomorrow" /><span>Salle · Demain</span></label>
             <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
             <label><input type="radio" name="task-list" value="bring" /><span>Courses</span></label>
           </div>
