@@ -2879,11 +2879,32 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
 
   const WEEKLY_PREP_CATEGORIES = [
-    ["bases", "Bases"],
-    ["entrees", "Entrées"],
-    ["plats", "Plats"],
-    ["desserts", "Desserts"],
+    ["cuisson", "Cuisson", "Lancer d’abord les cuissons longues et les préparations à refroidir."],
+    ["decoupe", "Découpe", "Tailler et préparer les éléments frais pendant les cuissons."],
+    ["preparation", "Préparation", "Terminer les sauces, le conditionnement et les montages."],
   ];
+
+  const WEEKLY_PREP_CATEGORY_BY_ID = {
+    "weekly-prep-stew": "cuisson",
+    "weekly-prep-potatoes": "cuisson",
+    "weekly-prep-eggs": "cuisson",
+    "weekly-prep-fries": "cuisson",
+    "weekly-prep-creme-brulee": "cuisson",
+    "weekly-prep-panna-cotta": "cuisson",
+    "weekly-prep-cornichons": "decoupe",
+    "weekly-prep-leek-green": "decoupe",
+    "weekly-prep-tartare": "decoupe",
+    "weekly-prep-mayo": "preparation",
+    "weekly-prep-cocktail": "preparation",
+    "weekly-prep-vinaigrette": "preparation",
+    "weekly-prep-croutons": "preparation",
+    "weekly-prep-hareng": "preparation",
+    "weekly-prep-terrine": "preparation",
+    "weekly-prep-croques": "preparation",
+    "weekly-prep-mousse": "preparation",
+  };
+
+  const LEGACY_WEEKLY_PREP_CATEGORIES = new Set(["bases", "entrees", "plats", "desserts"]);
 
   const WEEKLY_PREP_STARTER_ITEMS = [
     ["weekly-prep-mayo", "Mayonnaise", "bases", "", "", ""],
@@ -2909,19 +2930,41 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const knownIds = new Set(state.tasks.map((task) => task.id));
     const now = new Date().toISOString();
     let inserted = 0;
-    for (const [id, label, prepCategory, prepDish, prepQuantity, refillDay] of WEEKLY_PREP_STARTER_ITEMS) {
-      if (knownIds.has(id)) continue;
+    let changed = false;
+
+    for (const task of state.tasks.filter((item) => item.section === "weeklyPrep" && LEGACY_WEEKLY_PREP_CATEGORIES.has(item.prepCategory))) {
+      task.prepCategory = "preparation";
+      task.updatedAt = now;
+      await putRecord("tasks", task);
+      changed = true;
+    }
+
+    for (const [index, [id, label, prepCategory, prepDish, prepQuantity, refillDay]] of WEEKLY_PREP_STARTER_ITEMS.entries()) {
+      const category = WEEKLY_PREP_CATEGORY_BY_ID[id] || prepCategory;
+      const existing = state.tasks.find((task) => task.id === id);
+      if (existing) {
+        const position = index + 1;
+        if (existing.prepCategory !== category || existing.position !== position) {
+          existing.prepCategory = category;
+          existing.position = position;
+          existing.updatedAt = now;
+          await putRecord("tasks", existing);
+          changed = true;
+        }
+        continue;
+      }
+
       const task = normalizeTask({
-        id, label, section: "weeklyPrep", prepCategory, prepDish, prepQuantity, refillDay,
+        id, label, section: "weeklyPrep", prepCategory: category, prepDish, prepQuantity, refillDay,
         dueDate: todayKey(), completedAt: null, createdAt: now, updatedAt: now,
-        position: Date.now() + inserted,
+        position: index + 1,
       });
       await putRecord("tasks", task);
       state.tasks.push(task);
       knownIds.add(id);
       inserted += 1;
     }
-    if (inserted) announceChange();
+    if (inserted || changed) announceChange();
   }
 
   function mondayKey(key = todayKey()) {
@@ -2950,7 +2993,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.weeklyPrepProgress.textContent = tasks.length ? completed + "/" + tasks.length : "";
     const fragment = document.createDocumentFragment();
 
-    for (const [category, title] of WEEKLY_PREP_CATEGORIES) {
+    for (const [category, title, guide] of WEEKLY_PREP_CATEGORIES) {
       const group = document.createElement("section");
       group.className = "weekly-prep-group";
       group.dataset.prepCategory = category;
@@ -2962,6 +3005,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       count.textContent = String(groupTasks.length);
       heading.append(count);
       group.append(heading);
+      const guideLine = document.createElement("p");
+      guideLine.className = "weekly-prep-guide";
+      guideLine.textContent = guide;
+      group.append(guideLine);
 
       if (!groupTasks.length) {
         const empty = document.createElement("p");
