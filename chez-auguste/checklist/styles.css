@@ -2092,7 +2092,7 @@ dialog::backdrop {
 
 .weekly-prep-lists {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -2103,6 +2103,33 @@ dialog::backdrop {
   border: 1px solid var(--line);
   border-radius: 13px;
   background: var(--paper);
+}
+
+.weekly-prep-group[data-prep-category="cuisson"] {
+  --prep-accent: #dc8b32;
+}
+
+.weekly-prep-group[data-prep-category="decoupe"] {
+  --prep-accent: #398653;
+}
+
+.weekly-prep-group[data-prep-category="preparation"] {
+  --prep-accent: #3979bd;
+}
+
+.weekly-prep-group[data-prep-category] {
+  border-top: 3px solid var(--prep-accent);
+}
+
+.weekly-prep-group h3 {
+  color: var(--prep-accent);
+}
+
+.weekly-prep-guide {
+  margin: -2px 0 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .weekly-prep-group h3 {
