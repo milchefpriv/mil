@@ -1642,7 +1642,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
             remoteRows = await loadRemoteItems();
           }
           if (taskReorderLocked()) pendingRemoteRefresh = true;
-          else await applyRemoteItems(remoteRows);
+          else {
+            await applyRemoteItems(remoteRows);
+            await ensureWeeklyPrepStarterItems();
+            renderWeeklyPrep();
+          }
         } while (syncAgain);
         syncWarningShown = false;
       } catch (error) {
