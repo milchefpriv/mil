@@ -1797,7 +1797,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
       occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
       estimateMinutes: section === "bring" || section === "weeklyPrep" ? null : normalizeEstimateMinutes(task?.estimateMinutes),
-      prepCategory: section === "weeklyPrep" && ["bases", "entrees", "plats", "desserts"].includes(task?.prepCategory) ? task.prepCategory : (section === "weeklyPrep" ? "bases" : null),
+      prepCategory: section === "weeklyPrep" && ["cuisson", "decoupe", "preparation"].includes(task?.prepCategory) ? task.prepCategory : (section === "weeklyPrep" ? "preparation" : null),
       prepDish: section === "weeklyPrep" && typeof task?.prepDish === "string" ? task.prepDish.trim().slice(0, 120) : null,
       prepQuantity: section === "weeklyPrep" && typeof task?.prepQuantity === "string" ? task.prepQuantity.trim().slice(0, 80) : null,
       refillDay: section === "weeklyPrep" && ["", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].includes(task?.refillDay) ? task.refillDay : "",
