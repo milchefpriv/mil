@@ -2887,7 +2887,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const WEEKLY_PREP_CATEGORY_BY_ID = {
     "weekly-prep-stew": "cuisson",
     "weekly-prep-potatoes": "cuisson",
-    "weekly-prep-eggs": "cuisson",
+    "weekly-prep-eggs": "decoupe",
     "weekly-prep-fries": "cuisson",
     "weekly-prep-creme-brulee": "cuisson",
     "weekly-prep-panna-cotta": "cuisson",
@@ -2906,13 +2906,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   const LEGACY_WEEKLY_PREP_CATEGORIES = new Set(["bases", "entrees", "plats", "desserts"]);
   const WEEKLY_PREP_ORDER = [
-    "weekly-prep-stew", "weekly-prep-creme-brulee", "weekly-prep-panna-cotta",
-    "weekly-prep-potatoes", "weekly-prep-eggs", "weekly-prep-fries",
-    "weekly-prep-leek-green", "weekly-prep-cornichons", "weekly-prep-tartare",
-    "weekly-prep-mayo", "weekly-prep-cocktail", "weekly-prep-vinaigrette",
-    "weekly-prep-croutons", "weekly-prep-hareng", "weekly-prep-terrine",
+    "weekly-prep-stew", "task-2fdeae58-e831-404a-bc20-c224c64feb41",
+    "task-da3f882e-3c9c-416c-ac1f-7f897fb6f464", "weekly-prep-potatoes",
+    "task-442b47ba-e5e8-4e1c-a565-75d6807b1fd0",
+    "weekly-prep-creme-brulee", "weekly-prep-panna-cotta", "weekly-prep-fries",
+    "weekly-prep-eggs", "weekly-prep-leek-green", "weekly-prep-cornichons",
+    "weekly-prep-tartare", "weekly-prep-mayo", "weekly-prep-cocktail",
+    "weekly-prep-vinaigrette", "weekly-prep-croutons", "weekly-prep-hareng",
+    "weekly-prep-terrine", "task-7536ec70-340e-4458-90d9-45d0c3bd6e96",
     "weekly-prep-mousse", "weekly-prep-croques",
   ];
+
+  const WEEKLY_PREP_EXTRA_CATEGORIES = {
+    "task-2fdeae58-e831-404a-bc20-c224c64feb41": "cuisson",
+    "task-da3f882e-3c9c-416c-ac1f-7f897fb6f464": "cuisson",
+    "task-442b47ba-e5e8-4e1c-a565-75d6807b1fd0": "cuisson",
+    "task-7536ec70-340e-4458-90d9-45d0c3bd6e96": "preparation",
+  };
 
   const WEEKLY_PREP_STARTER_ITEMS = [
     ["weekly-prep-mayo", "Mayonnaise", "bases", "", "", ""],
@@ -2945,6 +2955,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       task.updatedAt = now;
       await putRecord("tasks", task);
       changed = true;
+    }
+
+    for (const task of state.tasks.filter((item) => item.section === "weeklyPrep" && WEEKLY_PREP_EXTRA_CATEGORIES[item.id])) {
+      const category = WEEKLY_PREP_EXTRA_CATEGORIES[task.id];
+      const position = WEEKLY_PREP_ORDER.indexOf(task.id) + 1;
+      if (task.prepCategory !== category || task.position !== position) {
+        task.prepCategory = category;
+        task.position = position;
+        task.updatedAt = now;
+        await putRecord("tasks", task);
+        changed = true;
+      }
     }
 
     for (const [index, [id, label, prepCategory, prepDish, prepQuantity, refillDay]] of WEEKLY_PREP_STARTER_ITEMS.entries()) {
