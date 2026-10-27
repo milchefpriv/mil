@@ -2905,6 +2905,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   };
 
   const LEGACY_WEEKLY_PREP_CATEGORIES = new Set(["bases", "entrees", "plats", "desserts"]);
+  const WEEKLY_PREP_ORDER = [
+    "weekly-prep-stew", "weekly-prep-creme-brulee", "weekly-prep-panna-cotta",
+    "weekly-prep-potatoes", "weekly-prep-eggs", "weekly-prep-fries",
+    "weekly-prep-leek-green", "weekly-prep-cornichons", "weekly-prep-tartare",
+    "weekly-prep-mayo", "weekly-prep-cocktail", "weekly-prep-vinaigrette",
+    "weekly-prep-croutons", "weekly-prep-hareng", "weekly-prep-terrine",
+    "weekly-prep-mousse", "weekly-prep-croques",
+  ];
 
   const WEEKLY_PREP_STARTER_ITEMS = [
     ["weekly-prep-mayo", "Mayonnaise", "bases", "", "", ""],
@@ -2943,7 +2951,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const category = WEEKLY_PREP_CATEGORY_BY_ID[id] || prepCategory;
       const existing = state.tasks.find((task) => task.id === id);
       if (existing) {
-        const position = index + 1;
+        const position = WEEKLY_PREP_ORDER.indexOf(id) + 1;
         if (existing.prepCategory !== category || existing.position !== position) {
           existing.prepCategory = category;
           existing.position = position;
@@ -2957,7 +2965,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const task = normalizeTask({
         id, label, section: "weeklyPrep", prepCategory: category, prepDish, prepQuantity, refillDay,
         dueDate: todayKey(), completedAt: null, createdAt: now, updatedAt: now,
-        position: index + 1,
+        position: WEEKLY_PREP_ORDER.indexOf(id) + 1,
       });
       await putRecord("tasks", task);
       state.tasks.push(task);
