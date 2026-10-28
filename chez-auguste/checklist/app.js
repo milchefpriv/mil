@@ -89,6 +89,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
     weeklyPrepDishActions: document.querySelector("#weeklyPrepDishActions"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
+    weeklyPrepOpenForm: document.querySelector("#weeklyPrepOpenForm"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
     weeklyPrepLabel: document.querySelector("#weeklyPrepLabel"),
@@ -2759,7 +2760,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function historyContext(entry) {
-    if (entry.section === "bring") return "Courses";
+    if (entry.section === "bring") return "Achat évolutif";
     if (entry.section === "maintenance") return "Entretien / innovation";
     const parts = [entry.department === "salle" ? "Salle" : "Cuisine"];
     if (entry.moment === "morning") parts.push("Matin");
@@ -3077,8 +3078,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function resetWeeklyPrepForm() {
     elements.weeklyPrepForm.reset();
+    elements.weeklyPrepForm.hidden = true;
+    elements.weeklyPrepOpenForm.hidden = false;
     elements.weeklyPrepEditId.value = "";
-    elements.weeklyPrepSubmit.textContent = "Ajouter la préparation";
+    elements.weeklyPrepSubmit.textContent = "Ajouter l’action";
     elements.weeklyPrepCancel.hidden = true;
   }
 
@@ -3273,6 +3276,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         elements.weeklyPrepDish.value = task.prepDish || "";
         elements.weeklyPrepQuantity.value = task.prepQuantity || "";
         elements.weeklyPrepRefillDay.value = task.refillDay || "";
+        elements.weeklyPrepForm.hidden = false;
+        elements.weeklyPrepOpenForm.hidden = true;
         elements.weeklyPrepSubmit.textContent = "Enregistrer";
         elements.weeklyPrepCancel.hidden = false;
         elements.weeklyPrepLabel.focus();
@@ -3337,7 +3342,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const targets = {
       cuisineToday: ["Générale · Auj.", "Ajouter à la checklist générale aujourd’hui. Appuyer pour changer de liste"],
       maintenance: ["Innovation", "Ajouter à Entretien / innovation. Appuyer pour changer de liste"],
-      bring: ["Courses", "Ajouter à la liste de courses. Appuyer pour changer de liste"],
+      bring: ["Achat évolutif", "Ajouter un achat évolutif. Appuyer pour changer de liste"],
     };
     if (!targets[state.settings.quickTarget]) state.settings.quickTarget = "cuisineToday";
     const [label, ariaLabel] = targets[state.settings.quickTarget];
@@ -3546,7 +3551,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!task) return;
     state.activeTaskId = id;
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
-      task.section === "bring" ? "Modifier — Liste de courses" : "Modifier";
+      task.section === "bring" ? "Modifier — Achat évolutif" : "Modifier";
     elements.editTaskLabel.value = task.label;
     elements.editKitchenType.value = normalizeKitchenType(task.kitchenType, task.label);
     const taskList = taskListForTask(task);
@@ -4076,6 +4081,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.weeklyPrepPanel.hidden = isOpen;
     });
 
+    elements.weeklyPrepOpenForm.addEventListener("click", () => {
+      elements.weeklyPrepForm.hidden = false;
+      elements.weeklyPrepOpenForm.hidden = true;
+      elements.weeklyPrepCategory.focus();
+      elements.weeklyPrepForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
     elements.weeklyPrepForm.addEventListener("submit", saveWeeklyPrepItem);
     elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
     elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
