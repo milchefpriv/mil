@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=24" />
-    <script type="module" src="./app.js?v=29"></script>
+    <link rel="stylesheet" href="./styles.css?v=25" />
+    <script type="module" src="./app.js?v=30"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -62,45 +62,10 @@
                 <strong>Carte de la semaine</strong>
                 <span class="weekly-prep-dish-summary" id="weeklyPrepDishSummary"></span>
               </span>
-              <span class="weekly-prep-dish-open-label">Voir les plats</span>
               <span class="weekly-prep-dish-chevron" aria-hidden="true">›</span>
             </summary>
             <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
           </details>
-          <h3 class="weekly-prep-form-title">Ajouter une préparation</h3>
-          <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
-            <input id="weeklyPrepEditId" type="hidden" />
-            <label class="weekly-prep-field">
-              <span>Étape de travail</span>
-              <select id="weeklyPrepCategory">
-                <option value="cuisson">Cuisson</option><option value="decoupe">Découpe</option><option value="preparation">Préparation</option>
-              </select>
-            </label>
-            <label class="weekly-prep-field weekly-prep-field-wide">
-              <span>Préparation</span>
-              <input id="weeklyPrepLabel" type="text" maxlength="180" placeholder="Ex. Mayonnaise" required />
-            </label>
-            <label class="weekly-prep-field">
-              <span>Plat(s) concerné(s)</span>
-              <input id="weeklyPrepDish" type="text" maxlength="120" placeholder="Ex. Œufs mimosa ; Terrine" />
-              <small>Séparez plusieurs plats avec un point-virgule.</small>
-            </label>
-            <label class="weekly-prep-field">
-              <span>Quantité</span>
-              <input id="weeklyPrepQuantity" type="text" maxlength="80" placeholder="Ex. 1 bac / 20 portions" />
-            </label>
-            <label class="weekly-prep-field">
-              <span>À refaire</span>
-              <select id="weeklyPrepRefillDay">
-                <option value="">Pas de réassort prévu</option>
-                <option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option>
-              </select>
-            </label>
-            <div class="weekly-prep-form-actions">
-              <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter une préparation</button>
-              <button class="plain-action" id="weeklyPrepCancel" type="button" hidden>Annuler la modification</button>
-            </div>
-          </form>
           <div class="weekly-prep-lists" id="weeklyPrepLists"></div>
         </div>
       </section>
@@ -196,6 +161,52 @@
           </div>
         </section>
       </div>
+
+      <details class="weekly-prep-add-disclosure" id="weeklyPrepAddDisclosure">
+        <summary>
+          <span class="weekly-prep-add-copy">
+            <strong>Ajouter une préparation</strong>
+            <span>Cuisson, découpe ou préparation</span>
+          </span>
+          <span class="weekly-prep-add-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+          </span>
+        </summary>
+                  <h3 class="weekly-prep-form-title">Ajouter une préparation</h3>
+                  <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
+                    <input id="weeklyPrepEditId" type="hidden" />
+                    <label class="weekly-prep-field">
+                      <span>Étape de travail</span>
+                      <select id="weeklyPrepCategory">
+                        <option value="cuisson">Cuisson</option><option value="decoupe">Découpe</option><option value="preparation">Préparation</option>
+                      </select>
+                    </label>
+                    <label class="weekly-prep-field weekly-prep-field-wide">
+                      <span>Préparation</span>
+                      <input id="weeklyPrepLabel" type="text" maxlength="180" placeholder="Ex. Mayonnaise" required />
+                    </label>
+                    <label class="weekly-prep-field">
+                      <span>Plat(s) concerné(s)</span>
+                      <input id="weeklyPrepDish" type="text" maxlength="120" placeholder="Ex. Œufs mimosa ; Terrine" />
+                      <small>Séparez plusieurs plats avec un point-virgule.</small>
+                    </label>
+                    <label class="weekly-prep-field">
+                      <span>Quantité</span>
+                      <input id="weeklyPrepQuantity" type="text" maxlength="80" placeholder="Ex. 1 bac / 20 portions" />
+                    </label>
+                    <label class="weekly-prep-field">
+                      <span>À refaire</span>
+                      <select id="weeklyPrepRefillDay">
+                        <option value="">Pas de réassort prévu</option>
+                        <option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option>
+                      </select>
+                    </label>
+                    <div class="weekly-prep-form-actions">
+                      <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter une préparation</button>
+                      <button class="plain-action" id="weeklyPrepCancel" type="button" hidden>Annuler la modification</button>
+                    </div>
+                  </form>
+      </details>
 
     <dialog class="weekly-prep-dish-dialog" id="weeklyPrepDishDialog" aria-labelledby="weeklyPrepDishDialogTitle">
       <form method="dialog">
