@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=22" />
-    <script type="module" src="./app.js?v=27"></script>
+    <link rel="stylesheet" href="./styles.css?v=23" />
+    <script type="module" src="./app.js?v=28"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -67,7 +67,8 @@
             </summary>
             <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
           </details>
-          <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
+          <button class="primary-button weekly-prep-open" id="weeklyPrepOpenForm" type="button">Ajouter une préparation</button>
+          <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off" hidden>
             <input id="weeklyPrepEditId" type="hidden" />
             <label class="weekly-prep-field">
               <span>Étape de travail</span>
@@ -96,7 +97,7 @@
               </select>
             </label>
             <div class="weekly-prep-form-actions">
-              <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter la préparation</button>
+              <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter l’action</button>
               <button class="plain-action" id="weeklyPrepCancel" type="button" hidden>Annuler la modification</button>
             </div>
           </form>
@@ -213,18 +214,18 @@
 
       <aside class="bring-note" aria-labelledby="bringTitle">
         <header class="bring-note-header">
-          <h2 id="bringTitle">Liste de courses</h2>
+          <h2 id="bringTitle">Achat évolutif</h2>
           <span class="bring-count" id="bringProgress" aria-live="polite"></span>
         </header>
         <div class="task-list bring-list" id="bringList" role="list"></div>
         <form class="bring-add" id="bringAddForm" autocomplete="off">
-          <label class="sr-only" for="bringInput">Ajouter un article à la liste de courses</label>
+          <label class="sr-only" for="bringInput">Ajouter un achat à la liste</label>
           <input
             id="bringInput"
             type="text"
             maxlength="180"
             enterkeyhint="done"
-            placeholder="Ajouter quelque chose…"
+            placeholder="Ajouter un achat…"
           />
           <button type="submit" aria-label="Ajouter à la liste de courses">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
@@ -377,7 +378,7 @@
           <div class="segmented-control list-control">
             <label><input type="radio" name="task-list" value="cuisineToday" /><span>Générale · Aujourd’hui</span></label>
             <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
-            <label><input type="radio" name="task-list" value="bring" /><span>Courses</span></label>
+            <label><input type="radio" name="task-list" value="bring" /><span>Achat évolutif</span></label>
           </div>
         </fieldset>
 
