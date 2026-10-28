@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Checklist — Chez Auguste",
   "short_name": "Auguste",
-  "description": "Tâches et checklists du matin et du soir.",
+  "description": "Checklist partagée, rappels de préparation et achats de Chez Auguste.",
   "lang": "fr-FR",
   "start_url": "./",
   "scope": "./",

@@ -2,21 +2,24 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="theme-color" content="#741e2b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Auguste" />
     <meta
       name="description"
-      content="Les tâches et checklists du matin et du soir de Chez Auguste."
+      content="La checklist partagée, les rappels de préparation et les achats de Chez Auguste."
     />
     <title>Checklist — Chez Auguste</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=25" />
-    <script type="module" src="./app.js?v=31"></script>
+    <link rel="stylesheet" href="./styles.css?v=26" />
+    <script type="module" src="./app.js?v=32"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -27,10 +30,22 @@
         </div>
         <div class="topbar-actions">
           <div class="sync-status-wrap">
-            <div class="sync-status" id="syncStatus" role="status" aria-live="polite" aria-atomic="true">Connexion…</div>
-            <span class="sr-only" id="syncStatusDetail" aria-live="polite">Connexion au serveur en cours.</span>
+            <div
+              class="sync-status"
+              id="syncStatus"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              Connexion…
+            </div>
+            <span class="sr-only" id="syncStatusDetail" aria-live="polite"
+              >Connexion au serveur en cours.</span
+            >
           </div>
-          <button class="routine-menu-button" id="openSettings" type="button">Routine</button>
+          <button class="routine-menu-button" id="openSettings" type="button">
+            Routine
+          </button>
         </div>
       </header>
 
@@ -38,140 +53,196 @@
 
       <section class="weekly-prep-section" aria-labelledby="weeklyPrepHeading">
         <h2 class="collapsible-heading" id="weeklyPrepHeading">
-          <button class="collapsible-toggle" id="weeklyPrepToggle" type="button" aria-expanded="true" aria-controls="weeklyPrepPanel">
+          <button
+            class="collapsible-toggle"
+            id="weeklyPrepToggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="weeklyPrepPanel"
+          >
             <span>Rappels</span>
             <span class="collapsible-toggle-end">
-              <span class="day-progress" id="weeklyPrepProgress" aria-live="polite"></span>
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+              <span
+                class="day-progress"
+                id="weeklyPrepProgress"
+                aria-live="polite"
+              ></span>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m7 9 5 5 5-5"></path>
+              </svg>
             </span>
           </button>
         </h2>
-        <div class="day-card weekly-prep-panel" id="weeklyPrepPanel" role="region" aria-labelledby="weeklyPrepHeading">
+        <div
+          class="day-card weekly-prep-panel"
+          id="weeklyPrepPanel"
+          role="region"
+          aria-labelledby="weeklyPrepHeading"
+        >
           <div class="weekly-prep-intro">
             <div>
               <p class="eyebrow" id="weeklyPrepWeek"></p>
-              <p class="weekly-prep-note">Les plats se valident quand toutes leurs actions sont cochées.</p>
+              <p class="weekly-prep-note">
+                Les plats se valident quand toutes leurs actions sont cochées.
+              </p>
             </div>
           </div>
-          <details class="weekly-prep-dish-reminder" id="weeklyPrepDishReminder">
-            <summary aria-label="Ouvrir le rappel de la carte et voir l’avancement des plats">
+          <details class="weekly-prep-dish-reminder">
+            <summary>
               <span class="weekly-prep-dish-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M6 4.75h12a1.25 1.25 0 0 1 1.25 1.25v13H4.75V6A1.25 1.25 0 0 1 6 4.75Z"></path><path d="M8 8h8M8 11.5h8M8 15h5"></path></svg>
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M6 4.75h12a1.25 1.25 0 0 1 1.25 1.25v13H4.75V6A1.25 1.25 0 0 1 6 4.75Z"
+                  ></path>
+                  <path d="M8 8h8M8 11.5h8M8 15h5"></path>
+                </svg>
               </span>
               <span class="weekly-prep-dish-info">
                 <strong>Carte de la semaine</strong>
-                <span class="weekly-prep-dish-summary" id="weeklyPrepDishSummary"></span>
+                <span
+                  class="weekly-prep-dish-summary"
+                  id="weeklyPrepDishSummary"
+                ></span>
               </span>
               <span class="weekly-prep-dish-chevron" aria-hidden="true">›</span>
             </summary>
-            <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
+            <div
+              class="weekly-prep-dishes"
+              id="weeklyPrepDishes"
+              role="list"
+              aria-live="polite"
+            ></div>
           </details>
           <div class="weekly-prep-lists" id="weeklyPrepLists"></div>
-          <details class="weekly-prep-add-disclosure" id="weeklyPrepAddDisclosure">
-                  <summary>
-                    <span class="weekly-prep-add-copy">
-                      <strong>Ajouter une préparation</strong>
-                      <span>Cuisson, découpe ou préparation</span>
-                    </span>
-                    <span class="weekly-prep-add-chevron" aria-hidden="true">
-                      <svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
-                    </span>
-                  </summary>
-                            <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
-                              <input id="weeklyPrepEditId" type="hidden" />
-                              <label class="weekly-prep-field">
-                                <span>Étape de travail</span>
-                                <select id="weeklyPrepCategory">
-                                  <option value="cuisson">Cuisson</option><option value="decoupe">Découpe</option><option value="preparation">Préparation</option>
-                                </select>
-                              </label>
-                              <label class="weekly-prep-field weekly-prep-field-wide">
-                                <span>Préparation</span>
-                                <input id="weeklyPrepLabel" type="text" maxlength="180" placeholder="Ex. Mayonnaise" required />
-                              </label>
-                              <label class="weekly-prep-field">
-                                <span>Plat(s) concerné(s)</span>
-                                <input id="weeklyPrepDish" type="text" maxlength="120" placeholder="Ex. Œufs mimosa ; Terrine" />
-                                <small>Séparez plusieurs plats avec un point-virgule.</small>
-                              </label>
-                              <label class="weekly-prep-field">
-                                <span>Quantité</span>
-                                <input id="weeklyPrepQuantity" type="text" maxlength="80" placeholder="Ex. 1 bac / 20 portions" />
-                              </label>
-                              <label class="weekly-prep-field">
-                                <span>À refaire</span>
-                                <select id="weeklyPrepRefillDay">
-                                  <option value="">Pas de réassort prévu</option>
-                                  <option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option>
-                                </select>
-                              </label>
-                              <div class="weekly-prep-form-actions">
-                                <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter une préparation</button>
-                                <button class="plain-action" id="weeklyPrepCancel" type="button" hidden>Annuler la modification</button>
-                              </div>
-                            </form>
-                </details>
+          <details
+            class="weekly-prep-add-disclosure"
+            id="weeklyPrepAddDisclosure"
+          >
+            <summary>
+              <span class="weekly-prep-add-copy">
+                <strong>Ajouter une préparation</strong>
+                <span>Cuisson, découpe ou préparation</span>
+              </span>
+              <span class="weekly-prep-add-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+              </span>
+            </summary>
+            <form
+              class="weekly-prep-form"
+              id="weeklyPrepForm"
+              autocomplete="off"
+            >
+              <input id="weeklyPrepEditId" type="hidden" />
+              <label class="weekly-prep-field">
+                <span>Étape de travail</span>
+                <select id="weeklyPrepCategory">
+                  <option value="cuisson">Cuisson</option>
+                  <option value="decoupe">Découpe</option>
+                  <option value="preparation">Préparation</option>
+                </select>
+              </label>
+              <label class="weekly-prep-field weekly-prep-field-wide">
+                <span>Préparation</span>
+                <input
+                  id="weeklyPrepLabel"
+                  type="text"
+                  maxlength="180"
+                  placeholder="Ex. Mayonnaise"
+                  required
+                />
+              </label>
+              <label class="weekly-prep-field">
+                <span>Plat(s) concerné(s)</span>
+                <input
+                  id="weeklyPrepDish"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ex. Œufs mimosa ; Terrine"
+                />
+                <small>Séparez plusieurs plats avec un point-virgule.</small>
+              </label>
+              <label class="weekly-prep-field">
+                <span>Quantité</span>
+                <input
+                  id="weeklyPrepQuantity"
+                  type="text"
+                  maxlength="80"
+                  placeholder="Ex. 1 bac / 20 portions"
+                />
+              </label>
+              <label class="weekly-prep-field">
+                <span>À refaire</span>
+                <select id="weeklyPrepRefillDay">
+                  <option value="">Pas de réassort prévu</option>
+                  <option>Mardi</option>
+                  <option>Mercredi</option>
+                  <option>Jeudi</option>
+                  <option>Vendredi</option>
+                  <option>Samedi</option>
+                </select>
+              </label>
+              <div class="weekly-prep-form-actions">
+                <button
+                  class="primary-button"
+                  id="weeklyPrepSubmit"
+                  type="submit"
+                >
+                  Ajouter une préparation
+                </button>
+                <button
+                  class="plain-action"
+                  id="weeklyPrepCancel"
+                  type="button"
+                  hidden
+                >
+                  Annuler la modification
+                </button>
+              </div>
+            </form>
+          </details>
         </div>
       </section>
 
       <div class="days-grid">
         <div class="service-boards">
-          <section class="service-board service-board-cuisine" data-area="cuisine" aria-labelledby="cuisineBoardTitle">
+          <section
+            class="service-board service-board-cuisine"
+            data-area="cuisine"
+            aria-labelledby="cuisineBoardTitle"
+          >
             <header class="service-board-header">
               <div>
                 <span class="service-board-kicker">Checklist</span>
                 <h2 id="cuisineBoardTitle">Générale</h2>
               </div>
-              <span class="service-board-badge" aria-hidden="true" hidden>C</span>
             </header>
 
             <div class="service-board-days">
               <section class="day-card" aria-labelledby="cuisineTodayTitle">
                 <div class="day-heading">
                   <h3 id="cuisineTodayTitle">Aujourd’hui</h3>
-                  <span class="day-progress" id="cuisineTodayProgress" aria-live="polite"></span>
+                  <span
+                    class="day-progress"
+                    id="cuisineTodayProgress"
+                    aria-live="polite"
+                  ></span>
                 </div>
-                <div class="task-list" id="cuisineTodayList" data-area="cuisine" data-list="today" role="list"></div>
-                <button class="empty-add" id="emptyAddCuisineToday" data-area="cuisine" data-list="today" type="button">+ Ajouter</button>
-              </section>
-
-              <section class="day-card tomorrow-card" aria-labelledby="cuisineTomorrowTitle" hidden>
-                <div class="day-heading">
-                  <h3 id="cuisineTomorrowTitle">Demain</h3>
-                  <span class="day-progress" id="cuisineTomorrowProgress" aria-live="polite"></span>
-                </div>
-                <div class="task-list" id="cuisineTomorrowList" data-area="cuisine" data-list="tomorrow" role="list"></div>
-                <button class="empty-add" id="emptyAddCuisineTomorrow" data-area="cuisine" data-list="tomorrow" type="button">+ Ajouter</button>
-              </section>
-            </div>
-          </section>
-
-          <section class="service-board service-board-salle" data-area="salle" aria-labelledby="salleBoardTitle" hidden>
-            <header class="service-board-header">
-              <div>
-                <span class="service-board-kicker">Équipe</span>
-                <h2 id="salleBoardTitle">Salle</h2>
-              </div>
-              <span class="service-board-badge" aria-hidden="true">S</span>
-            </header>
-
-            <div class="service-board-days">
-              <section class="day-card" aria-labelledby="salleTodayTitle">
-                <div class="day-heading">
-                  <h3 id="salleTodayTitle">Aujourd’hui</h3>
-                  <span class="day-progress" id="salleTodayProgress" aria-live="polite"></span>
-                </div>
-                <div class="task-list" id="salleTodayList" data-area="salle" data-list="today" role="list"></div>
-                <button class="empty-add" id="emptyAddSalleToday" data-area="salle" data-list="today" type="button">+ Ajouter</button>
-              </section>
-
-              <section class="day-card tomorrow-card" aria-labelledby="salleTomorrowTitle">
-                <div class="day-heading">
-                  <h3 id="salleTomorrowTitle">Demain</h3>
-                  <span class="day-progress" id="salleTomorrowProgress" aria-live="polite"></span>
-                </div>
-                <div class="task-list" id="salleTomorrowList" data-area="salle" data-list="tomorrow" role="list"></div>
-                <button class="empty-add" id="emptyAddSalleTomorrow" data-area="salle" data-list="tomorrow" type="button">+ Ajouter</button>
+                <div
+                  class="task-list"
+                  id="cuisineTodayList"
+                  data-area="cuisine"
+                  data-list="today"
+                  role="list"
+                ></div>
+                <button
+                  class="empty-add"
+                  id="emptyAddCuisineToday"
+                  data-area="cuisine"
+                  data-list="today"
+                  type="button"
+                >
+                  + Ajouter
+                </button>
               </section>
             </div>
           </section>
@@ -188,8 +259,14 @@
             >
               <span>Entretien / innovation</span>
               <span class="collapsible-toggle-end">
-                <span class="day-progress" id="maintenanceProgress" aria-live="polite"></span>
-                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
+                <span
+                  class="day-progress"
+                  id="maintenanceProgress"
+                  aria-live="polite"
+                ></span>
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m7 9 5 5 5-5"></path>
+                </svg>
               </span>
             </button>
           </h2>
@@ -201,36 +278,27 @@
             hidden
           >
             <div class="task-list" id="maintenanceList" role="list"></div>
-            <button class="empty-add" id="emptyAddMaintenance" type="button">+ Ajouter</button>
+            <button class="empty-add" id="emptyAddMaintenance" type="button">
+              + Ajouter
+            </button>
           </div>
         </section>
       </div>
 
-      
-
-    <dialog class="weekly-prep-dish-dialog" id="weeklyPrepDishDialog" aria-labelledby="weeklyPrepDishDialogTitle">
-      <form method="dialog">
-        <header>
-          <div>
-            <p class="eyebrow">Rappel de la carte</p>
-            <h2 id="weeklyPrepDishDialogTitle"></h2>
-          </div>
-          <button class="icon-button" type="submit" aria-label="Fermer">×</button>
-        </header>
-        <p class="weekly-prep-dish-dialog-note">Actions du plat, classées par étape et état.</p>
-        <div class="weekly-prep-dish-actions" id="weeklyPrepDishActions"></div>
-        <button class="primary-button weekly-prep-dish-dialog-close" type="submit">Fermer</button>
-      </form>
-    </dialog>
-
       <aside class="bring-note" aria-labelledby="bringTitle">
         <header class="bring-note-header">
           <h2 id="bringTitle">Achat évolutif</h2>
-          <span class="bring-count" id="bringProgress" aria-live="polite"></span>
+          <span
+            class="bring-count"
+            id="bringProgress"
+            aria-live="polite"
+          ></span>
         </header>
         <div class="task-list bring-list" id="bringList" role="list"></div>
         <form class="bring-add" id="bringAddForm" autocomplete="off">
-          <label class="sr-only" for="bringInput">Ajouter un achat à la liste</label>
+          <label class="sr-only" for="bringInput"
+            >Ajouter un achat à la liste</label
+          >
           <input
             id="bringInput"
             type="text"
@@ -239,107 +307,135 @@
             placeholder="Ajouter un achat…"
           />
           <button type="submit" aria-label="Ajouter à Achat évolutif">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
           </button>
         </form>
       </aside>
     </main>
 
-    <form class="quick-add" id="quickAddForm" autocomplete="off">
-      <div class="quick-add-inner">
-        <button class="target-button" id="quickTarget" type="button" aria-label="Changer la liste">
-          Générale · Aujourd’hui
-        </button>
-        <label class="sr-only" for="quickKitchenType">Section cuisine</label>
-        <select class="kitchen-type-select" id="quickKitchenType" aria-label="Section cuisine">
-          <option value="cuisson">Cuisson</option>
-          <option value="decoupe">Découpe</option>
-          <option value="preparation" selected>Préparation</option>
-        </select>
-        <label class="sr-only" for="quickInput">Ajouter une tâche</label>
-        <input
-          id="quickInput"
-          name="task"
-          type="text"
-          maxlength="180"
-          enterkeyhint="done"
-          placeholder="Ajouter une tâche…"
-        />
+    <dialog
+      class="weekly-prep-dish-dialog"
+      id="weeklyPrepDishDialog"
+      aria-labelledby="weeklyPrepDishDialogTitle"
+    >
+      <form method="dialog">
+        <header>
+          <div>
+            <p class="eyebrow">Rappel de la carte</p>
+            <h2 id="weeklyPrepDishDialogTitle"></h2>
+          </div>
+          <button class="icon-button" type="submit" aria-label="Fermer">
+            ×
+          </button>
+        </header>
+        <p class="weekly-prep-dish-dialog-note">
+          Actions du plat, classées par étape et état.
+        </p>
+        <div class="weekly-prep-dish-actions" id="weeklyPrepDishActions"></div>
         <button
-          class="estimate-button"
-          id="quickEstimate"
-          type="button"
-          aria-label="Ajouter une durée estimée"
-          aria-haspopup="dialog"
+          class="primary-button weekly-prep-dish-dialog-close"
+          type="submit"
         >
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <circle cx="12" cy="13" r="7.5"></circle>
-            <path d="M12 9v4.5l3 1.8M9 3h6M12 3v2"></path>
-          </svg>
-          <span class="estimate-indicator" aria-hidden="true"></span>
+          Fermer
         </button>
-        <button class="submit-button" type="submit" aria-label="Ajouter la tâche">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
-        </button>
-      </div>
-    </form>
+      </form>
+    </dialog>
 
     <dialog class="sheet" id="settingsDialog" aria-labelledby="settingsTitle">
       <div class="sheet-handle" aria-hidden="true"></div>
       <header class="sheet-header">
         <div class="sheet-header-leading">
-          <button class="icon-button sheet-back-button" id="backToSettings" type="button" aria-label="Retour aux routines" hidden>
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg>
+          <button
+            class="icon-button sheet-back-button"
+            id="backToSettings"
+            type="button"
+            aria-label="Retour aux routines"
+            hidden
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
           </button>
           <h2 id="settingsTitle">Routine</h2>
         </div>
-        <button class="icon-button close-button" id="closeSettings" type="button" aria-label="Fermer">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+        <button
+          class="icon-button close-button"
+          id="closeSettings"
+          type="button"
+          aria-label="Fermer"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
         </button>
       </header>
 
       <div class="sheet-content">
         <div class="settings-main-view" id="settingsMainView">
           <section class="settings-section">
-          <div class="settings-title-row">
-            <div>
-              <p class="eyebrow">Routine</p>
-              <h3>Checklist du matin</h3>
+            <div class="settings-title-row">
+              <div>
+                <p class="eyebrow">Routine</p>
+                <h3>Checklist du matin</h3>
+              </div>
+              <label class="switch-label">
+                <span class="switch-copy">Auto</span>
+                <input id="autoMorning" type="checkbox" />
+                <span class="switch" aria-hidden="true"></span>
+                <span class="sr-only"
+                  >Créer automatiquement la checklist du matin</span
+                >
+              </label>
             </div>
-            <label class="switch-label">
-              <span class="switch-copy">Auto</span>
-              <input id="autoMorning" type="checkbox" />
-              <span class="switch" aria-hidden="true"></span>
-              <span class="sr-only">Créer automatiquement la checklist du matin</span>
-            </label>
-          </div>
-          <div class="template-list" id="morningTemplateList"></div>
-          <form class="template-add" data-template-form="morning">
-            <input type="text" maxlength="180" placeholder="Ajouter une étape…" aria-label="Ajouter une étape au matin" />
-            <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
-          </form>
-          <button class="secondary-button" id="addMorningToday" type="button">Ajouter à aujourd’hui</button>
+            <div class="template-list" id="morningTemplateList"></div>
+            <form class="template-add" data-template-form="morning">
+              <input
+                type="text"
+                maxlength="180"
+                placeholder="Ajouter une étape…"
+                aria-label="Ajouter une étape au matin"
+              />
+              <button type="submit" aria-label="Ajouter">
+                <span aria-hidden="true">+</span>
+              </button>
+            </form>
+            <button class="secondary-button" id="addMorningToday" type="button">
+              Ajouter à aujourd’hui
+            </button>
           </section>
 
           <section class="settings-section">
-          <div class="settings-title-row">
-            <div>
-              <p class="eyebrow">Routine</p>
-              <h3>Checklist du soir</h3>
+            <div class="settings-title-row">
+              <div>
+                <p class="eyebrow">Routine</p>
+                <h3>Checklist du soir</h3>
+              </div>
+              <label class="switch-label">
+                <span class="switch-copy">Auto</span>
+                <input id="autoEvening" type="checkbox" />
+                <span class="switch" aria-hidden="true"></span>
+                <span class="sr-only"
+                  >Créer automatiquement la checklist du soir</span
+                >
+              </label>
             </div>
-            <label class="switch-label">
-              <span class="switch-copy">Auto</span>
-              <input id="autoEvening" type="checkbox" />
-              <span class="switch" aria-hidden="true"></span>
-              <span class="sr-only">Créer automatiquement la checklist du soir</span>
-            </label>
-          </div>
-          <div class="template-list" id="eveningTemplateList"></div>
-          <form class="template-add" data-template-form="evening">
-            <input type="text" maxlength="180" placeholder="Ajouter une étape…" aria-label="Ajouter une étape au soir" />
-            <button type="submit" aria-label="Ajouter"><span aria-hidden="true">+</span></button>
-          </form>
-          <button class="secondary-button" id="addEveningToday" type="button">Ajouter à aujourd’hui</button>
+            <div class="template-list" id="eveningTemplateList"></div>
+            <form class="template-add" data-template-form="evening">
+              <input
+                type="text"
+                maxlength="180"
+                placeholder="Ajouter une étape…"
+                aria-label="Ajouter une étape au soir"
+              />
+              <button type="submit" aria-label="Ajouter">
+                <span aria-hidden="true">+</span>
+              </button>
+            </form>
+            <button class="secondary-button" id="addEveningToday" type="button">
+              Ajouter à aujourd’hui
+            </button>
           </section>
 
           <section class="settings-section compact-section">
@@ -351,67 +447,125 @@
               <button class="plain-action" id="exportData" type="button">
                 <span>Sauvegarder</span><span aria-hidden="true">↓</span>
               </button>
-              <button class="plain-action file-action" id="importDataButton" type="button">
+              <button
+                class="plain-action file-action"
+                id="importDataButton"
+                type="button"
+              >
                 <span>Restaurer</span><span aria-hidden="true">↑</span>
               </button>
-              <input class="sr-only" id="importData" type="file" accept="application/json,.json" tabindex="-1" aria-label="Choisir une sauvegarde" />
+              <input
+                class="sr-only"
+                id="importData"
+                type="file"
+                accept="application/json,.json"
+                tabindex="-1"
+                aria-label="Choisir une sauvegarde"
+              />
               <button class="plain-action" id="installApp" type="button" hidden>
                 <span>Installer l’app</span><span aria-hidden="true">+</span>
               </button>
-              <button class="plain-action danger-action" id="clearCompleted" type="button">
-                <span>Retirer les tâches terminées</span><span aria-hidden="true">×</span>
+              <button
+                class="plain-action danger-action"
+                id="clearCompleted"
+                type="button"
+              >
+                <span>Retirer les tâches terminées</span
+                ><span aria-hidden="true">×</span>
               </button>
             </div>
           </section>
         </div>
 
-        <section class="history-view" id="historyView" aria-labelledby="settingsTitle" hidden>
+        <section
+          class="history-view"
+          id="historyView"
+          aria-labelledby="settingsTitle"
+          hidden
+        >
           <p class="history-intro" id="historySummary"></p>
           <div class="history-list" id="historyList"></div>
         </section>
       </div>
     </dialog>
 
-    <dialog class="task-dialog" id="taskDialog" aria-labelledby="taskDialogTitle">
+    <dialog
+      class="task-dialog"
+      id="taskDialog"
+      aria-labelledby="taskDialogTitle"
+    >
       <form id="editTaskForm">
         <header class="task-dialog-header">
           <h2 id="taskDialogTitle">Modifier</h2>
-          <button class="icon-button" id="closeTaskDialog" type="button" aria-label="Fermer">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+          <button
+            class="icon-button"
+            id="closeTaskDialog"
+            type="button"
+            aria-label="Fermer"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 6 12 12M18 6 6 18"></path>
+            </svg>
           </button>
         </header>
 
         <label class="field-label" for="editTaskLabel">Tâche</label>
-        <input class="text-field" id="editTaskLabel" type="text" maxlength="180" required />
+        <input
+          class="text-field"
+          id="editTaskLabel"
+          type="text"
+          maxlength="180"
+          required
+        />
 
         <fieldset class="list-fieldset" id="taskListFieldset">
           <legend>Liste</legend>
           <div class="segmented-control list-control">
-            <label><input type="radio" name="task-list" value="cuisineToday" /><span>Générale · Aujourd’hui</span></label>
-            <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
-            <label><input type="radio" name="task-list" value="bring" /><span>Achat évolutif</span></label>
+            <label
+              ><input type="radio" name="task-list" value="cuisineToday" /><span
+                >Générale · Aujourd’hui</span
+              ></label
+            >
+            <label
+              ><input type="radio" name="task-list" value="maintenance" /><span
+                >Entretien / innovation</span
+              ></label
+            >
+            <label
+              ><input type="radio" name="task-list" value="bring" /><span
+                >Achat évolutif</span
+              ></label
+            >
           </div>
-        </fieldset>
-
-        <fieldset class="kitchen-type-fieldset" id="kitchenTypeFieldset" hidden>
-          <legend>Section cuisine</legend>
-          <select class="kitchen-type-select edit-kitchen-type-select" id="editKitchenType" aria-label="Section cuisine">
-            <option value="cuisson">Cuisson</option>
-            <option value="decoupe">Découpe</option>
-            <option value="preparation">Préparation</option>
-          </select>
         </fieldset>
 
         <fieldset class="moment-fieldset" id="momentFieldset">
           <legend>Moment</legend>
           <div class="segmented-control">
-            <label><input type="radio" name="moment" value="any" /><span>Libre</span></label>
-            <label><input type="radio" name="moment" value="morning" /><span>Matin</span></label>
-            <label><input type="radio" name="moment" value="evening" /><span>Soir</span></label>
+            <label
+              ><input type="radio" name="moment" value="any" /><span
+                >Libre</span
+              ></label
+            >
+            <label
+              ><input type="radio" name="moment" value="morning" /><span
+                >Matin</span
+              ></label
+            >
+            <label
+              ><input type="radio" name="moment" value="evening" /><span
+                >Soir</span
+              ></label
+            >
           </div>
         </fieldset>
 
-        <button class="task-estimate-control" id="editEstimate" type="button" aria-haspopup="dialog">
+        <button
+          class="task-estimate-control"
+          id="editEstimate"
+          type="button"
+          aria-haspopup="dialog"
+        >
           <span class="task-estimate-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <circle cx="12" cy="13" r="7.5"></circle>
@@ -422,28 +576,49 @@
             <span>Durée estimée</span>
             <strong id="editEstimateValue">Aucune</strong>
           </span>
-          <svg class="task-estimate-chevron" aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></svg>
+          <svg
+            class="task-estimate-chevron"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+          >
+            <path d="m9 6 6 6-6 6"></path>
+          </svg>
         </button>
 
         <div class="task-dialog-actions">
-          <button class="delete-button" id="deleteTask" type="button">Supprimer</button>
+          <button class="delete-button" id="deleteTask" type="button">
+            Supprimer
+          </button>
           <button class="save-button" type="submit">Enregistrer</button>
         </div>
       </form>
     </dialog>
 
-    <dialog class="duration-dialog" id="durationDialog" aria-labelledby="durationDialogTitle">
+    <dialog
+      class="duration-dialog"
+      id="durationDialog"
+      aria-labelledby="durationDialogTitle"
+    >
       <div class="duration-dialog-handle" aria-hidden="true"></div>
       <header class="duration-dialog-header">
         <div>
           <p class="eyebrow">Optionnel</p>
           <h2 id="durationDialogTitle">Durée estimée</h2>
         </div>
-        <button class="icon-button" id="closeDurationDialog" type="button" aria-label="Fermer">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+        <button
+          class="icon-button"
+          id="closeDurationDialog"
+          type="button"
+          aria-label="Fermer"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+          </svg>
         </button>
       </header>
-      <p class="duration-help">Choisis le temps visé pour accomplir cette tâche.</p>
+      <p class="duration-help">
+        Choisis le temps visé pour accomplir cette tâche.
+      </p>
       <div class="duration-grid" role="group" aria-label="Choisir une durée">
         <button type="button" data-duration-minutes="5">5 min</button>
         <button type="button" data-duration-minutes="10">10 min</button>
@@ -456,24 +631,56 @@
         <button type="button" data-duration-minutes="120">2 h</button>
       </div>
       <form class="custom-duration" id="customDurationForm">
-        <label class="sr-only" for="customDurationInput">Autre durée en minutes</label>
-        <input id="customDurationInput" type="number" min="1" max="720" inputmode="numeric" placeholder="Autre durée" />
+        <label class="sr-only" for="customDurationInput"
+          >Autre durée en minutes</label
+        >
+        <input
+          id="customDurationInput"
+          type="number"
+          min="1"
+          max="720"
+          inputmode="numeric"
+          placeholder="Autre durée"
+        />
         <span aria-hidden="true">min</span>
         <button type="submit">Valider</button>
       </form>
-      <button class="clear-duration" id="clearDuration" type="button">Aucune durée</button>
+      <button class="clear-duration" id="clearDuration" type="button">
+        Aucune durée
+      </button>
     </dialog>
 
-    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" popover="manual">
+    <div
+      class="toast"
+      id="toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      popover="manual"
+    >
       <span id="toastMessage"></span>
       <button id="toastAction" type="button" hidden></button>
-      <button class="toast-dismiss" id="toastDismiss" type="button" aria-label="Fermer" hidden>×</button>
+      <button
+        class="toast-dismiss"
+        id="toastDismiss"
+        type="button"
+        aria-label="Fermer"
+        hidden
+      >
+        ×
+      </button>
     </div>
 
     <template id="taskTemplate">
       <article class="task-row" role="listitem">
-        <button class="check-button" type="button" aria-label="Marquer comme terminée">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8"></path></svg>
+        <button
+          class="check-button"
+          type="button"
+          aria-label="Marquer comme terminée"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6.5 12.5 3.5 3.5 7.5-8"></path>
+          </svg>
         </button>
         <button class="task-main" type="button">
           <span class="task-label"></span>

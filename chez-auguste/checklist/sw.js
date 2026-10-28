@@ -1,13 +1,13 @@
 "use strict";
 
-const BUILD_ID = "23";
+const BUILD_ID = "24";
 const CACHE_NAME = `auguste-checklist-v${BUILD_ID}`;
 const CACHE_PREFIX = "auguste-checklist-";
 const INDEX_URL = new URL("./index.html", self.location.href).href;
 const CORE_SHELL = [
   "./index.html",
-  "./styles.css?v=25",
-  "./app.js?v=31",
+  "./styles.css?v=26",
+  "./app.js?v=32",
   "./manifest.webmanifest",
   "../assets/supabase-D_AYc1Jo.js",
 ];
@@ -18,13 +18,20 @@ const OPTIONAL_ASSETS = [
   "../app-icon-512.png",
 ];
 const APP_SHELL_URLS = new Set(
-  [...CORE_SHELL, ...OPTIONAL_ASSETS].map((asset) => new URL(asset, self.location.href).href),
+  [...CORE_SHELL, ...OPTIONAL_ASSETS].map(
+    (asset) => new URL(asset, self.location.href).href,
+  ),
 );
 
 async function cacheAsset(cache, asset) {
-  const request = new Request(new URL(asset, self.location.href).href, { cache: "reload" });
+  const request = new Request(new URL(asset, self.location.href).href, {
+    cache: "reload",
+  });
   const response = await fetch(request);
-  if (!response.ok) throw new Error(`Impossible de mettre en cache ${asset}: ${response.status}`);
+  if (!response.ok)
+    throw new Error(
+      `Impossible de mettre en cache ${asset}: ${response.status}`,
+    );
   await cache.put(request, response);
 }
 
@@ -33,7 +40,9 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME).then(async (cache) => {
       await Promise.all(CORE_SHELL.map((asset) => cacheAsset(cache, asset)));
       await Promise.all(
-        OPTIONAL_ASSETS.map((asset) => cacheAsset(cache, asset).catch(() => undefined)),
+        OPTIONAL_ASSETS.map((asset) =>
+          cacheAsset(cache, asset).catch(() => undefined),
+        ),
       );
     }),
   );
@@ -84,5 +93,4 @@ self.addEventListener("fetch", (event) => {
 
   if (!responsePromise) return;
   event.respondWith(responsePromise);
-  event.waitUntil(responsePromise.then(() => undefined, () => undefined));
 });

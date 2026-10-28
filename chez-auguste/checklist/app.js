@@ -7,17 +7,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-28-weekly-prep-category-persistence-v3";
+  const APP_BUILD_ID = "2026-10-28-project-cleanup-v4";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-  const QUICK_TARGET_ORDER = ["cuisineToday", "maintenance", "bring"];
-  const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
-  const KITCHEN_TYPE_LABELS = { cuisson: "Cuisson", decoupe: "Découpe", preparation: "Préparation" };
+  const TASK_LIST_OPTIONS = ["cuisineToday", "maintenance", "bring"];
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
   const REORDER_MAX_SCROLL_SPEED = 14;
   const SUPABASE_URL = "https://eoewkjfgqivrkkgpjsrk.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
+  const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_b9sZUgW7Sr2WItAxEqCoyw_gc-xoJyl";
   const SHARED_SECTION = "checklist";
   const ITEMS_TABLE = "auguste_checklist_items";
   const MUTATIONS_TABLE = "auguste_checklist_mutations";
@@ -55,7 +54,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DEVICE_ID = persistentDeviceId();
   const DEFAULT_SETTINGS = {
     id: "preferences",
-    quickTarget: "cuisineToday",
     autoMorning: false,
     autoEvening: false,
   };
@@ -63,9 +61,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const elements = {
     currentDate: document.querySelector("#currentDate"),
     cuisineTodayList: document.querySelector("#cuisineTodayList"),
-    cuisineTomorrowList: document.querySelector("#cuisineTomorrowList"),
-    salleTodayList: document.querySelector("#salleTodayList"),
-    salleTomorrowList: document.querySelector("#salleTomorrowList"),
     bringList: document.querySelector("#bringList"),
     bringAddForm: document.querySelector("#bringAddForm"),
     bringInput: document.querySelector("#bringInput"),
@@ -73,9 +68,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     maintenancePanel: document.querySelector("#maintenancePanel"),
     maintenanceList: document.querySelector("#maintenanceList"),
     cuisineTodayProgress: document.querySelector("#cuisineTodayProgress"),
-    cuisineTomorrowProgress: document.querySelector("#cuisineTomorrowProgress"),
-    salleTodayProgress: document.querySelector("#salleTodayProgress"),
-    salleTomorrowProgress: document.querySelector("#salleTomorrowProgress"),
     bringProgress: document.querySelector("#bringProgress"),
     maintenanceProgress: document.querySelector("#maintenanceProgress"),
     weeklyPrepToggle: document.querySelector("#weeklyPrepToggle"),
@@ -86,7 +78,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepDishes: document.querySelector("#weeklyPrepDishes"),
     weeklyPrepDishSummary: document.querySelector("#weeklyPrepDishSummary"),
     weeklyPrepDishDialog: document.querySelector("#weeklyPrepDishDialog"),
-    weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
+    weeklyPrepDishDialogTitle: document.querySelector(
+      "#weeklyPrepDishDialogTitle",
+    ),
     weeklyPrepDishActions: document.querySelector("#weeklyPrepDishActions"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
     weeklyPrepAddDisclosure: document.querySelector("#weeklyPrepAddDisclosure"),
@@ -98,15 +92,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepRefillDay: document.querySelector("#weeklyPrepRefillDay"),
     weeklyPrepSubmit: document.querySelector("#weeklyPrepSubmit"),
     weeklyPrepCancel: document.querySelector("#weeklyPrepCancel"),
-    quickAddForm: document.querySelector("#quickAddForm"),
-    quickInput: document.querySelector("#quickInput"),
-    quickTarget: document.querySelector("#quickTarget"),
-    quickKitchenType: document.querySelector("#quickKitchenType"),
-    quickEstimate: document.querySelector("#quickEstimate"),
     emptyAddCuisineToday: document.querySelector("#emptyAddCuisineToday"),
-    emptyAddCuisineTomorrow: document.querySelector("#emptyAddCuisineTomorrow"),
-    emptyAddSalleToday: document.querySelector("#emptyAddSalleToday"),
-    emptyAddSalleTomorrow: document.querySelector("#emptyAddSalleTomorrow"),
     emptyAddMaintenance: document.querySelector("#emptyAddMaintenance"),
     taskTemplate: document.querySelector("#taskTemplate"),
     settingsDialog: document.querySelector("#settingsDialog"),
@@ -135,8 +121,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editTaskForm: document.querySelector("#editTaskForm"),
     editTaskLabel: document.querySelector("#editTaskLabel"),
     taskListFieldset: document.querySelector("#taskListFieldset"),
-    kitchenTypeFieldset: document.querySelector("#kitchenTypeFieldset"),
-    editKitchenType: document.querySelector("#editKitchenType"),
     momentFieldset: document.querySelector("#momentFieldset"),
     editEstimate: document.querySelector("#editEstimate"),
     editEstimateValue: document.querySelector("#editEstimateValue"),
@@ -162,9 +146,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     occurrences: [],
     settings: { ...DEFAULT_SETTINGS },
     activeTaskId: null,
-    quickEstimateMinutes: null,
+    editorTaskList: null,
     editEstimateMinutes: null,
-    durationTarget: null,
     lastDateKey: "",
     maintenanceOpen: false,
   };
@@ -192,7 +175,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   let pendingLocalRefresh = false;
   let localMutationVersion = 0;
   const optimisticRevisions = new Map();
-  const syncChannel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
+  const syncChannel =
+    "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       persistSession: false,
@@ -221,7 +205,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (crypto.randomUUID) return crypto.randomUUID();
     const bytes = new Uint8Array(16);
     if (crypto.getRandomValues) crypto.getRandomValues(bytes);
-    else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+    else
+      for (let index = 0; index < bytes.length; index += 1)
+        bytes[index] = Math.floor(Math.random() * 256);
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     const hex = [...bytes].map((value) => value.toString(16).padStart(2, "0"));
@@ -230,11 +216,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function cssEscape(value) {
     if (window.CSS?.escape) return window.CSS.escape(String(value));
-    return [...String(value)].map((character) => (
-      /[a-zA-Z0-9_-]/.test(character)
-        ? character
-        : `\\${character.codePointAt(0).toString(16)} `
-    )).join("");
+    return [...String(value)]
+      .map((character) =>
+        /[a-zA-Z0-9_-]/.test(character)
+          ? character
+          : `\\${character.codePointAt(0).toString(16)} `,
+      )
+      .join("");
   }
 
   function persistentDeviceId() {
@@ -272,14 +260,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return toDateKey(new Date());
   }
 
-  function tomorrowKey() {
-    return shiftDateKey(todayKey(), 1);
-  }
-
   function historyDateKey(date = new Date()) {
     const parts = Object.fromEntries(
-      HISTORY_DAY_KEY_FORMATTER
-        .formatToParts(date)
+      HISTORY_DAY_KEY_FORMATTER.formatToParts(date)
         .filter((part) => part.type !== "literal")
         .map((part) => [part.type, part.value]),
     );
@@ -321,7 +304,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           database.createObjectStore("occurrences", { keyPath: "id" });
         }
         if (!database.objectStoreNames.contains("outbox")) {
-          const outbox = database.createObjectStore("outbox", { keyPath: "id" });
+          const outbox = database.createObjectStore("outbox", {
+            keyPath: "id",
+          });
           outbox.createIndex("createdAt", "createdAt", { unique: false });
         }
         if (!database.objectStoreNames.contains("meta")) {
@@ -355,7 +340,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         history: Array.isArray(parsed.history) ? parsed.history : [],
         templates: Array.isArray(parsed.templates) ? parsed.templates : [],
         settings: Array.isArray(parsed.settings) ? parsed.settings : [],
-        occurrences: Array.isArray(parsed.occurrences) ? parsed.occurrences : [],
+        occurrences: Array.isArray(parsed.occurrences)
+          ? parsed.occurrences
+          : [],
         outbox: Array.isArray(parsed.outbox) ? parsed.outbox : [],
         meta: Array.isArray(parsed.meta) ? parsed.meta : [],
       };
@@ -389,23 +376,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const database = await getDatabase();
     if (!database) return readFallback()[storeName];
     return new Promise((resolve, reject) => {
-      const request = database.transaction(storeName, "readonly").objectStore(storeName).getAll();
+      const request = database
+        .transaction(storeName, "readonly")
+        .objectStore(storeName)
+        .getAll();
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
   function entityTypeForStore(storeName) {
-    return {
-      tasks: "task",
-      templates: "template",
-      occurrences: "occurrence",
-      settings: "setting",
-    }[storeName] || null;
+    return (
+      {
+        tasks: "task",
+        templates: "template",
+        occurrences: "occurrence",
+        settings: "setting",
+      }[storeName] || null
+    );
   }
 
   function mutationPayload(storeName, record) {
-    const { _syncRevision: ignoredSyncRevision, ...shareableRecord } = record || {};
+    const { _syncRevision: ignoredSyncRevision, ...shareableRecord } =
+      record || {};
     if (storeName === "settings") {
       return {
         id: "preferences",
@@ -436,20 +429,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (!record?.id?.startsWith(REVISION_META_PREFIX)) continue;
       if (!record.entityType || !record.entityId) continue;
       const entityKey = mutationEntityKey(record.entityType, record.entityId);
-      optimisticRevisions.set(entityKey, Math.max(
-        syncRevision(optimisticRevisions.get(entityKey)),
-        syncRevision(record.revision),
-      ));
+      optimisticRevisions.set(
+        entityKey,
+        Math.max(
+          syncRevision(optimisticRevisions.get(entityKey)),
+          syncRevision(record.revision),
+        ),
+      );
     }
   }
 
   function rememberOutboxRevisions(outbox) {
     for (const mutation of outbox || []) {
-      const entityKey = mutationEntityKey(mutation.entityType, mutation.entityId);
-      optimisticRevisions.set(entityKey, Math.max(
-        syncRevision(optimisticRevisions.get(entityKey)),
-        syncRevision(mutation.baseRevision) + 1,
-      ));
+      const entityKey = mutationEntityKey(
+        mutation.entityType,
+        mutation.entityId,
+      );
+      optimisticRevisions.set(
+        entityKey,
+        Math.max(
+          syncRevision(optimisticRevisions.get(entityKey)),
+          syncRevision(mutation.baseRevision) + 1,
+        ),
+      );
     }
   }
 
@@ -465,11 +467,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const recordRevision = syncRevision(record?._syncRevision);
     const hadOptimisticRevision = optimisticRevisions.has(entityKey);
     const previousOptimisticRevision = optimisticRevisions.get(entityKey);
-    const hasForcedBase = Number.isInteger(options.baseRevision) && options.baseRevision >= 0;
+    const hasForcedBase =
+      Number.isInteger(options.baseRevision) && options.baseRevision >= 0;
     const baseRevision = hasForcedBase
       ? options.baseRevision
       : Math.max(recordRevision, syncRevision(previousOptimisticRevision));
-    const hadRecordRevision = Object.prototype.hasOwnProperty.call(record, "_syncRevision");
+    const hadRecordRevision = Object.prototype.hasOwnProperty.call(
+      record,
+      "_syncRevision",
+    );
     const mutation = {
       id: makeUuid(),
       entityType,
@@ -494,10 +500,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function rollbackMutations(mutations) {
     for (const mutation of [...mutations].filter(Boolean).reverse()) {
-      const entityKey = mutationEntityKey(mutation.entityType, mutation.entityId);
+      const entityKey = mutationEntityKey(
+        mutation.entityType,
+        mutation.entityId,
+      );
       if (optimisticRevisions.get(entityKey) === mutation.optimisticRevision) {
         if (mutation.hadOptimisticRevision) {
-          optimisticRevisions.set(entityKey, mutation.previousOptimisticRevision);
+          optimisticRevisions.set(
+            entityKey,
+            mutation.previousOptimisticRevision,
+          );
         } else {
           optimisticRevisions.delete(entityKey);
         }
@@ -535,7 +547,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function putMutationInTransaction(transaction, mutation) {
-    if (mutation) transaction.objectStore("outbox").put(outboxMutation(mutation));
+    if (mutation)
+      transaction.objectStore("outbox").put(outboxMutation(mutation));
   }
 
   async function queueMutations(mutations, metaRecord = null) {
@@ -544,7 +557,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const database = await getDatabase();
       if (!database) {
         const data = readFallback();
-        for (const mutation of validMutations) putMutationInFallback(data, mutation);
+        for (const mutation of validMutations)
+          putMutationInFallback(data, mutation);
         if (metaRecord) {
           data.meta = data.meta.filter((item) => item.id !== metaRecord.id);
           data.meta.push(metaRecord);
@@ -556,11 +570,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (metaRecord) storeNames.push("meta");
       await new Promise((resolve, reject) => {
         const transaction = database.transaction(storeNames, "readwrite");
-        for (const mutation of validMutations) putMutationInTransaction(transaction, mutation);
+        for (const mutation of validMutations)
+          putMutationInTransaction(transaction, mutation);
         if (metaRecord) transaction.objectStore("meta").put(metaRecord);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("File d’attente annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("File d’attente annulée"));
       });
     } catch (error) {
       rollbackMutations(validMutations);
@@ -589,7 +605,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       transaction.objectStore("meta").put(headRecord);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error || new Error("Accusé de réception annulé"));
+      transaction.onabort = () =>
+        reject(transaction.error || new Error("Accusé de réception annulé"));
     });
   }
 
@@ -609,17 +626,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       transaction.objectStore("outbox").put(persistedMutation);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(
-        transaction.error || new Error("Mise à jour de synchronisation annulée"),
-      );
+      transaction.onabort = () =>
+        reject(
+          transaction.error ||
+            new Error("Mise à jour de synchronisation annulée"),
+        );
     });
   }
 
   async function getMetaRecord(id) {
     const database = await getDatabase();
-    if (!database) return readFallback().meta.find((item) => item.id === id) || null;
+    if (!database)
+      return readFallback().meta.find((item) => item.id === id) || null;
     return new Promise((resolve, reject) => {
-      const request = database.transaction("meta", "readonly").objectStore("meta").get(id);
+      const request = database
+        .transaction("meta", "readonly")
+        .objectStore("meta")
+        .get(id);
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
@@ -631,7 +654,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const database = await getDatabase();
       if (!database) {
         const data = readFallback();
-        const index = data[storeName].findIndex((item) => item.id === record.id);
+        const index = data[storeName].findIndex(
+          (item) => item.id === record.id,
+        );
         if (index >= 0) data[storeName][index] = record;
         else data[storeName].push(record);
         putMutationInFallback(data, mutation);
@@ -647,7 +672,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Écriture annulée"));
       });
     } catch (error) {
       rollbackMutations([mutation]);
@@ -656,7 +682,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function putTaskWithHistory(task, historyEntry = null) {
-    const historyRecord = historyEntry ? historyCompatibilityRecord(historyEntry) : null;
+    const historyRecord = historyEntry
+      ? historyCompatibilityRecord(historyEntry)
+      : null;
     const taskMutation = makeMutation("tasks", task, "upsert");
     const historyMutation = historyRecord
       ? makeMutation("occurrences", historyRecord, "upsert")
@@ -664,25 +692,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     try {
       const database = await getDatabase();
       if (!database) {
-      const data = readFallback();
-      const taskIndex = data.tasks.findIndex((item) => item.id === task.id);
-      if (taskIndex >= 0) data.tasks[taskIndex] = task;
-      else data.tasks.push(task);
-      if (historyEntry) {
-        const historyIndex = data.history.findIndex((item) => item.id === historyEntry.id);
-        if (historyIndex >= 0) data.history[historyIndex] = historyEntry;
-        else data.history.push(historyEntry);
-        const compatibilityRecord = historyRecord;
-        const occurrenceIndex = data.occurrences.findIndex(
-          (item) => item.id === compatibilityRecord.id,
-        );
-        if (occurrenceIndex >= 0) data.occurrences[occurrenceIndex] = compatibilityRecord;
-        else data.occurrences.push(compatibilityRecord);
-      }
-      putMutationInFallback(data, taskMutation);
-      putMutationInFallback(data, historyMutation);
+        const data = readFallback();
+        const taskIndex = data.tasks.findIndex((item) => item.id === task.id);
+        if (taskIndex >= 0) data.tasks[taskIndex] = task;
+        else data.tasks.push(task);
+        if (historyEntry) {
+          const historyIndex = data.history.findIndex(
+            (item) => item.id === historyEntry.id,
+          );
+          if (historyIndex >= 0) data.history[historyIndex] = historyEntry;
+          else data.history.push(historyEntry);
+          const compatibilityRecord = historyRecord;
+          const occurrenceIndex = data.occurrences.findIndex(
+            (item) => item.id === compatibilityRecord.id,
+          );
+          if (occurrenceIndex >= 0)
+            data.occurrences[occurrenceIndex] = compatibilityRecord;
+          else data.occurrences.push(compatibilityRecord);
+        }
+        putMutationInFallback(data, taskMutation);
+        putMutationInFallback(data, historyMutation);
         writeFallback(data);
-        if (historyEntry) historyEntry._syncRevision = historyRecord._syncRevision;
+        if (historyEntry)
+          historyEntry._syncRevision = historyRecord._syncRevision;
         return;
       }
       await new Promise((resolve, reject) => {
@@ -698,9 +730,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         putMutationInTransaction(transaction, historyMutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Écriture annulée"));
       });
-      if (historyEntry) historyEntry._syncRevision = historyRecord._syncRevision;
+      if (historyEntry)
+        historyEntry._syncRevision = historyRecord._syncRevision;
     } catch (error) {
       rollbackMutations([taskMutation, historyMutation]);
       throw error;
@@ -713,27 +747,34 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     try {
       const database = await getDatabase();
       if (!database) {
-      const data = readFallback();
-      const index = data.history.findIndex((item) => item.id === historyEntry.id);
-      if (index >= 0) data.history[index] = historyEntry;
-      else data.history.push(historyEntry);
-      const occurrenceIndex = data.occurrences.findIndex(
-        (item) => item.id === compatibilityRecord.id,
-      );
-      if (occurrenceIndex >= 0) data.occurrences[occurrenceIndex] = compatibilityRecord;
-      else data.occurrences.push(compatibilityRecord);
-      putMutationInFallback(data, mutation);
+        const data = readFallback();
+        const index = data.history.findIndex(
+          (item) => item.id === historyEntry.id,
+        );
+        if (index >= 0) data.history[index] = historyEntry;
+        else data.history.push(historyEntry);
+        const occurrenceIndex = data.occurrences.findIndex(
+          (item) => item.id === compatibilityRecord.id,
+        );
+        if (occurrenceIndex >= 0)
+          data.occurrences[occurrenceIndex] = compatibilityRecord;
+        else data.occurrences.push(compatibilityRecord);
+        putMutationInFallback(data, mutation);
         writeFallback(data);
         historyEntry._syncRevision = compatibilityRecord._syncRevision;
         return;
       }
       await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["occurrences", "outbox"], "readwrite");
+        const transaction = database.transaction(
+          ["occurrences", "outbox"],
+          "readwrite",
+        );
         transaction.objectStore("occurrences").put(compatibilityRecord);
         putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Écriture annulée"));
       });
       historyEntry._syncRevision = compatibilityRecord._syncRevision;
     } catch (error) {
@@ -749,7 +790,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const database = await getDatabase();
       if (!database) {
         const data = readFallback();
-        const positions = new Map(taskIds.map((id, index) => [id, positionBase + index]));
+        const positions = new Map(
+          taskIds.map((id, index) => [id, positionBase + index]),
+        );
         const updatedRecords = [];
         data.tasks = data.tasks.map((task) => {
           if (!positions.has(task.id)) return task;
@@ -768,7 +811,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         return updatedRecords;
       }
       return await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["tasks", "outbox"], "readwrite");
+        const transaction = database.transaction(
+          ["tasks", "outbox"],
+          "readwrite",
+        );
         const store = transaction.objectStore("tasks");
         const updatedRecords = [];
         taskIds.forEach((id, index) => {
@@ -789,7 +835,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         });
         transaction.oncomplete = () => resolve(updatedRecords);
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Écriture annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Écriture annulée"));
       });
     } catch (error) {
       rollbackMutations(mutations);
@@ -802,19 +849,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     try {
       const database = await getDatabase();
       if (!database) {
-      const data = readFallback();
-      data[storeName] = data[storeName].filter((item) => item.id !== id);
-      putMutationInFallback(data, mutation);
+        const data = readFallback();
+        data[storeName] = data[storeName].filter((item) => item.id !== id);
+        putMutationInFallback(data, mutation);
         writeFallback(data);
         return;
       }
       await new Promise((resolve, reject) => {
-        const transaction = database.transaction([storeName, "outbox"], "readwrite");
+        const transaction = database.transaction(
+          [storeName, "outbox"],
+          "readwrite",
+        );
         transaction.objectStore(storeName).delete(id);
         putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Suppression annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Suppression annulée"));
       });
     } catch (error) {
       rollbackMutations([mutation]);
@@ -845,27 +896,37 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return new Promise((resolve, reject) => {
       const storeNames = ["tasks", "templates", "settings", "occurrences"];
       const transaction = database.transaction(storeNames, "readwrite");
-      for (const storeName of storeNames) transaction.objectStore(storeName).clear();
-      for (const task of nextState.tasks) transaction.objectStore("tasks").put(task);
+      for (const storeName of storeNames)
+        transaction.objectStore(storeName).clear();
+      for (const task of nextState.tasks)
+        transaction.objectStore("tasks").put(task);
       for (const historyEntry of nextState.history || []) {
-        transaction.objectStore("occurrences").put(historyCompatibilityRecord(historyEntry));
+        transaction
+          .objectStore("occurrences")
+          .put(historyCompatibilityRecord(historyEntry));
       }
-      for (const template of nextState.templates) transaction.objectStore("templates").put(template);
+      for (const template of nextState.templates)
+        transaction.objectStore("templates").put(template);
       for (const occurrence of nextState.occurrences || []) {
         transaction.objectStore("occurrences").put(occurrence);
       }
       transaction.objectStore("settings").put(nextState.settings);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error || new Error("Restauration annulée"));
+      transaction.onabort = () =>
+        reject(transaction.error || new Error("Restauration annulée"));
     });
   }
 
   function storedRecordsToState(records) {
     const occurrenceRecords = records.occurrences || [];
     return {
-      tasks: (records.tasks || []).map(normalizeTask).filter((task) => task.label),
-      history: mergeCompletionHistory(occurrenceRecords.filter(isHistoryRecord)),
+      tasks: (records.tasks || [])
+        .map(normalizeTask)
+        .filter((task) => task.label),
+      history: mergeCompletionHistory(
+        occurrenceRecords.filter(isHistoryRecord),
+      ),
       templates: (records.templates || [])
         .map(normalizeTemplate)
         .filter((template) => template.label),
@@ -880,11 +941,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function replaceRemoteDataWithOutbox(rows) {
-    const headRecords = (rows || []).map((row) => revisionMetaRecord(
-      row.entity_type,
-      row.entity_id,
-      row.revision,
-    ));
+    const headRecords = (rows || []).map((row) =>
+      revisionMetaRecord(row.entity_type, row.entity_id, row.revision),
+    );
     const database = await getDatabase();
     if (!database) {
       const existing = readFallback();
@@ -909,7 +968,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       // projection. IndexedDB then serializes this reconciliation with every
       // concurrent tab mutation: it can never clear a record without also
       // seeing and replaying the mutation that created it.
-      const storeNames = ["tasks", "templates", "settings", "occurrences", "outbox", "meta"];
+      const storeNames = [
+        "tasks",
+        "templates",
+        "settings",
+        "occurrences",
+        "outbox",
+        "meta",
+      ];
       const transaction = database.transaction(storeNames, "readwrite");
       const results = {};
       let remainingRequests = storeNames.length;
@@ -919,9 +985,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         try {
           const localState = storedRecordsToState(results);
           const remoteState = remoteItemsToState(rows, localState);
-          const nextState = applyOutboxToState(remoteState, results.outbox || []);
+          const nextState = applyOutboxToState(
+            remoteState,
+            results.outbox || [],
+          );
           const nextRecords = stateStoreRecords(nextState);
-          for (const storeName of ["tasks", "templates", "settings", "occurrences"]) {
+          for (const storeName of [
+            "tasks",
+            "templates",
+            "settings",
+            "occurrences",
+          ]) {
             const store = transaction.objectStore(storeName);
             store.clear();
             for (const record of nextRecords[storeName]) store.put(record);
@@ -943,16 +1017,20 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       }
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(
-        transaction.error || new Error("Réconciliation locale annulée"),
-      );
+      transaction.onabort = () =>
+        reject(transaction.error || new Error("Réconciliation locale annulée"));
     });
   }
 
   function stateStoreRecords(snapshot) {
-    const historyRecords = (snapshot.history || []).map(historyCompatibilityRecord);
+    const historyRecords = (snapshot.history || []).map(
+      historyCompatibilityRecord,
+    );
     const occurrenceMap = new Map(
-      [...(snapshot.occurrences || []), ...historyRecords].map((record) => [record.id, record]),
+      [...(snapshot.occurrences || []), ...historyRecords].map((record) => [
+        record.id,
+        record,
+      ]),
     );
     return {
       tasks: snapshot.tasks || [],
@@ -967,7 +1045,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const previousRecords = stateStoreRecords(previousState);
     const mutations = [];
     for (const storeName of ["tasks", "templates", "occurrences", "settings"]) {
-      const nextIds = new Set(nextRecords[storeName].map((record) => record.id));
+      const nextIds = new Set(
+        nextRecords[storeName].map((record) => record.id),
+      );
       for (const record of previousRecords[storeName]) {
         if (!nextIds.has(record.id)) {
           mutations.push(makeMutation(storeName, record, "delete"));
@@ -994,17 +1074,30 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         return;
       }
       await new Promise((resolve, reject) => {
-        const storeNames = ["tasks", "templates", "settings", "occurrences", "outbox"];
+        const storeNames = [
+          "tasks",
+          "templates",
+          "settings",
+          "occurrences",
+          "outbox",
+        ];
         const transaction = database.transaction(storeNames, "readwrite");
-        for (const storeName of ["tasks", "templates", "settings", "occurrences"]) {
+        for (const storeName of [
+          "tasks",
+          "templates",
+          "settings",
+          "occurrences",
+        ]) {
           const store = transaction.objectStore(storeName);
           store.clear();
           for (const record of nextRecords[storeName]) store.put(record);
         }
-        for (const mutation of mutations) putMutationInTransaction(transaction, mutation);
+        for (const mutation of mutations)
+          putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Restauration annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Restauration annulée"));
       });
     } catch (error) {
       rollbackMutations(mutations);
@@ -1017,14 +1110,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       ? { id: task.occurrenceKey, dismissedAt: new Date().toISOString() }
       : null;
     const mutations = [makeMutation("tasks", task, "delete")];
-    if (occurrence) mutations.push(makeMutation("occurrences", occurrence, "upsert"));
+    if (occurrence)
+      mutations.push(makeMutation("occurrences", occurrence, "upsert"));
     try {
       const database = await getDatabase();
       if (!database) {
         const data = readFallback();
         data.tasks = data.tasks.filter((item) => item.id !== task.id);
         if (occurrence) {
-          data.occurrences = data.occurrences.filter((item) => item.id !== occurrence.id);
+          data.occurrences = data.occurrences.filter(
+            (item) => item.id !== occurrence.id,
+          );
           data.occurrences.push(occurrence);
         }
         for (const mutation of mutations) putMutationInFallback(data, mutation);
@@ -1032,13 +1128,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         return occurrence;
       }
       await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["tasks", "occurrences", "outbox"], "readwrite");
+        const transaction = database.transaction(
+          ["tasks", "occurrences", "outbox"],
+          "readwrite",
+        );
         transaction.objectStore("tasks").delete(task.id);
         if (occurrence) transaction.objectStore("occurrences").put(occurrence);
-        for (const mutation of mutations) putMutationInTransaction(transaction, mutation);
+        for (const mutation of mutations)
+          putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Suppression annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Suppression annulée"));
       });
       return occurrence;
     } catch (error) {
@@ -1048,7 +1149,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function restoreTaskWithOccurrence(task) {
-    const occurrenceRecord = task.occurrenceKey ? { id: task.occurrenceKey } : null;
+    const occurrenceRecord = task.occurrenceKey
+      ? { id: task.occurrenceKey }
+      : null;
     const mutations = [makeMutation("tasks", task, "upsert")];
     if (occurrenceRecord) {
       mutations.push(makeMutation("occurrences", occurrenceRecord, "delete"));
@@ -1060,20 +1163,28 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         data.tasks = data.tasks.filter((item) => item.id !== task.id);
         data.tasks.push(task);
         if (task.occurrenceKey) {
-          data.occurrences = data.occurrences.filter((item) => item.id !== task.occurrenceKey);
+          data.occurrences = data.occurrences.filter(
+            (item) => item.id !== task.occurrenceKey,
+          );
         }
         for (const mutation of mutations) putMutationInFallback(data, mutation);
         writeFallback(data);
         return;
       }
       await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["tasks", "occurrences", "outbox"], "readwrite");
+        const transaction = database.transaction(
+          ["tasks", "occurrences", "outbox"],
+          "readwrite",
+        );
         transaction.objectStore("tasks").put(task);
-        if (task.occurrenceKey) transaction.objectStore("occurrences").delete(task.occurrenceKey);
-        for (const mutation of mutations) putMutationInTransaction(transaction, mutation);
+        if (task.occurrenceKey)
+          transaction.objectStore("occurrences").delete(task.occurrenceKey);
+        for (const mutation of mutations)
+          putMutationInTransaction(transaction, mutation);
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Restauration annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Restauration annulée"));
       });
     } catch (error) {
       rollbackMutations(mutations);
@@ -1084,34 +1195,48 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function deleteCompletedRecords(tasks) {
     const tombstones = tasks
       .filter((task) => task.occurrenceKey)
-      .map((task) => ({ id: task.occurrenceKey, dismissedAt: new Date().toISOString() }));
+      .map((task) => ({
+        id: task.occurrenceKey,
+        dismissedAt: new Date().toISOString(),
+      }));
     const taskIds = new Set(tasks.map((task) => task.id));
     const mutations = [
       ...tasks.map((task) => makeMutation("tasks", task, "delete")),
-      ...tombstones.map((occurrence) => makeMutation("occurrences", occurrence, "upsert")),
+      ...tombstones.map((occurrence) =>
+        makeMutation("occurrences", occurrence, "upsert"),
+      ),
     ];
     try {
       const database = await getDatabase();
       if (!database) {
-      const data = readFallback();
-      data.tasks = data.tasks.filter((task) => !taskIds.has(task.id));
-      const tombstoneIds = new Set(tombstones.map((occurrence) => occurrence.id));
-      data.occurrences = data.occurrences.filter((occurrence) => !tombstoneIds.has(occurrence.id));
-      data.occurrences.push(...tombstones);
-      for (const mutation of mutations) putMutationInFallback(data, mutation);
-      writeFallback(data);
-      return tombstones;
+        const data = readFallback();
+        data.tasks = data.tasks.filter((task) => !taskIds.has(task.id));
+        const tombstoneIds = new Set(
+          tombstones.map((occurrence) => occurrence.id),
+        );
+        data.occurrences = data.occurrences.filter(
+          (occurrence) => !tombstoneIds.has(occurrence.id),
+        );
+        data.occurrences.push(...tombstones);
+        for (const mutation of mutations) putMutationInFallback(data, mutation);
+        writeFallback(data);
+        return tombstones;
       }
       await new Promise((resolve, reject) => {
-      const transaction = database.transaction(["tasks", "occurrences", "outbox"], "readwrite");
-      const taskStore = transaction.objectStore("tasks");
-      const occurrenceStore = transaction.objectStore("occurrences");
-      for (const task of tasks) taskStore.delete(task.id);
-      for (const occurrence of tombstones) occurrenceStore.put(occurrence);
-      for (const mutation of mutations) putMutationInTransaction(transaction, mutation);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error || new Error("Suppression annulée"));
+        const transaction = database.transaction(
+          ["tasks", "occurrences", "outbox"],
+          "readwrite",
+        );
+        const taskStore = transaction.objectStore("tasks");
+        const occurrenceStore = transaction.objectStore("occurrences");
+        for (const task of tasks) taskStore.delete(task.id);
+        for (const occurrence of tombstones) occurrenceStore.put(occurrence);
+        for (const mutation of mutations)
+          putMutationInTransaction(transaction, mutation);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Suppression annulée"));
       });
       return tombstones;
     } catch (error) {
@@ -1126,33 +1251,44 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       .map((task) => ({ id: task.occurrenceKey }));
     const mutations = [
       ...tasks.map((task) => makeMutation("tasks", task, "upsert")),
-      ...occurrenceRecords.map((record) => makeMutation("occurrences", record, "delete")),
+      ...occurrenceRecords.map((record) =>
+        makeMutation("occurrences", record, "delete"),
+      ),
     ];
     try {
       const database = await getDatabase();
       if (!database) {
-      const data = readFallback();
-      const restoredIds = new Set(tasks.map((task) => task.id));
-      const occurrenceIds = new Set(tasks.map((task) => task.occurrenceKey).filter(Boolean));
-      data.tasks = data.tasks.filter((task) => !restoredIds.has(task.id));
-      data.tasks.push(...tasks);
-      data.occurrences = data.occurrences.filter((occurrence) => !occurrenceIds.has(occurrence.id));
-      for (const mutation of mutations) putMutationInFallback(data, mutation);
-      writeFallback(data);
-      return;
+        const data = readFallback();
+        const restoredIds = new Set(tasks.map((task) => task.id));
+        const occurrenceIds = new Set(
+          tasks.map((task) => task.occurrenceKey).filter(Boolean),
+        );
+        data.tasks = data.tasks.filter((task) => !restoredIds.has(task.id));
+        data.tasks.push(...tasks);
+        data.occurrences = data.occurrences.filter(
+          (occurrence) => !occurrenceIds.has(occurrence.id),
+        );
+        for (const mutation of mutations) putMutationInFallback(data, mutation);
+        writeFallback(data);
+        return;
       }
       await new Promise((resolve, reject) => {
-      const transaction = database.transaction(["tasks", "occurrences", "outbox"], "readwrite");
-      const taskStore = transaction.objectStore("tasks");
-      const occurrenceStore = transaction.objectStore("occurrences");
-      for (const task of tasks) {
-        taskStore.put(task);
-        if (task.occurrenceKey) occurrenceStore.delete(task.occurrenceKey);
-      }
-      for (const mutation of mutations) putMutationInTransaction(transaction, mutation);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error || new Error("Restauration annulée"));
+        const transaction = database.transaction(
+          ["tasks", "occurrences", "outbox"],
+          "readwrite",
+        );
+        const taskStore = transaction.objectStore("tasks");
+        const occurrenceStore = transaction.objectStore("occurrences");
+        for (const task of tasks) {
+          taskStore.put(task);
+          if (task.occurrenceKey) occurrenceStore.delete(task.occurrenceKey);
+        }
+        for (const mutation of mutations)
+          putMutationInTransaction(transaction, mutation);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Restauration annulée"));
       });
     } catch (error) {
       rollbackMutations(mutations);
@@ -1160,17 +1296,24 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function createRoutineTaskIfAllowed(task, { restoreDismissed = false } = {}) {
+  async function createRoutineTaskIfAllowed(
+    task,
+    { restoreDismissed = false } = {},
+  ) {
     const mutations = [];
     try {
       const database = await getDatabase();
       if (!database) {
         const data = readFallback();
-        const dismissedRecord = data.occurrences.find((item) => item.id === task.occurrenceKey);
+        const dismissedRecord = data.occurrences.find(
+          (item) => item.id === task.occurrenceKey,
+        );
         const exists = data.tasks.some((item) => item.id === task.id);
         if (exists || (dismissedRecord && !restoreDismissed)) return false;
         if (dismissedRecord) {
-          data.occurrences = data.occurrences.filter((item) => item.id !== task.occurrenceKey);
+          data.occurrences = data.occurrences.filter(
+            (item) => item.id !== task.occurrenceKey,
+          );
           const occurrenceMutation = makeMutation(
             "occurrences",
             dismissedRecord,
@@ -1187,7 +1330,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         return true;
       }
       return await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["tasks", "occurrences", "outbox"], "readwrite");
+        const transaction = database.transaction(
+          ["tasks", "occurrences", "outbox"],
+          "readwrite",
+        );
         const taskStore = transaction.objectStore("tasks");
         const occurrenceStore = transaction.objectStore("occurrences");
         let created = false;
@@ -1217,7 +1363,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         };
         transaction.oncomplete = () => resolve(created);
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error("Création annulée"));
+        transaction.onabort = () =>
+          reject(transaction.error || new Error("Création annulée"));
       });
     } catch (error) {
       rollbackMutations(mutations);
@@ -1233,23 +1380,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return `${entityType}:${entityId}`;
   }
 
-  function recordTimestamp(record) {
-    return Date.parse(
-      record?.updatedAt ||
-      record?.dismissedAt ||
-      record?.completedAt ||
-      record?.createdAt ||
-      "",
-    ) || 0;
-  }
-
   function recordsShareSamePayload(storeName, first, second) {
     if (storeName === "settings") {
-      return Boolean(first?.autoMorning) === Boolean(second?.autoMorning) &&
-        Boolean(first?.autoEvening) === Boolean(second?.autoEvening);
+      return (
+        Boolean(first?.autoMorning) === Boolean(second?.autoMorning) &&
+        Boolean(first?.autoEvening) === Boolean(second?.autoEvening)
+      );
     }
-    return canonicalJson(mutationPayload(storeName, first)) ===
-      canonicalJson(mutationPayload(storeName, second));
+    return (
+      canonicalJson(mutationPayload(storeName, first)) ===
+      canonicalJson(mutationPayload(storeName, second))
+    );
   }
 
   function remoteItemsToState(rows, baseState = null) {
@@ -1260,7 +1401,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       occurrences: [],
       settings: { ...DEFAULT_SETTINGS },
     };
-    const taskMap = new Map(startingState.tasks.map((record) => [record.id, record]));
+    const taskMap = new Map(
+      startingState.tasks.map((record) => [record.id, record]),
+    );
     const templateMap = new Map(
       startingState.templates.map((record) => [record.id, record]),
     );
@@ -1276,15 +1419,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const entityKey = mutationEntityKey(row.entity_type, row.entity_id);
       optimisticRevisions.set(entityKey, syncRevision(row.revision));
       const payload = row.payload;
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
+      if (!payload || typeof payload !== "object" || Array.isArray(payload))
+        continue;
       const record = { ...payload, _syncRevision: syncRevision(row.revision) };
-      const target = row.entity_type === "task"
-        ? taskMap
-        : row.entity_type === "template"
-          ? templateMap
-          : row.entity_type === "occurrence"
-            ? occurrenceMap
-            : null;
+      const target =
+        row.entity_type === "task"
+          ? taskMap
+          : row.entity_type === "template"
+            ? templateMap
+            : row.entity_type === "occurrence"
+              ? occurrenceMap
+              : null;
       if (target) {
         if (row.deleted_at) target.delete(row.entity_id);
         else target.set(row.entity_id, record);
@@ -1293,21 +1438,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         if (row.deleted_at) {
           sharedSettings = normalizeSettings({
             ...DEFAULT_SETTINGS,
-            quickTarget: sharedSettings.quickTarget,
             _syncRevision: row.revision,
           });
         } else {
-          sharedSettings = normalizeSettings({
-            ...record,
-            quickTarget: sharedSettings.quickTarget,
-          });
+          sharedSettings = normalizeSettings(record);
         }
       }
     }
     const occurrenceRecords = [...occurrenceMap.values()];
-    const history = mergeCompletionHistory(occurrenceRecords.filter(isHistoryRecord));
+    const history = mergeCompletionHistory(
+      occurrenceRecords.filter(isHistoryRecord),
+    );
     return {
-      tasks: [...taskMap.values()].map(normalizeTask).filter((task) => task.label),
+      tasks: [...taskMap.values()]
+        .map(normalizeTask)
+        .filter((task) => task.label),
       history,
       templates: [...templateMap.values()]
         .map(normalizeTemplate)
@@ -1325,15 +1470,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const bEntityKey = mutationEntityKey(b.entityType, b.entityId);
     const entityDifference = aEntityKey.localeCompare(bEntityKey);
     if (entityDifference) return entityDifference;
-    const revisionDifference = syncRevision(a.baseRevision) - syncRevision(b.baseRevision);
+    const revisionDifference =
+      syncRevision(a.baseRevision) - syncRevision(b.baseRevision);
     if (revisionDifference) return revisionDifference;
-    const timeDifference = Date.parse(a.createdAt || "") - Date.parse(b.createdAt || "");
+    const timeDifference =
+      Date.parse(a.createdAt || "") - Date.parse(b.createdAt || "");
     return timeDifference || String(a.id).localeCompare(String(b.id));
   }
 
   function applyOutboxToState(remoteState, outbox) {
-    const taskMap = new Map(remoteState.tasks.map((record) => [record.id, record]));
-    const templateMap = new Map(remoteState.templates.map((record) => [record.id, record]));
+    const taskMap = new Map(
+      remoteState.tasks.map((record) => [record.id, record]),
+    );
+    const templateMap = new Map(
+      remoteState.templates.map((record) => [record.id, record]),
+    );
     const occurrenceMap = new Map(
       [
         ...remoteState.occurrences,
@@ -1344,7 +1495,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     const ordered = [...outbox].sort(compareOutboxMutations);
     for (const mutation of ordered) {
-      const entityKey = mutationEntityKey(mutation.entityType, mutation.entityId);
+      const entityKey = mutationEntityKey(
+        mutation.entityType,
+        mutation.entityId,
+      );
       optimisticRevisions.set(
         entityKey,
         Math.max(
@@ -1352,13 +1506,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           syncRevision(mutation.baseRevision) + 1,
         ),
       );
-      const target = mutation.entityType === "task"
-        ? taskMap
-        : mutation.entityType === "template"
-          ? templateMap
-          : mutation.entityType === "occurrence"
-            ? occurrenceMap
-            : null;
+      const target =
+        mutation.entityType === "task"
+          ? taskMap
+          : mutation.entityType === "template"
+            ? templateMap
+            : mutation.entityType === "occurrence"
+              ? occurrenceMap
+              : null;
       if (target) {
         if (mutation.action === "delete") target.delete(mutation.entityId);
         else {
@@ -1367,12 +1522,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
             _syncRevision: syncRevision(mutation.baseRevision) + 1,
           });
         }
-      } else if (mutation.entityType === "setting" && mutation.entityId === "preferences") {
+      } else if (
+        mutation.entityType === "setting" &&
+        mutation.entityId === "preferences"
+      ) {
         if (mutation.action !== "delete") {
           settings = normalizeSettings({
             ...settings,
             ...mutation.payload,
-            quickTarget: settings.quickTarget,
             _syncRevision: syncRevision(mutation.baseRevision) + 1,
           });
         }
@@ -1381,11 +1538,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     const occurrenceRecords = [...occurrenceMap.values()];
     return {
-      tasks: [...taskMap.values()].map(normalizeTask).filter((task) => task.label),
+      tasks: [...taskMap.values()]
+        .map(normalizeTask)
+        .filter((task) => task.label),
       templates: [...templateMap.values()]
         .map(normalizeTemplate)
         .filter((template) => template.label),
-      history: mergeCompletionHistory(occurrenceRecords.filter(isHistoryRecord)),
+      history: mergeCompletionHistory(
+        occurrenceRecords.filter(isHistoryRecord),
+      ),
       occurrences: occurrenceRecords
         .filter((record) => !isHistoryRecord(record))
         .map(normalizeOccurrence)
@@ -1397,48 +1558,61 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function loadRemoteItems() {
     const entityTypes = ["task", "template", "occurrence", "setting"];
     const pageSize = 500;
-    const collections = await Promise.all(entityTypes.map(async (entityType) => {
-      const rows = [];
-      let cursor = "";
-      while (true) {
-        let query = supabase
-          .from(ITEMS_TABLE)
-          .select("workspace,entity_type,entity_id,payload,deleted_at,revision,mutation_id,updated_at")
-          .eq("workspace", SHARED_SECTION)
-          .eq("entity_type", entityType);
-        if (cursor) query = query.gt("entity_id", cursor);
-        query = query
-          .order("entity_id", { ascending: true })
-          .limit(pageSize);
-        const { data, error } = await query;
-        if (error) throw error;
-        const page = data || [];
-        rows.push(...page);
-        if (page.length < pageSize) break;
-        cursor = page.at(-1).entity_id;
-      }
-      return rows;
-    }));
+    const collections = await Promise.all(
+      entityTypes.map(async (entityType) => {
+        const rows = [];
+        let cursor = "";
+        while (true) {
+          let query = supabase
+            .from(ITEMS_TABLE)
+            .select(
+              "workspace,entity_type,entity_id,payload,deleted_at,revision,mutation_id,updated_at",
+            )
+            .eq("workspace", SHARED_SECTION)
+            .eq("entity_type", entityType);
+          if (cursor) query = query.gt("entity_id", cursor);
+          query = query.order("entity_id", { ascending: true }).limit(pageSize);
+          const { data, error } = await query;
+          if (error) throw error;
+          const page = data || [];
+          rows.push(...page);
+          if (page.length < pageSize) break;
+          cursor = page.at(-1).entity_id;
+        }
+        return rows;
+      }),
+    );
     return collections.flat();
   }
 
   async function safeguardLegacyLocalData(remoteRows) {
-    const [legacyCheck, existingOutbox] = await Promise.all([
+    const [legacyCheck, existingOutbox, storedSettings] = await Promise.all([
       getMetaRecord(LEGACY_MIGRATION_KEY),
       getAllRecords("outbox"),
+      getAllRecords("settings"),
     ]);
     const pendingEntityKeys = new Set(
-      existingOutbox.map((mutation) => rowKey(mutation.entityType, mutation.entityId)),
+      existingOutbox.map((mutation) =>
+        rowKey(mutation.entityType, mutation.entityId),
+      ),
     );
     const remoteByKey = new Map(
-      (remoteRows || []).map((row) => [rowKey(row.entity_type, row.entity_id), row]),
+      (remoteRows || []).map((row) => [
+        rowKey(row.entity_type, row.entity_id),
+        row,
+      ]),
     );
     const localRecords = [
       ...state.tasks.map((record) => ["tasks", record]),
       ...state.templates.map((record) => ["templates", record]),
       ...state.occurrences.map((record) => ["occurrences", record]),
-      ...state.history.map((entry) => ["occurrences", historyCompatibilityRecord(entry)]),
-      ["settings", state.settings],
+      ...state.history.map((entry) => [
+        "occurrences",
+        historyCompatibilityRecord(entry),
+      ]),
+      ...storedSettings
+        .filter((record) => record.id === "preferences")
+        .map((record) => ["settings", normalizeSettings(record)]),
     ];
     const mutations = [];
     for (const [storeName, record] of localRecords) {
@@ -1447,9 +1621,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (pendingEntityKeys.has(rowKey(entityType, record.id))) continue;
       if (remote?.deleted_at) {
         if (!legacyCheck) {
-          mutations.push(makeMutation(storeName, record, "upsert", {
-            baseRevision: Math.max(0, syncRevision(remote.revision) - 1),
-          }));
+          mutations.push(
+            makeMutation(storeName, record, "upsert", {
+              baseRevision: Math.max(0, syncRevision(remote.revision) - 1),
+            }),
+          );
         }
         continue;
       }
@@ -1457,14 +1633,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       // existing ID is journaled deliberately as a conflict: neither version
       // is allowed to overwrite the other based on an untrusted client clock.
       if (!remote) {
-        mutations.push(makeMutation(storeName, record, "upsert", { baseRevision: 0 }));
+        mutations.push(
+          makeMutation(storeName, record, "upsert", { baseRevision: 0 }),
+        );
       } else if (
         !legacyCheck &&
         !recordsShareSamePayload(storeName, record, remote.payload)
       ) {
-        mutations.push(makeMutation(storeName, record, "upsert", {
-          baseRevision: Math.max(0, syncRevision(remote.revision) - 1),
-        }));
+        mutations.push(
+          makeMutation(storeName, record, "upsert", {
+            baseRevision: Math.max(0, syncRevision(remote.revision) - 1),
+          }),
+        );
       }
     }
     await queueMutations(mutations, {
@@ -1483,7 +1663,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
     await replaceRemoteDataWithOutbox(rows);
     await loadState({ runAutomatic: false });
-    syncChannel?.postMessage({ type: "refresh", reason: "remote", at: Date.now() });
+    syncChannel?.postMessage({
+      type: "refresh",
+      reason: "remote",
+      at: Date.now(),
+    });
   }
 
   async function updateSyncStatus(forcedState = "") {
@@ -1496,20 +1680,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
     const count = outbox.length;
     const conflictCount = outbox.filter((mutation) => mutation.conflict).length;
-    const realtimeConnecting = sharedReady && sharedChannelStatus !== "SUBSCRIBED";
-    const status = forcedState || (
-      !navigator.onLine
+    const realtimeConnecting =
+      sharedReady && sharedChannelStatus !== "SUBSCRIBED";
+    const status =
+      forcedState ||
+      (!navigator.onLine
         ? "offline"
         : sharedSaving
           ? "syncing"
           : conflictCount
             ? "conflict"
-          : count
-            ? "pending"
-            : realtimeConnecting
-              ? "connecting"
-              : "synced"
-    );
+            : count
+              ? "pending"
+              : realtimeConnecting
+                ? "connecting"
+                : "synced");
     const labels = {
       offline: "Hors ligne",
       connecting: "Connexion…",
@@ -1543,16 +1728,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function canonicalJson(value) {
     if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
     if (value && typeof value === "object") {
-      return `{${Object.keys(value).sort().map((key) => (
-        `${JSON.stringify(key)}:${canonicalJson(value[key])}`
-      )).join(",")}}`;
+      return `{${Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+        .join(",")}}`;
     }
     return JSON.stringify(value);
   }
 
   function matchesStoredMutation(stored, mutation) {
     if (!stored) return false;
-    const sameIdentity = stored.mutation_id === mutation.id &&
+    const sameIdentity =
+      stored.mutation_id === mutation.id &&
       stored.workspace === SHARED_SECTION &&
       stored.entity_type === mutation.entityType &&
       stored.entity_id === mutation.entityId &&
@@ -1560,14 +1747,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       stored.device_id === (mutation.deviceId || DEVICE_ID) &&
       Number(stored.base_revision) === syncRevision(mutation.baseRevision);
     if (!sameIdentity) return false;
-    return mutation.action === "delete" ||
-      canonicalJson(stored.payload) === canonicalJson(mutation.payload || {});
+    return (
+      mutation.action === "delete" ||
+      canonicalJson(stored.payload) === canonicalJson(mutation.payload || {})
+    );
   }
 
   async function loadStoredMutation(mutationId) {
     const { data, error } = await supabase
       .from(MUTATIONS_TABLE)
-      .select("mutation_id,workspace,entity_type,entity_id,action,payload,device_id,base_revision,entity_revision,outcome")
+      .select(
+        "mutation_id,workspace,entity_type,entity_id,action,payload,device_id,base_revision,entity_revision,outcome",
+      )
       .eq("mutation_id", mutationId)
       .limit(1)
       .maybeSingle();
@@ -1579,26 +1770,35 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const outbox = (await getAllRecords("outbox")).sort(compareOutboxMutations);
     const blockedEntities = new Set();
     for (const mutation of outbox) {
-      const entityKey = mutationEntityKey(mutation.entityType, mutation.entityId);
+      const entityKey = mutationEntityKey(
+        mutation.entityType,
+        mutation.entityId,
+      );
       if (mutation.conflict) {
         blockedEntities.add(entityKey);
         continue;
       }
       if (blockedEntities.has(entityKey)) continue;
 
-      const { data, error } = await supabase.from(MUTATIONS_TABLE).insert({
-        mutation_id: mutation.id,
-        workspace: SHARED_SECTION,
-        entity_type: mutation.entityType,
-        entity_id: mutation.entityId,
-        action: mutation.action,
-        payload: mutation.payload || {},
-        device_id: mutation.deviceId || DEVICE_ID,
-        client_created_at: mutation.createdAt || null,
-        base_revision: syncRevision(mutation.baseRevision),
-      }).select("mutation_id,workspace,entity_type,entity_id,action,payload,device_id,base_revision,entity_revision,outcome");
+      const { data, error } = await supabase
+        .from(MUTATIONS_TABLE)
+        .insert({
+          mutation_id: mutation.id,
+          workspace: SHARED_SECTION,
+          entity_type: mutation.entityType,
+          entity_id: mutation.entityId,
+          action: mutation.action,
+          payload: mutation.payload || {},
+          device_id: mutation.deviceId || DEVICE_ID,
+          client_created_at: mutation.createdAt || null,
+          base_revision: syncRevision(mutation.baseRevision),
+        })
+        .select(
+          "mutation_id,workspace,entity_type,entity_id,action,payload,device_id,base_revision,entity_revision,outcome",
+        );
       if (error && error.code !== "23505") throw error;
-      const storedMutation = data?.[0] || await loadStoredMutation(mutation.id);
+      const storedMutation =
+        data?.[0] || (await loadStoredMutation(mutation.id));
       if (!matchesStoredMutation(storedMutation, mutation)) {
         throw error || new Error("Accusé de réception de mutation invalide");
       }
@@ -1607,7 +1807,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         await acknowledgeOutboxMutation(mutation, appliedRevision);
         optimisticRevisions.set(
           entityKey,
-          Math.max(syncRevision(optimisticRevisions.get(entityKey)), appliedRevision),
+          Math.max(
+            syncRevision(optimisticRevisions.get(entityKey)),
+            appliedRevision,
+          ),
         );
         continue;
       }
@@ -1649,7 +1852,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           if (taskReorderLocked()) pendingRemoteRefresh = true;
           else {
             await applyRemoteItems(remoteRows);
-            await ensureWeeklyPrepStarterItems();
             renderWeeklyPrep();
           }
         } while (syncAgain);
@@ -1675,7 +1877,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     void updateSyncStatus();
     if (!sharedReady) return;
     window.clearTimeout(sharedSaveTimer);
-    sharedSaveTimer = window.setTimeout(() => void synchronizeSharedState(), delay);
+    sharedSaveTimer = window.setTimeout(
+      () => void synchronizeSharedState(),
+      delay,
+    );
   }
 
   function handleRemoteChecklistChange() {
@@ -1711,27 +1916,30 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         handleRemoteChecklistChange,
       );
     sharedChannel = channel;
-    channel
-      .subscribe((status, error) => {
-        if (sharedChannel !== channel) return;
-        sharedChannelStatus = status;
-        if (status === "SUBSCRIBED") {
-          // Always reconcile once after joining: an event may have happened
-          // while the phone was asleep or while the socket was reconnecting.
-          scheduleSharedSave(0);
-          return;
-        }
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          console.error("Canal de synchronisation indisponible.", error);
-          // Supabase rejoins automatically with backoff. REST reconciliation
-          // keeps the list current while the socket is being repaired.
-          sharedChannelStatus = "CONNECTING";
-          scheduleSharedSave(0);
-          void updateSyncStatus();
-          return;
-        }
+    channel.subscribe((status, error) => {
+      if (sharedChannel !== channel) return;
+      sharedChannelStatus = status;
+      if (status === "SUBSCRIBED") {
+        // Always reconcile once after joining: an event may have happened
+        // while the phone was asleep or while the socket was reconnecting.
+        scheduleSharedSave(0);
+        return;
+      }
+      if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT" ||
+        status === "CLOSED"
+      ) {
+        console.error("Canal de synchronisation indisponible.", error);
+        // Supabase rejoins automatically with backoff. REST reconciliation
+        // keeps the list current while the socket is being repaired.
+        sharedChannelStatus = "CONNECTING";
+        scheduleSharedSave(0);
         void updateSyncStatus();
-      });
+        return;
+      }
+      void updateSyncStatus();
+    });
   }
 
   function ensureRealtimeSubscription() {
@@ -1756,60 +1964,87 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function normalizeSettings(record) {
-    const legacyTarget = record?.quickTarget === "tomorrow"
-      ? "cuisineTomorrow"
-      : record?.quickTarget === "today"
-        ? "cuisineToday"
-        : record?.quickTarget;
     return {
       ...DEFAULT_SETTINGS,
-      ...(record || {}),
       id: "preferences",
-      quickTarget: QUICK_TARGET_ORDER.includes(legacyTarget) ? legacyTarget : "cuisineToday",
       autoMorning: Boolean(record?.autoMorning),
       autoEvening: Boolean(record?.autoEvening),
+      updatedAt:
+        typeof record?.updatedAt === "string" ? record.updatedAt : undefined,
       _syncRevision: syncRevision(record?._syncRevision),
     };
   }
 
-  function normalizeKitchenType(value, label = "") {
-    if (KITCHEN_TYPE_ORDER.includes(value)) return value;
-    const normalizedLabel = String(label).toLocaleLowerCase("fr-FR");
-    if (/(couper|tailler|émincer|hacher|écailler|trancher|ciseler)/u.test(normalizedLabel)) return "decoupe";
-    if (/(cuire|cuisson|blanchir|bain[ -]marie|maintien chaud|au four|rôtir|braiser|réchauffer)/u.test(normalizedLabel)) return "cuisson";
-    return "preparation";
-  }
-
   function normalizeTask(task) {
-    const label = typeof task?.label === "string" ? task.label.trim().slice(0, 180) : "";
-    const dueDate = DATE_PATTERN.test(task?.dueDate || "") ? task.dueDate : todayKey();
-    const moment = ["morning", "evening", "any"].includes(task?.moment) ? task.moment : "any";
-    const section = ["bring", "maintenance", "weeklyPrep"].includes(task?.section) ? task.section : "daily";
-    const department = section === "daily" && task?.department === "salle"
-      ? "salle"
-      : section === "daily"
-        ? "cuisine"
-        : null;
+    const label =
+      typeof task?.label === "string" ? task.label.trim().slice(0, 180) : "";
+    const dueDate = DATE_PATTERN.test(task?.dueDate || "")
+      ? task.dueDate
+      : todayKey();
+    const moment = ["morning", "evening", "any"].includes(task?.moment)
+      ? task.moment
+      : "any";
+    const section = ["bring", "maintenance", "weeklyPrep"].includes(
+      task?.section,
+    )
+      ? task.section
+      : "daily";
+    const department =
+      section === "daily" && task?.department === "salle"
+        ? "salle"
+        : section === "daily"
+          ? "cuisine"
+          : null;
     return {
       id: typeof task?.id === "string" && task.id ? task.id : makeId("task"),
       label,
       dueDate,
       section,
       department,
-      kitchenType: department === "cuisine" ? normalizeKitchenType(task?.kitchenType, label) : null,
       moment: section === "bring" ? "any" : moment,
-      completedAt: typeof task?.completedAt === "string" ? task.completedAt : null,
-      createdAt: typeof task?.createdAt === "string" ? task.createdAt : new Date().toISOString(),
-      updatedAt: typeof task?.updatedAt === "string" ? task.updatedAt : new Date().toISOString(),
+      completedAt:
+        typeof task?.completedAt === "string" ? task.completedAt : null,
+      createdAt:
+        typeof task?.createdAt === "string"
+          ? task.createdAt
+          : new Date().toISOString(),
+      updatedAt:
+        typeof task?.updatedAt === "string"
+          ? task.updatedAt
+          : new Date().toISOString(),
       position: Number.isFinite(task?.position) ? task.position : Date.now(),
-      manualPosition: Number.isFinite(task?.manualPosition) ? task.manualPosition : null,
+      manualPosition: Number.isFinite(task?.manualPosition)
+        ? task.manualPosition
+        : null,
       templateId: typeof task?.templateId === "string" ? task.templateId : null,
-      occurrenceKey: typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
-      estimateMinutes: section === "bring" || section === "weeklyPrep" ? null : normalizeEstimateMinutes(task?.estimateMinutes),
-      prepCategory: section === "weeklyPrep" && ["cuisson", "decoupe", "preparation"].includes(task?.prepCategory) ? task.prepCategory : (section === "weeklyPrep" ? "preparation" : null),
-      prepDish: section === "weeklyPrep" && typeof task?.prepDish === "string" ? task.prepDish.trim().slice(0, 120) : null,
-      prepQuantity: section === "weeklyPrep" && typeof task?.prepQuantity === "string" ? task.prepQuantity.trim().slice(0, 80) : null,
-      refillDay: section === "weeklyPrep" && ["", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].includes(task?.refillDay) ? task.refillDay : "",
+      occurrenceKey:
+        typeof task?.occurrenceKey === "string" ? task.occurrenceKey : null,
+      estimateMinutes:
+        section === "bring" || section === "weeklyPrep"
+          ? null
+          : normalizeEstimateMinutes(task?.estimateMinutes),
+      prepCategory:
+        section === "weeklyPrep" &&
+        ["cuisson", "decoupe", "preparation"].includes(task?.prepCategory)
+          ? task.prepCategory
+          : section === "weeklyPrep"
+            ? "preparation"
+            : null,
+      prepDish:
+        section === "weeklyPrep" && typeof task?.prepDish === "string"
+          ? task.prepDish.trim().slice(0, 120)
+          : null,
+      prepQuantity:
+        section === "weeklyPrep" && typeof task?.prepQuantity === "string"
+          ? task.prepQuantity.trim().slice(0, 80)
+          : null,
+      refillDay:
+        section === "weeklyPrep" &&
+        ["", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].includes(
+          task?.refillDay,
+        )
+          ? task.refillDay
+          : "",
       _syncRevision: syncRevision(task?._syncRevision),
     };
   }
@@ -1819,7 +2054,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     for (let index = 0; index < value.length; index += 1) {
       const code = value.charCodeAt(index);
       for (let seedIndex = 0; seedIndex < seeds.length; seedIndex += 1) {
-        seeds[seedIndex] = Math.imul(seeds[seedIndex] ^ (code + seedIndex * 131), 0x01000193);
+        seeds[seedIndex] = Math.imul(
+          seeds[seedIndex] ^ (code + seedIndex * 131),
+          0x01000193,
+        );
       }
     }
     return seeds
@@ -1833,10 +2071,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function historySnapshotId(snapshot) {
     // V2 keeps the entity key compact; the complete immutable snapshot now
     // lives in the payload. decodeHistoryRecord still supports every v1 key.
-    return `history-v2:${compactStableId(JSON.stringify([
-      snapshot.taskId,
-      snapshot.completedAt,
-    ]))}`;
+    return `history-v2:${compactStableId(
+      JSON.stringify([snapshot.taskId, snapshot.completedAt]),
+    )}`;
   }
 
   function decodeHistoryRecord(record) {
@@ -1849,7 +2086,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (separatorIndex < 0) return null;
       encodedSnapshot = encodedRecord.slice(0, separatorIndex);
       try {
-        reopenedAt = decodeURIComponent(encodedRecord.slice(separatorIndex + 1));
+        reopenedAt = decodeURIComponent(
+          encodedRecord.slice(separatorIndex + 1),
+        );
       } catch {
         return null;
       }
@@ -1861,7 +2100,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     try {
       const snapshot = JSON.parse(decodeURIComponent(encodedSnapshot));
-      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
+        return null;
       return {
         ...snapshot,
         id: `history:${encodedSnapshot}`,
@@ -1909,7 +2149,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function reopenedHistoryEntry(task, reopenedAt) {
     if (!task?.completedAt) return null;
     const existingEntry = state.history.find(
-      (entry) => entry.taskId === task.id && entry.completedAt === task.completedAt,
+      (entry) =>
+        entry.taskId === task.id && entry.completedAt === task.completedAt,
     );
     return normalizeHistoryEntry({
       ...(existingEntry || completionHistoryEntry(task)),
@@ -1919,20 +2160,28 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function isHistoryRecord(record) {
-    return record?.recordType === "completion-history" ||
+    return (
+      record?.recordType === "completion-history" ||
       (typeof record?.id === "string" &&
-        (record.id.startsWith("history:") || record.id.startsWith("history-reopened:")));
+        (record.id.startsWith("history:") ||
+          record.id.startsWith("history-reopened:")))
+    );
   }
 
   function normalizeHistoryEntry(entry) {
     const decodedRecord = decodeHistoryRecord(entry);
     const source = decodedRecord ? { ...decodedRecord, ...entry } : entry;
-    const completedAt = typeof source?.completedAt === "string" ? source.completedAt : "";
+    const completedAt =
+      typeof source?.completedAt === "string" ? source.completedAt : "";
     if (!Number.isFinite(Date.parse(completedAt))) return null;
-    const taskId = typeof source?.taskId === "string" && source.taskId
-      ? source.taskId
-      : "ancienne-tache";
-    const label = typeof source?.label === "string" ? source.label.trim().slice(0, 180) : "";
+    const taskId =
+      typeof source?.taskId === "string" && source.taskId
+        ? source.taskId
+        : "ancienne-tache";
+    const label =
+      typeof source?.label === "string"
+        ? source.label.trim().slice(0, 180)
+        : "";
     if (!label) return null;
     const section = ["bring", "maintenance"].includes(source?.section)
       ? source.section
@@ -1940,17 +2189,22 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const moment = ["morning", "evening", "any"].includes(source?.moment)
       ? source.moment
       : "any";
-    const department = section === "daily" && source?.department === "salle"
-      ? "salle"
-      : section === "daily"
-        ? "cuisine"
+    const department =
+      section === "daily" && source?.department === "salle"
+        ? "salle"
+        : section === "daily"
+          ? "cuisine"
+          : null;
+    const reopenedAt =
+      typeof source?.reopenedAt === "string" &&
+      Number.isFinite(Date.parse(source.reopenedAt))
+        ? source.reopenedAt
         : null;
-    const reopenedAt = typeof source?.reopenedAt === "string" && Number.isFinite(Date.parse(source.reopenedAt))
-      ? source.reopenedAt
-      : null;
-    const updatedAt = typeof source?.updatedAt === "string" && Number.isFinite(Date.parse(source.updatedAt))
-      ? source.updatedAt
-      : reopenedAt || completedAt;
+    const updatedAt =
+      typeof source?.updatedAt === "string" &&
+      Number.isFinite(Date.parse(source.updatedAt))
+        ? source.updatedAt
+        : reopenedAt || completedAt;
     const normalized = {
       recordType: "completion-history",
       taskId,
@@ -1966,11 +2220,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       updatedAt,
     };
     const id = historySnapshotId(normalized);
-    const sameStorageEntity = typeof source?.id !== "string" || source.id === id;
+    const sameStorageEntity =
+      typeof source?.id !== "string" || source.id === id;
     return {
       ...normalized,
       id,
-      _syncRevision: sameStorageEntity ? syncRevision(source?._syncRevision) : 0,
+      _syncRevision: sameStorageEntity
+        ? syncRevision(source?._syncRevision)
+        : 0,
     };
   }
 
@@ -1991,21 +2248,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         if (
           !previous ||
           (entryReopened && !previousReopened) ||
-          (entryReopened === previousReopened && Date.parse(entry.updatedAt) >= Date.parse(previous.updatedAt))
+          (entryReopened === previousReopened &&
+            Date.parse(entry.updatedAt) >= Date.parse(previous.updatedAt))
         ) {
           merged.set(identityKey, entry);
         }
       }
     }
     return [...merged.values()].sort((a, b) => {
-      const timeDifference = Date.parse(a.completedAt) - Date.parse(b.completedAt);
+      const timeDifference =
+        Date.parse(a.completedAt) - Date.parse(b.completedAt);
       return timeDifference || a.id.localeCompare(b.id);
     });
   }
 
   function normalizeEstimateMinutes(value) {
     const minutes = Number(value);
-    return Number.isInteger(minutes) && minutes >= 1 && minutes <= 720 ? minutes : null;
+    return Number.isInteger(minutes) && minutes >= 1 && minutes <= 720
+      ? minutes
+      : null;
   }
 
   function formatEstimate(minutes) {
@@ -2018,20 +2279,32 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function normalizeTemplate(template) {
-    const label = typeof template?.label === "string" ? template.label.trim().slice(0, 180) : "";
+    const label =
+      typeof template?.label === "string"
+        ? template.label.trim().slice(0, 180)
+        : "";
     const routine = template?.routine === "evening" ? "evening" : "morning";
     return {
-      id: typeof template?.id === "string" && template.id ? template.id : makeId("template"),
+      id:
+        typeof template?.id === "string" && template.id
+          ? template.id
+          : makeId("template"),
       label,
       routine,
       department: template?.department === "salle" ? "salle" : "cuisine",
-      position: Number.isFinite(template?.position) ? template.position : Date.now(),
-      createdAt: typeof template?.createdAt === "string" ? template.createdAt : new Date().toISOString(),
-      updatedAt: typeof template?.updatedAt === "string"
-        ? template.updatedAt
-        : typeof template?.createdAt === "string"
+      position: Number.isFinite(template?.position)
+        ? template.position
+        : Date.now(),
+      createdAt:
+        typeof template?.createdAt === "string"
           ? template.createdAt
           : new Date().toISOString(),
+      updatedAt:
+        typeof template?.updatedAt === "string"
+          ? template.updatedAt
+          : typeof template?.createdAt === "string"
+            ? template.createdAt
+            : new Date().toISOString(),
       _syncRevision: syncRevision(template?._syncRevision),
     };
   }
@@ -2042,7 +2315,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return {
       id: occurrence.id,
       dismissedAt:
-        typeof occurrence.dismissedAt === "string" ? occurrence.dismissedAt : new Date().toISOString(),
+        typeof occurrence.dismissedAt === "string"
+          ? occurrence.dismissedAt
+          : new Date().toISOString(),
       _syncRevision: syncRevision(occurrence?._syncRevision),
     };
   }
@@ -2057,8 +2332,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         merged.set(item.id, item);
         continue;
       }
-      const previousTime = Date.parse(previous.updatedAt || previous.dismissedAt || previous.createdAt || 0);
-      const nextTime = Date.parse(item.updatedAt || item.dismissedAt || item.createdAt || 0);
+      const previousTime = Date.parse(
+        previous.updatedAt || previous.dismissedAt || previous.createdAt || 0,
+      );
+      const nextTime = Date.parse(
+        item.updatedAt || item.dismissedAt || item.createdAt || 0,
+      );
       if (nextTime >= previousTime) merged.set(item.id, item);
     }
     return [...merged.values()];
@@ -2068,12 +2347,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const database = await getDatabase();
     if (!database) return;
     const fallback = readFallback();
-    const hasFallback = ["tasks", "history", "templates", "settings", "occurrences", "outbox", "meta"].some(
-      (key) => fallback[key].length,
-    );
+    const hasFallback = [
+      "tasks",
+      "history",
+      "templates",
+      "settings",
+      "occurrences",
+      "outbox",
+      "meta",
+    ].some((key) => fallback[key].length);
     if (!hasFallback) return;
 
-    const [tasks, templates, settings, occurrenceRecords, currentOutbox, currentMeta] = await Promise.all([
+    const [
+      tasks,
+      templates,
+      settings,
+      occurrenceRecords,
+      currentOutbox,
+      currentMeta,
+    ] = await Promise.all([
       getAllRecords("tasks"),
       getAllRecords("templates"),
       getAllRecords("settings"),
@@ -2087,18 +2379,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       .map(normalizeSettings)
       .sort(
         (a, b) =>
-          (Date.parse(a.updatedAt || "") || 0) - (Date.parse(b.updatedAt || "") || 0),
+          (Date.parse(a.updatedAt || "") || 0) -
+          (Date.parse(b.updatedAt || "") || 0),
       );
     const merged = {
-      tasks: mergeById(tasks, fallback.tasks, normalizeTask).filter((task) => task.label),
+      tasks: mergeById(tasks, fallback.tasks, normalizeTask).filter(
+        (task) => task.label,
+      ),
       history: mergeCompletionHistory(
         occurrenceRecords.filter(isHistoryRecord),
         fallback.history,
         fallback.occurrences.filter(isHistoryRecord),
       ),
-      templates: mergeById(templates, fallback.templates, normalizeTemplate).filter(
-        (template) => template.label,
-      ),
+      templates: mergeById(
+        templates,
+        fallback.templates,
+        normalizeTemplate,
+      ).filter((template) => template.label),
       occurrences: mergeById(
         occurrenceRecords.filter((record) => !isHistoryRecord(record)),
         fallback.occurrences,
@@ -2108,22 +2405,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     };
     await replaceAllData(merged);
     const pendingKeys = new Set(
-      [...currentOutbox, ...fallback.outbox].map(
-        (mutation) => mutationEntityKey(mutation.entityType, mutation.entityId),
+      [...currentOutbox, ...fallback.outbox].map((mutation) =>
+        mutationEntityKey(mutation.entityType, mutation.entityId),
       ),
     );
     const currentByStore = {
       tasks: new Map(tasks.map((record) => [record.id, record])),
       templates: new Map(templates.map((record) => [record.id, record])),
-      occurrences: new Map(occurrenceRecords.map((record) => [record.id, record])),
+      occurrences: new Map(
+        occurrenceRecords.map((record) => [record.id, record]),
+      ),
       settings: new Map(settings.map((record) => [record.id, record])),
     };
     const fallbackRecords = {
       tasks: fallback.tasks.map(normalizeTask).filter((record) => record.label),
-      templates: fallback.templates.map(normalizeTemplate).filter((record) => record.label),
+      templates: fallback.templates
+        .map(normalizeTemplate)
+        .filter((record) => record.label),
       occurrences: [
         ...fallback.occurrences,
-        ...fallback.history.map(normalizeHistoryEntry).filter(Boolean).map(historyCompatibilityRecord),
+        ...fallback.history
+          .map(normalizeHistoryEntry)
+          .filter(Boolean)
+          .map(historyCompatibilityRecord),
       ],
       settings: fallback.settings.map(normalizeSettings),
     };
@@ -2134,7 +2438,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         const entityKey = mutationEntityKey(entityType, candidate.id);
         if (pendingKeys.has(entityKey)) continue;
         const current = currentByStore[storeName].get(candidate.id);
-        if (current && recordsShareSamePayload(storeName, candidate, current)) continue;
+        if (current && recordsShareSamePayload(storeName, candidate, current))
+          continue;
         const knownRevision = Math.max(
           syncRevision(current?._syncRevision),
           syncRevision(optimisticRevisions.get(entityKey)),
@@ -2148,7 +2453,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
     try {
       await new Promise((resolve, reject) => {
-        const transaction = database.transaction(["outbox", "meta"], "readwrite");
+        const transaction = database.transaction(
+          ["outbox", "meta"],
+          "readwrite",
+        );
         for (const mutation of [...fallback.outbox, ...recoveryMutations]) {
           transaction.objectStore("outbox").put(outboxMutation(mutation));
         }
@@ -2157,9 +2465,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         }
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(
-          transaction.error || new Error("Migration de secours annulée"),
-        );
+        transaction.onabort = () =>
+          reject(
+            transaction.error || new Error("Migration de secours annulée"),
+          );
       });
     } catch (error) {
       rollbackMutations(recoveryMutations);
@@ -2175,7 +2484,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   async function loadState({ runAutomatic = true } = {}) {
     try {
       const fallbackHistory = readFallback().history;
-      const [tasks, templates, settings, occurrenceRecords, outbox, metaRecords] = await Promise.all([
+      const [
+        tasks,
+        templates,
+        settings,
+        occurrenceRecords,
+        outbox,
+        metaRecords,
+      ] = await Promise.all([
         getAllRecords("tasks"),
         getAllRecords("templates"),
         getAllRecords("settings"),
@@ -2192,21 +2508,30 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         occurrenceRecords.filter(isHistoryRecord),
         fallbackHistory,
       );
-      state.templates = templates.map(normalizeTemplate).filter((template) => template.label);
+      state.templates = templates
+        .map(normalizeTemplate)
+        .filter((template) => template.label);
       state.occurrences = occurrenceRecords
         .filter((record) => !isHistoryRecord(record))
         .map(normalizeOccurrence)
         .filter(Boolean);
-      state.settings = normalizeSettings(settings.find((item) => item.id === "preferences"));
+      state.settings = normalizeSettings(
+        settings.find((item) => item.id === "preferences"),
+      );
       state.lastDateKey = todayKey();
 
       const knownHistoryKeys = new Set(state.history.map(historyIdentityKey));
       const backfilledHistory = state.tasks
         .map(completionHistoryEntry)
-        .filter((entry) => entry && !knownHistoryKeys.has(historyIdentityKey(entry)));
+        .filter(
+          (entry) => entry && !knownHistoryKeys.has(historyIdentityKey(entry)),
+        );
       if (durableStorageAvailable && backfilledHistory.length) {
         await Promise.all(backfilledHistory.map(putHistoryRecord));
-        state.history = mergeCompletionHistory(state.history, backfilledHistory);
+        state.history = mergeCompletionHistory(
+          state.history,
+          backfilledHistory,
+        );
         announceChange();
       }
 
@@ -2218,23 +2543,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  function tasksForToday(department = "cuisine") {
+  function tasksForToday() {
     const today = todayKey();
     return state.tasks.filter(
       (task) =>
         task.section === "daily" &&
-        task.department === department &&
         (task.dueDate === today || (task.dueDate < today && !task.completedAt)),
-    );
-  }
-
-  function tasksForTomorrow(department = "cuisine") {
-    const tomorrow = tomorrowKey();
-    return state.tasks.filter(
-      (task) =>
-        task.section === "daily" &&
-        task.department === department &&
-        task.dueDate === tomorrow,
     );
   }
 
@@ -2249,15 +2563,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function taskListForTask(task) {
     if (task?.section === "bring") return "bring";
     if (task?.section === "maintenance") return "maintenance";
-    const department = task?.department === "salle" ? "salle" : "cuisine";
-    return `${department}${task?.dueDate === tomorrowKey() ? "Tomorrow" : "Today"}`;
+    return "cuisineToday";
   }
 
   function tasksForListKey(listKey) {
-    if (listKey === "cuisineTodayList") return tasksForToday("cuisine");
-    if (listKey === "cuisineTomorrowList") return tasksForTomorrow("cuisine");
-    if (listKey === "salleTodayList") return tasksForToday("salle");
-    if (listKey === "salleTomorrowList") return tasksForTomorrow("salle");
+    if (listKey === "cuisineTodayList") return tasksForToday();
     if (listKey === "bringList") return tasksForBring();
     if (listKey === "maintenanceList") return tasksForMaintenance();
     return [];
@@ -2269,21 +2579,26 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const aHasManualPosition = Number.isFinite(a.manualPosition);
       const bHasManualPosition = Number.isFinite(b.manualPosition);
       if (aHasManualPosition || bHasManualPosition) {
-        if (aHasManualPosition !== bHasManualPosition) return aHasManualPosition ? -1 : 1;
+        if (aHasManualPosition !== bHasManualPosition)
+          return aHasManualPosition ? -1 : 1;
         const manualDifference = a.manualPosition - b.manualPosition;
         if (manualDifference) return manualDifference;
       }
-      const completeDifference = Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt));
+      const completeDifference =
+        Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt));
       if (completeDifference) return completeDifference;
-      const aIsOverdue = a.section === "daily" && a.dueDate < todayKey() && !a.completedAt;
-      const bIsOverdue = b.section === "daily" && b.dueDate < todayKey() && !b.completedAt;
+      const aIsOverdue =
+        a.section === "daily" && a.dueDate < todayKey() && !a.completedAt;
+      const bIsOverdue =
+        b.section === "daily" && b.dueDate < todayKey() && !b.completedAt;
       const overdueDifference = Number(bIsOverdue) - Number(aIsOverdue);
       if (overdueDifference) return overdueDifference;
       const momentDifference = momentRank[a.moment] - momentRank[b.moment];
       if (momentDifference) return momentDifference;
       const positionDifference = a.position - b.position;
       if (positionDifference) return positionDifference;
-      const creationDifference = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+      const creationDifference =
+        Date.parse(a.createdAt) - Date.parse(b.createdAt);
       if (creationDifference) return creationDifference;
       return a.id.localeCompare(b.id, "fr");
     });
@@ -2294,7 +2609,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const aHasManualPosition = Number.isFinite(a.manualPosition);
       const bHasManualPosition = Number.isFinite(b.manualPosition);
       if (aHasManualPosition || bHasManualPosition) {
-        if (aHasManualPosition !== bHasManualPosition) return aHasManualPosition ? -1 : 1;
+        if (aHasManualPosition !== bHasManualPosition)
+          return aHasManualPosition ? -1 : 1;
         const manualDifference = a.manualPosition - b.manualPosition;
         if (manualDifference) return manualDifference;
       }
@@ -2305,15 +2621,22 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function taskRows(container) {
-    return [...container.children].filter((child) => child.classList.contains("task-row"));
+    return [...container.children].filter((child) =>
+      child.classList.contains("task-row"),
+    );
   }
 
   function taskOrder(container) {
-    return taskRows(container).map((row) => row.dataset.taskId).filter(Boolean);
+    return taskRows(container)
+      .map((row) => row.dataset.taskId)
+      .filter(Boolean);
   }
 
   function sameTaskOrder(first, second) {
-    return first.length === second.length && first.every((id, index) => id === second[index]);
+    return (
+      first.length === second.length &&
+      first.every((id, index) => id === second[index])
+    );
   }
 
   function suppressTaskClick(event) {
@@ -2334,7 +2657,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }, 180);
   }
 
-  function startTaskReorderPress({ inputType, pointerId, row, container, clientX, clientY }) {
+  function startTaskReorderPress({
+    inputType,
+    pointerId,
+    row,
+    container,
+    clientX,
+    clientY,
+  }) {
     if (reorderGesture) cancelTaskReorder();
     const gesture = {
       inputType,
@@ -2351,7 +2681,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       offsetY: 0,
       timer: null,
     };
-    gesture.timer = window.setTimeout(() => activateTaskReorder(gesture), REORDER_HOLD_DELAY);
+    gesture.timer = window.setTimeout(
+      () => activateTaskReorder(gesture),
+      REORDER_HOLD_DELAY,
+    );
     reorderGesture = gesture;
     if (inputType === "touch") attachTaskTouchListeners();
   }
@@ -2361,9 +2694,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       capture: true,
       passive: true,
     });
-    document.addEventListener("touchmove", handleTaskTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTaskTouchEnd, { passive: false });
-    document.addEventListener("touchcancel", handleTaskTouchCancel, { passive: true });
+    document.addEventListener("touchmove", handleTaskTouchMove, {
+      passive: false,
+    });
+    document.addEventListener("touchend", handleTaskTouchEnd, {
+      passive: false,
+    });
+    document.addEventListener("touchcancel", handleTaskTouchCancel, {
+      passive: true,
+    });
   }
 
   function detachTaskTouchListeners() {
@@ -2413,7 +2752,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function placeTaskPlaceholder(clientY) {
     const gesture = reorderGesture;
     if (!gesture?.active || !gesture.placeholder?.isConnected) return;
-    const rows = taskRows(gesture.container).filter((row) => row !== gesture.row);
+    const rows = taskRows(gesture.container).filter(
+      (row) => row !== gesture.row,
+    );
     const nextRow = rows.find((row) => {
       const bounds = row.getBoundingClientRect();
       return clientY < bounds.top + bounds.height / 2;
@@ -2425,7 +2766,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function reorderScrollSpeed(clientY) {
     if (clientY < REORDER_EDGE_ZONE) {
       return -Math.ceil(
-        ((REORDER_EDGE_ZONE - clientY) / REORDER_EDGE_ZONE) * REORDER_MAX_SCROLL_SPEED,
+        ((REORDER_EDGE_ZONE - clientY) / REORDER_EDGE_ZONE) *
+          REORDER_MAX_SCROLL_SPEED,
       );
     }
     const bottomEdge = window.innerHeight - REORDER_EDGE_ZONE;
@@ -2445,17 +2787,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!speed) return;
     window.scrollBy(0, speed);
     placeTaskPlaceholder(gesture.lastClientY);
-    reorderAutoScrollFrame = window.requestAnimationFrame(runTaskReorderAutoScroll);
+    reorderAutoScrollFrame = window.requestAnimationFrame(
+      runTaskReorderAutoScroll,
+    );
   }
 
   function updateTaskReorderAutoScroll() {
-    if (!reorderGesture?.active || !reorderScrollSpeed(reorderGesture.lastClientY)) {
-      if (reorderAutoScrollFrame) window.cancelAnimationFrame(reorderAutoScrollFrame);
+    if (
+      !reorderGesture?.active ||
+      !reorderScrollSpeed(reorderGesture.lastClientY)
+    ) {
+      if (reorderAutoScrollFrame)
+        window.cancelAnimationFrame(reorderAutoScrollFrame);
       reorderAutoScrollFrame = null;
       return;
     }
     if (!reorderAutoScrollFrame) {
-      reorderAutoScrollFrame = window.requestAnimationFrame(runTaskReorderAutoScroll);
+      reorderAutoScrollFrame = window.requestAnimationFrame(
+        runTaskReorderAutoScroll,
+      );
     }
   }
 
@@ -2482,12 +2832,20 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function clearTaskReorderVisuals(gesture, { commit = false } = {}) {
     window.clearTimeout(gesture.timer);
     if (gesture.inputType === "touch") detachTaskTouchListeners();
-    if (reorderAutoScrollFrame) window.cancelAnimationFrame(reorderAutoScrollFrame);
+    if (reorderAutoScrollFrame)
+      window.cancelAnimationFrame(reorderAutoScrollFrame);
     reorderAutoScrollFrame = null;
 
     if (gesture.active) {
-      if (commit && gesture.placeholder?.parentElement && gesture.row.isConnected) {
-        gesture.placeholder.parentElement.insertBefore(gesture.row, gesture.placeholder);
+      if (
+        commit &&
+        gesture.placeholder?.parentElement &&
+        gesture.row.isConnected
+      ) {
+        gesture.placeholder.parentElement.insertBefore(
+          gesture.row,
+          gesture.placeholder,
+        );
       }
       gesture.placeholder?.remove();
       gesture.row.classList.remove("is-reordering");
@@ -2514,7 +2872,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function persistTaskOrder({ desiredOrder, listKey, movedTaskId, restoreFocus = true }) {
+  async function persistTaskOrder({
+    desiredOrder,
+    listKey,
+    movedTaskId,
+    restoreFocus = true,
+  }) {
     try {
       let mergedOrder = [];
       let reorderedById = new Map();
@@ -2522,9 +2885,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       while (true) {
         await refreshStateBeforeReorderCommit();
         const latestTasks = tasksForListKey(listKey);
-        const latestListTasks = listKey === "bringList"
-          ? sortBringTasks(latestTasks)
-          : sortTasks(latestTasks);
+        const latestListTasks =
+          listKey === "bringList"
+            ? sortBringTasks(latestTasks)
+            : sortTasks(latestTasks);
         const latestIds = new Set(latestListTasks.map((task) => task.id));
         if (!latestIds.has(movedTaskId)) {
           renderAll();
@@ -2543,8 +2907,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           Date.now(),
           new Date().toISOString(),
         );
-        reorderedById = new Map(reorderedTasks.map((task) => [task.id, normalizeTask(task)]));
-        state.tasks = state.tasks.map((task) => reorderedById.get(task.id) || task);
+        reorderedById = new Map(
+          reorderedTasks.map((task) => [task.id, normalizeTask(task)]),
+        );
+        state.tasks = state.tasks.map(
+          (task) => reorderedById.get(task.id) || task,
+        );
 
         if (!pendingLocalRefresh) break;
       }
@@ -2558,7 +2926,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       }
       if (restoreFocus) {
         requestAnimationFrame(() => {
-          document.querySelector(`[data-task-id="${cssEscape(movedTaskId)}"] .task-main`)?.focus();
+          document
+            .querySelector(
+              `[data-task-id="${cssEscape(movedTaskId)}"] .task-main`,
+            )
+            ?.focus();
         });
       }
     } catch (error) {
@@ -2583,7 +2955,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const movedTaskId = gesture.row.dataset.taskId;
     if (sameTaskOrder(gesture.originalOrder, desiredOrder)) {
       reorderGesture = null;
-      gesture.container.querySelector(`[data-task-id="${cssEscape(movedTaskId)}"] .task-main`)?.focus();
+      gesture.container
+        .querySelector(`[data-task-id="${cssEscape(movedTaskId)}"] .task-main`)
+        ?.focus();
       await flushDeferredTaskSync();
       return;
     }
@@ -2598,14 +2972,19 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function moveTaskWithKeyboard(row, direction, { restoreFocus = true } = {}) {
+  async function moveTaskWithKeyboard(
+    row,
+    direction,
+    { restoreFocus = true } = {},
+  ) {
     if (reorderPersisting) return;
     if (reorderGesture) cancelTaskReorder({ flushSync: false });
     const container = row.parentElement;
     const rows = taskRows(container);
     const currentIndex = rows.indexOf(row);
     const targetIndex = currentIndex + direction;
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length) return;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= rows.length)
+      return;
     const target = rows[targetIndex];
     if (direction < 0) container.insertBefore(row, target);
     else container.insertBefore(row, target.nextSibling);
@@ -2678,7 +3057,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
     mainButton.addEventListener("dragstart", (event) => event.preventDefault());
     mainButton.addEventListener("keydown", (event) => {
-      if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+      if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key))
+        return;
       event.preventDefault();
       void moveTaskWithKeyboard(row, event.key === "ArrowUp" ? -1 : 1);
     });
@@ -2697,64 +3077,42 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return parts.join(" · ");
   }
 
-  function renderTaskList(container, tasks, { isBring = false, kitchenGroups = false } = {}) {
+  function renderTaskList(container, tasks, { isBring = false } = {}) {
     const fragment = document.createDocumentFragment();
     const sortedTasks = isBring ? sortBringTasks(tasks) : sortTasks(tasks);
-    const groups = kitchenGroups
-      ? KITCHEN_TYPE_ORDER.map((type) => ({
-          type,
-          tasks: sortedTasks.filter((task) => normalizeKitchenType(task.kitchenType, task.label) === type),
-        }))
-      : [{ type: null, tasks: sortedTasks }];
+    for (const task of sortedTasks) {
+      const row =
+        elements.taskTemplate.content.firstElementChild.cloneNode(true);
+      const checkButton = row.querySelector(".check-button");
+      const mainButton = row.querySelector(".task-main");
+      const moreButton = row.querySelector(".task-more");
 
-    for (const group of groups) {
-      if (kitchenGroups) {
-        const heading = document.createElement("div");
-        heading.className = "kitchen-section-heading";
-        heading.dataset.kitchenType = group.type;
-        heading.setAttribute("role", "heading");
-        heading.setAttribute("aria-level", "4");
-        const marker = document.createElement("span");
-        marker.className = "kitchen-section-dot";
-        marker.setAttribute("aria-hidden", "true");
-        const label = document.createElement("span");
-        label.textContent = KITCHEN_TYPE_LABELS[group.type];
-        const count = document.createElement("span");
-        count.className = "kitchen-section-count";
-        count.textContent = String(group.tasks.length);
-        heading.append(marker, label, count);
-        fragment.append(heading);
-      }
-
-      for (const task of group.tasks) {
-        const row = elements.taskTemplate.content.firstElementChild.cloneNode(true);
-        const checkButton = row.querySelector(".check-button");
-        const mainButton = row.querySelector(".task-main");
-        const moreButton = row.querySelector(".task-more");
-
-        row.dataset.taskId = task.id;
-        if (kitchenGroups) row.dataset.kitchenType = normalizeKitchenType(task.kitchenType, task.label);
-        row.classList.toggle("is-bring-item", isBring);
-        row.classList.toggle("is-complete", Boolean(task.completedAt));
-        row.querySelector(".task-label").textContent = task.label;
-        const meta = isBring ? "" : taskMeta(task);
-        row.querySelector(".task-meta").textContent = meta;
-        const estimate = row.querySelector(".task-estimate");
-        if (!isBring && task.estimateMinutes) {
-          estimate.hidden = false;
-          row.querySelector(".task-estimate-value").textContent = formatEstimate(task.estimateMinutes);
-        }
-        row.querySelector(".task-details").hidden = isBring || (!meta && !task.estimateMinutes);
-        checkButton.setAttribute(
-          "aria-label",
-          task.completedAt ? `Réouvrir : ${task.label}` : `Terminer : ${task.label}`,
+      row.dataset.taskId = task.id;
+      row.classList.toggle("is-bring-item", isBring);
+      row.classList.toggle("is-complete", Boolean(task.completedAt));
+      row.querySelector(".task-label").textContent = task.label;
+      const meta = isBring ? "" : taskMeta(task);
+      row.querySelector(".task-meta").textContent = meta;
+      const estimate = row.querySelector(".task-estimate");
+      if (!isBring && task.estimateMinutes) {
+        estimate.hidden = false;
+        row.querySelector(".task-estimate-value").textContent = formatEstimate(
+          task.estimateMinutes,
         );
-        bindTaskReorder(row, mainButton, container);
-        checkButton.addEventListener("click", () => toggleTask(task.id));
-        mainButton.addEventListener("click", () => openTaskEditor(task.id));
-        moreButton.addEventListener("click", () => openTaskEditor(task.id));
-        fragment.append(row);
       }
+      row.querySelector(".task-details").hidden =
+        isBring || (!meta && !task.estimateMinutes);
+      checkButton.setAttribute(
+        "aria-label",
+        task.completedAt
+          ? `Réouvrir : ${task.label}`
+          : `Terminer : ${task.label}`,
+      );
+      bindTaskReorder(row, mainButton, container);
+      checkButton.addEventListener("click", () => toggleTask(task.id));
+      mainButton.addEventListener("click", () => openTaskEditor(task.id));
+      moreButton.addEventListener("click", () => openTaskEditor(task.id));
+      fragment.append(row);
     }
     container.replaceChildren(fragment);
   }
@@ -2769,10 +3127,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function renderHistory() {
-    const entries = state.history.filter((entry) => !entry.reopenedAt).sort((a, b) => {
-      const timeDifference = Date.parse(b.completedAt) - Date.parse(a.completedAt);
-      return timeDifference || b.id.localeCompare(a.id);
-    });
+    const entries = state.history
+      .filter((entry) => !entry.reopenedAt)
+      .sort((a, b) => {
+        const timeDifference =
+          Date.parse(b.completedAt) - Date.parse(a.completedAt);
+        return timeDifference || b.id.localeCompare(a.id);
+      });
     elements.historySummary.textContent = entries.length
       ? `${entries.length} tâche${entries.length > 1 ? "s" : ""} rayée${entries.length > 1 ? "s" : ""}`
       : "Aucune tâche rayée pour le moment.";
@@ -2791,7 +3152,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       group.className = "history-day";
 
       const heading = document.createElement("h3");
-      heading.textContent = historyDayLabel(new Date(groupedEntries[0].completedAt));
+      heading.textContent = historyDayLabel(
+        new Date(groupedEntries[0].completedAt),
+      );
 
       const list = document.createElement("div");
       list.className = "history-day-list";
@@ -2850,7 +3213,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function renderTemplates(routine) {
-    const container = routine === "morning" ? elements.morningTemplateList : elements.eveningTemplateList;
+    const container =
+      routine === "morning"
+        ? elements.morningTemplateList
+        : elements.eveningTemplateList;
     const templates = state.templates
       .filter((template) => template.routine === routine)
       .sort((a, b) => a.position - b.position);
@@ -2886,124 +3252,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     container.replaceChildren(fragment);
   }
 
-
   const WEEKLY_PREP_CATEGORIES = [
-    ["cuisson", "Cuisson", "Lancer d’abord les cuissons longues et les préparations à refroidir."],
-    ["decoupe", "Découpe", "Tailler et préparer les éléments frais pendant les cuissons."],
-    ["preparation", "Préparation", "Terminer les sauces, le conditionnement et les montages."],
+    [
+      "cuisson",
+      "Cuisson",
+      "Lancer d’abord les cuissons longues et les préparations à refroidir.",
+    ],
+    [
+      "decoupe",
+      "Découpe",
+      "Tailler et préparer les éléments frais pendant les cuissons.",
+    ],
+    [
+      "preparation",
+      "Préparation",
+      "Terminer les sauces, le conditionnement et les montages.",
+    ],
   ];
-
-  const WEEKLY_PREP_CATEGORY_BY_ID = {
-    "weekly-prep-stew": "cuisson",
-    "weekly-prep-potatoes": "cuisson",
-    "weekly-prep-eggs": "decoupe",
-    "weekly-prep-fries": "decoupe",
-    "weekly-prep-creme-brulee": "cuisson",
-    "weekly-prep-panna-cotta": "cuisson",
-    "weekly-prep-cornichons": "decoupe",
-    "weekly-prep-leek-green": "decoupe",
-    "weekly-prep-tartare": "decoupe",
-    "weekly-prep-mayo": "preparation",
-    "weekly-prep-cocktail": "preparation",
-    "weekly-prep-vinaigrette": "preparation",
-    "weekly-prep-croutons": "preparation",
-    "weekly-prep-hareng": "preparation",
-    "weekly-prep-terrine": "preparation",
-    "weekly-prep-croques": "preparation",
-    "weekly-prep-mousse": "preparation",
-  };
-
-  const LEGACY_WEEKLY_PREP_CATEGORIES = new Set(["bases", "entrees", "plats", "desserts"]);
-  const WEEKLY_PREP_ORDER = [
-    "weekly-prep-stew", "task-2fdeae58-e831-404a-bc20-c224c64feb41",
-    "task-da3f882e-3c9c-416c-ac1f-7f897fb6f464", "weekly-prep-potatoes",
-    "task-442b47ba-e5e8-4e1c-a565-75d6807b1fd0",
-    "weekly-prep-creme-brulee", "weekly-prep-panna-cotta", "weekly-prep-fries",
-    "weekly-prep-eggs", "weekly-prep-leek-green", "weekly-prep-cornichons",
-    "weekly-prep-tartare", "weekly-prep-mayo", "weekly-prep-cocktail",
-    "weekly-prep-vinaigrette", "weekly-prep-croutons", "weekly-prep-hareng",
-    "weekly-prep-terrine", "task-7536ec70-340e-4458-90d9-45d0c3bd6e96",
-    "weekly-prep-mousse", "weekly-prep-croques",
-  ];
-
-  const WEEKLY_PREP_EXTRA_CATEGORIES = {
-    "task-2fdeae58-e831-404a-bc20-c224c64feb41": "cuisson",
-    "task-da3f882e-3c9c-416c-ac1f-7f897fb6f464": "cuisson",
-    "task-442b47ba-e5e8-4e1c-a565-75d6807b1fd0": "cuisson",
-    "task-7536ec70-340e-4458-90d9-45d0c3bd6e96": "preparation",
-  };
-
-  const WEEKLY_PREP_STARTER_ITEMS = [
-    ["weekly-prep-mayo", "Mayonnaise", "bases", "", "", ""],
-    ["weekly-prep-cocktail", "Sauce cocktail", "bases", "", "", ""],
-    ["weekly-prep-vinaigrette", "Vinaigrette", "bases", "", "", ""],
-    ["weekly-prep-croutons", "Croûtons", "bases", "", "3 boîtes", ""],
-    ["weekly-prep-hareng", "Hareng", "entrees", "Entrée hareng-pommes de terre", "1 boîte", ""],
-    ["weekly-prep-potatoes", "Pommes de terre cuites", "entrees", "Entrée hareng-pommes de terre", "6 pièces", ""],
-    ["weekly-prep-eggs", "Œufs mimosa : cuire et écaler", "entrees", "Œufs mimosa", "50 écalés + 50 cuits", ""],
-    ["weekly-prep-terrine", "Conditionner la terrine", "entrees", "Terrine", "", ""],
-    ["weekly-prep-cornichons", "Couper les cornichons", "entrees", "Terrine", "1 boîte", ""],
-    ["weekly-prep-leek-green", "Préparer le vert de poireau", "entrees", "Poireaux vinaigrette", "1 boîte", ""],
-    ["weekly-prep-fries", "Préparer les frites", "plats", "Croques et tartare", "1 bac froid + 1 bac moyen à blanchir", ""],
-    ["weekly-prep-stew", "Préparer le mijoté", "plats", "Bœuf bourguignon", "1 gastro", ""],
-    ["weekly-prep-tartare", "Mise en place du tartare", "plats", "Tartare au couteau", "Câpres, persil, oignon", ""],
-    ["weekly-prep-croques", "Monter les croques", "plats", "Croque-monsieur", "20 pièces", ""],
-    ["weekly-prep-mousse", "Préparer la mousse", "desserts", "Mousse au chocolat", "20 portions + 2 poches congelées", ""],
-    ["weekly-prep-creme-brulee", "Préparer les crèmes", "desserts", "Crème brûlée", "10 portions", ""],
-    ["weekly-prep-panna-cotta", "Préparer la panna cotta", "desserts", "Panna cotta spéculoos", "", ""],
-  ];
-
-  async function ensureWeeklyPrepStarterItems() {
-    const knownIds = new Set(state.tasks.map((task) => task.id));
-    const now = new Date().toISOString();
-    let inserted = 0;
-    let changed = false;
-
-    for (const task of state.tasks.filter((item) => item.section === "weeklyPrep" && LEGACY_WEEKLY_PREP_CATEGORIES.has(item.prepCategory))) {
-      task.prepCategory = "preparation";
-      task.updatedAt = now;
-      await putRecord("tasks", task);
-      changed = true;
-    }
-
-    for (const task of state.tasks.filter((item) => item.section === "weeklyPrep" && WEEKLY_PREP_EXTRA_CATEGORIES[item.id])) {
-      const category = WEEKLY_PREP_EXTRA_CATEGORIES[task.id];
-      const position = WEEKLY_PREP_ORDER.indexOf(task.id) + 1;
-      if (task.prepCategory !== category || task.position !== position) {
-        task.prepCategory = category;
-        task.position = position;
-        task.updatedAt = now;
-        await putRecord("tasks", task);
-        changed = true;
-      }
-    }
-
-    for (const [index, [id, label, prepCategory, prepDish, prepQuantity, refillDay]] of WEEKLY_PREP_STARTER_ITEMS.entries()) {
-      const category = WEEKLY_PREP_CATEGORY_BY_ID[id] || prepCategory;
-      const existing = state.tasks.find((task) => task.id === id);
-      if (existing) {
-        const position = WEEKLY_PREP_ORDER.indexOf(id) + 1;
-        if (existing.position !== position) {
-          existing.position = position;
-          existing.updatedAt = now;
-          await putRecord("tasks", existing);
-          changed = true;
-        }
-        continue;
-      }
-
-      const task = normalizeTask({
-        id, label, section: "weeklyPrep", prepCategory: category, prepDish, prepQuantity, refillDay,
-        dueDate: todayKey(), completedAt: null, createdAt: now, updatedAt: now,
-        position: WEEKLY_PREP_ORDER.indexOf(id) + 1,
-      });
-      await putRecord("tasks", task);
-      state.tasks.push(task);
-      knownIds.add(id);
-      inserted += 1;
-    }
-    if (inserted || changed) announceChange();
-  }
 
   function mondayKey(key = todayKey()) {
     const date = dateFromKey(key);
@@ -3012,15 +3277,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function weeklyPrepTasks() {
-    return sortTasks(state.tasks.filter((task) => task.section === "weeklyPrep"));
+    return sortTasks(
+      state.tasks.filter((task) => task.section === "weeklyPrep"),
+    );
   }
 
   function weeklyPrepDishNames(value) {
-    return [...new Set(String(value || "").split(/[;\n]+/).map((name) => name.trim()).filter(Boolean))];
+    return [
+      ...new Set(
+        String(value || "")
+          .split(/[;\n]+/)
+          .map((name) => name.trim())
+          .filter(Boolean),
+      ),
+    ];
   }
 
   function weeklyPrepDishKey(value) {
-    return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/\s+/g, " ").trim();
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("fr-FR")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function weeklyPrepDishProgress(tasks) {
@@ -3033,44 +3312,69 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         dishes.get(key).tasks.push(task);
       }
     }
-    return [...dishes.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    return [...dishes.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "fr"),
+    );
   }
 
   function renderWeeklyPrepDishes(tasks) {
     const dishes = weeklyPrepDishProgress(tasks);
-    const incomplete = dishes.filter((dish) => dish.tasks.some((task) => !task.completedAt)).length;
+    const incomplete = dishes.filter((dish) =>
+      dish.tasks.some((task) => !task.completedAt),
+    ).length;
     elements.weeklyPrepDishSummary.textContent = dishes.length
-      ? dishes.length + " plats · " + (incomplete ? incomplete + " à terminer" : "tout validé")
+      ? dishes.length +
+        " plats · " +
+        (incomplete ? incomplete + " à terminer" : "tout validé")
       : "Aucun plat lié";
     const fragment = document.createDocumentFragment();
     if (!dishes.length) {
       const empty = document.createElement("p");
       empty.className = "weekly-prep-dishes-empty";
-      empty.textContent = "Ajoutez le nom d’un plat aux actions pour suivre son avancement.";
+      empty.textContent =
+        "Ajoutez le nom d’un plat aux actions pour suivre son avancement.";
       fragment.append(empty);
     }
     for (const dish of dishes) {
-      const completed = dish.tasks.filter((task) => Boolean(task.completedAt)).length;
+      const completed = dish.tasks.filter((task) =>
+        Boolean(task.completedAt),
+      ).length;
       const isComplete = completed === dish.tasks.length;
+      const listItem = document.createElement("div");
+      listItem.setAttribute("role", "listitem");
       const item = document.createElement("button");
       item.type = "button";
       item.className = "weekly-prep-dish-status";
       item.classList.toggle("is-complete", isComplete);
       item.dataset.dishKey = weeklyPrepDishKey(dish.name);
-      item.setAttribute("role", "listitem");
-      item.setAttribute("aria-label", dish.name + " — " + completed + " action(s) cochée(s) sur " + dish.tasks.length + (isComplete ? " — validé" : " — en cours; toucher pour voir les actions restantes"));
+      item.setAttribute(
+        "aria-label",
+        dish.name +
+          " — " +
+          completed +
+          " action(s) cochée(s) sur " +
+          dish.tasks.length +
+          (isComplete
+            ? " — validé"
+            : " — en cours; toucher pour voir les actions restantes"),
+      );
       const copy = document.createElement("div");
       copy.className = "weekly-prep-dish-copy";
       const name = document.createElement("strong");
       name.textContent = dish.name;
       const count = document.createElement("span");
-      count.textContent = completed + "/" + dish.tasks.length + (dish.tasks.length > 1 ? " actions cochées" : " action cochée");
+      count.textContent =
+        completed +
+        "/" +
+        dish.tasks.length +
+        (dish.tasks.length > 1 ? " actions cochées" : " action cochée");
       copy.append(name, count);
       const status = document.createElement("span");
       status.className = "weekly-prep-dish-badge";
       status.textContent = isComplete ? "✓ Validé" : "En cours";
       item.append(copy, status);
-      fragment.append(item);
+      listItem.append(item);
+      fragment.append(listItem);
     }
     elements.weeklyPrepDishes.replaceChildren(fragment);
   }
@@ -3086,9 +3390,17 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const tasks = weeklyPrepTasks();
     const completed = tasks.filter((task) => task.completedAt).length;
     const monday = dateFromKey(mondayKey());
-    const dateFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" });
-    elements.weeklyPrepWeek.textContent = "Semaine du " + dateFormatter.format(monday) + " · services du mardi au samedi";
-    elements.weeklyPrepProgress.textContent = tasks.length ? completed + "/" + tasks.length + " actions" : "";
+    const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+      day: "numeric",
+      month: "long",
+    });
+    elements.weeklyPrepWeek.textContent =
+      "Semaine du " +
+      dateFormatter.format(monday) +
+      " · services du mardi au samedi";
+    elements.weeklyPrepProgress.textContent = tasks.length
+      ? completed + "/" + tasks.length + " actions"
+      : "";
     renderWeeklyPrepDishes(tasks);
     const fragment = document.createDocumentFragment();
 
@@ -3126,7 +3438,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         check.type = "button";
         check.className = "weekly-prep-check";
         check.dataset.prepAction = "toggle";
-        check.setAttribute("aria-label", (task.completedAt ? "Réouvrir : " : "Terminer : ") + task.label);
+        check.setAttribute(
+          "aria-label",
+          (task.completedAt ? "Réouvrir : " : "Terminer : ") + task.label,
+        );
         check.setAttribute("aria-pressed", String(Boolean(task.completedAt)));
         check.textContent = task.completedAt ? "✓" : "";
 
@@ -3139,7 +3454,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         const linkedDishes = weeklyPrepDishNames(task.prepDish);
         if (linkedDishes.length) metaParts.push(linkedDishes.join(", "));
         if (task.prepQuantity) metaParts.push(task.prepQuantity);
-        if (task.refillDay) metaParts.push("À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"));
+        if (task.refillDay)
+          metaParts.push(
+            "À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"),
+          );
         if (metaParts.length) {
           const meta = document.createElement("span");
           meta.className = "weekly-prep-meta";
@@ -3155,7 +3473,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         ]) {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = action === "delete" ? "weekly-prep-delete" : "weekly-prep-edit";
+          button.className =
+            action === "delete" ? "weekly-prep-delete" : "weekly-prep-edit";
           button.dataset.prepAction = action;
           button.setAttribute("aria-label", labelText);
           button.textContent = text;
@@ -3172,12 +3491,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function handleWeeklyPrepDishClick(event) {
     const button = event.target.closest("[data-dish-key]");
     if (!button) return;
-    const dish = weeklyPrepDishProgress(weeklyPrepTasks()).find((item) => weeklyPrepDishKey(item.name) === button.dataset.dishKey);
+    const dish = weeklyPrepDishProgress(weeklyPrepTasks()).find(
+      (item) => weeklyPrepDishKey(item.name) === button.dataset.dishKey,
+    );
     if (!dish) return;
     elements.weeklyPrepDishDialogTitle.textContent = dish.name;
     const fragment = document.createDocumentFragment();
     for (const [category, title] of WEEKLY_PREP_CATEGORIES) {
-      const actions = dish.tasks.filter((task) => task.prepCategory === category);
+      const actions = dish.tasks.filter(
+        (task) => task.prepCategory === category,
+      );
       if (!actions.length) continue;
       const group = document.createElement("section");
       group.className = "weekly-prep-dish-action-group";
@@ -3200,7 +3523,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         copy.append(label);
         const detailParts = [];
         if (task.prepQuantity) detailParts.push(task.prepQuantity);
-        if (task.refillDay) detailParts.push("À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"));
+        if (task.refillDay)
+          detailParts.push(
+            "À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"),
+          );
         if (detailParts.length) {
           const detail = document.createElement("small");
           detail.textContent = detailParts.join(" · ");
@@ -3221,7 +3547,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const label = elements.weeklyPrepLabel.value.trim().slice(0, 180);
     if (!label) return;
     const id = elements.weeklyPrepEditId.value;
-    const existing = id ? state.tasks.find((task) => task.id === id && task.section === "weeklyPrep") : null;
+    const existing = id
+      ? state.tasks.find(
+          (task) => task.id === id && task.section === "weeklyPrep",
+        )
+      : null;
     const now = new Date().toISOString();
     const task = normalizeTask({
       ...(existing || {}),
@@ -3241,7 +3571,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     try {
       await putRecord("tasks", task);
       state.tasks = existing
-        ? state.tasks.map((item) => item.id === task.id ? task : item)
+        ? state.tasks.map((item) => (item.id === task.id ? task : item))
         : [...state.tasks, task];
       resetWeeklyPrepForm();
       announceChange();
@@ -3257,15 +3587,24 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const button = event.target.closest("[data-prep-action]");
     if (!button) return;
     const row = button.closest("[data-prep-id]");
-    const task = state.tasks.find((item) => item.id === row?.dataset.prepId && item.section === "weeklyPrep");
+    const task = state.tasks.find(
+      (item) =>
+        item.id === row?.dataset.prepId && item.section === "weeklyPrep",
+    );
     if (!task) return;
     const now = new Date().toISOString();
 
     try {
       if (button.dataset.prepAction === "toggle") {
-        const nextTask = { ...task, completedAt: task.completedAt ? null : now, updatedAt: now };
+        const nextTask = {
+          ...task,
+          completedAt: task.completedAt ? null : now,
+          updatedAt: now,
+        };
         await putRecord("tasks", nextTask);
-        state.tasks = state.tasks.map((item) => item.id === task.id ? nextTask : item);
+        state.tasks = state.tasks.map((item) =>
+          item.id === task.id ? nextTask : item,
+        );
       } else if (button.dataset.prepAction === "edit") {
         elements.weeklyPrepEditId.value = task.id;
         elements.weeklyPrepCategory.value = task.prepCategory || "preparation";
@@ -3277,10 +3616,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         elements.weeklyPrepAddDisclosure.open = true;
         elements.weeklyPrepCancel.hidden = false;
         elements.weeklyPrepLabel.focus();
-        elements.weeklyPrepForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        elements.weeklyPrepForm.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
         return;
       } else if (button.dataset.prepAction === "delete") {
-        if (!window.confirm("Supprimer « " + task.label + " » du plan de préparation ?")) return;
+        if (
+          !window.confirm(
+            "Supprimer « " + task.label + " » du plan de préparation ?",
+          )
+        )
+          return;
         await deleteRecord("tasks", task.id, task);
         state.tasks = state.tasks.filter((item) => item.id !== task.id);
       }
@@ -3293,10 +3640,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function renderAll() {
-    const cuisineTodayTasks = tasksForToday("cuisine");
-    const cuisineTomorrowTasks = tasksForTomorrow("cuisine");
-    const salleTodayTasks = tasksForToday("salle");
-    const salleTomorrowTasks = tasksForTomorrow("salle");
+    const todayTasks = tasksForToday();
     const bringTasks = tasksForBring();
     const maintenanceTasks = tasksForMaintenance();
 
@@ -3306,94 +3650,70 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       month: "long",
     }).format(new Date());
 
-    renderTaskList(elements.cuisineTodayList, cuisineTodayTasks);
-    renderTaskList(elements.cuisineTomorrowList, cuisineTomorrowTasks);
-    renderTaskList(elements.salleTodayList, salleTodayTasks);
-    renderTaskList(elements.salleTomorrowList, salleTomorrowTasks);
+    renderTaskList(elements.cuisineTodayList, todayTasks);
     renderTaskList(elements.bringList, bringTasks, { isBring: true });
     renderTaskList(elements.maintenanceList, maintenanceTasks);
     renderWeeklyPrep();
-    elements.cuisineTodayProgress.textContent = progressText(cuisineTodayTasks);
-    elements.cuisineTomorrowProgress.textContent = progressText(cuisineTomorrowTasks);
-    elements.salleTodayProgress.textContent = progressText(salleTodayTasks);
-    elements.salleTomorrowProgress.textContent = progressText(salleTomorrowTasks);
+    elements.cuisineTodayProgress.textContent = progressText(todayTasks);
     elements.bringProgress.textContent = progressText(bringTasks);
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddCuisineToday.hidden = false;
-    elements.emptyAddCuisineTomorrow.hidden = false;
-    elements.emptyAddSalleToday.hidden = false;
-    elements.emptyAddSalleTomorrow.hidden = false;
     elements.emptyAddMaintenance.hidden = false;
     setMaintenanceOpen(state.maintenanceOpen);
     renderTemplates("morning");
     renderTemplates("evening");
     elements.autoMorning.checked = state.settings.autoMorning;
     elements.autoEvening.checked = state.settings.autoEvening;
-    renderQuickTarget();
     updateEstimateControls();
     if (!elements.historyView.hidden) renderHistory();
   }
 
-  function renderQuickTarget() {
-    const targets = {
-      cuisineToday: ["Générale · Auj.", "Ajouter à la checklist générale aujourd’hui. Appuyer pour changer de liste"],
-      maintenance: ["Innovation", "Ajouter à Entretien / innovation. Appuyer pour changer de liste"],
-      bring: ["Achat évolutif", "Ajouter un achat évolutif. Appuyer pour changer de liste"],
-    };
-    if (!targets[state.settings.quickTarget]) state.settings.quickTarget = "cuisineToday";
-    const [label, ariaLabel] = targets[state.settings.quickTarget];
-    elements.quickTarget.textContent = label;
-    elements.quickTarget.setAttribute("aria-label", ariaLabel);
-    elements.quickKitchenType.hidden = true;
-    elements.quickEstimate.hidden = state.settings.quickTarget === "bring";
-  }
-
-  function selectedEstimate() {
-    return state.durationTarget === "edit"
-      ? state.editEstimateMinutes
-      : state.quickEstimateMinutes;
-  }
-
   function updateEstimateControls() {
-    const quickLabel = state.quickEstimateMinutes
-      ? `Durée estimée : ${formatEstimate(state.quickEstimateMinutes)}`
-      : "Ajouter une durée estimée";
-    elements.quickEstimate.classList.toggle("is-active", Boolean(state.quickEstimateMinutes));
-    elements.quickEstimate.setAttribute("aria-label", quickLabel);
-    elements.editEstimateValue.textContent = formatEstimate(state.editEstimateMinutes);
+    elements.editEstimateValue.textContent = formatEstimate(
+      state.editEstimateMinutes,
+    );
 
-    const selected = selectedEstimate();
-    for (const button of elements.durationDialog.querySelectorAll("[data-duration-minutes]")) {
-      const active = Number(button.dataset.durationMinutes) === selected;
+    for (const button of elements.durationDialog.querySelectorAll(
+      "[data-duration-minutes]",
+    )) {
+      const active =
+        Number(button.dataset.durationMinutes) === state.editEstimateMinutes;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", String(active));
     }
-    elements.clearDuration.classList.toggle("is-selected", !selected);
-    elements.clearDuration.setAttribute("aria-pressed", String(!selected));
+    elements.clearDuration.classList.toggle(
+      "is-selected",
+      !state.editEstimateMinutes,
+    );
+    elements.clearDuration.setAttribute(
+      "aria-pressed",
+      String(!state.editEstimateMinutes),
+    );
   }
 
-  function openDurationPicker(target) {
-    state.durationTarget = target;
-    const currentEstimate = selectedEstimate();
+  function openDurationPicker() {
+    const currentEstimate = state.editEstimateMinutes;
     const hasPreset = Boolean(
-      elements.durationDialog.querySelector(`[data-duration-minutes="${currentEstimate}"]`),
+      elements.durationDialog.querySelector(
+        `[data-duration-minutes="${currentEstimate}"]`,
+      ),
     );
-    elements.customDurationInput.value = currentEstimate && !hasPreset ? currentEstimate : "";
+    elements.customDurationInput.value =
+      currentEstimate && !hasPreset ? currentEstimate : "";
     updateEstimateControls();
     elements.durationDialog.showModal();
     requestAnimationFrame(() => {
       const preferred = currentEstimate
-        ? elements.durationDialog.querySelector(".duration-grid .is-selected") ||
-          elements.customDurationInput
+        ? elements.durationDialog.querySelector(
+            ".duration-grid .is-selected",
+          ) || elements.customDurationInput
         : elements.durationDialog.querySelector('[data-duration-minutes="15"]');
       preferred?.focus();
     });
   }
 
   function setSelectedEstimate(value) {
-    const minutes = normalizeEstimateMinutes(value);
-    if (state.durationTarget === "edit") state.editEstimateMinutes = minutes;
-    else state.quickEstimateMinutes = minutes;
+    state.editEstimateMinutes = normalizeEstimateMinutes(value);
     updateEstimateControls();
     elements.durationDialog.close();
   }
@@ -3401,7 +3721,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function setMaintenanceOpen(isOpen) {
     state.maintenanceOpen = Boolean(isOpen);
     elements.maintenancePanel.hidden = !state.maintenanceOpen;
-    elements.maintenanceToggle.setAttribute("aria-expanded", String(state.maintenanceOpen));
+    elements.maintenanceToggle.setAttribute(
+      "aria-expanded",
+      String(state.maintenanceOpen),
+    );
   }
 
   async function updateSettings(patch) {
@@ -3411,11 +3734,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       updatedAt: new Date().toISOString(),
     });
     try {
-      const sharedSettingChanged = Object.keys(patch).some((key) => key !== "quickTarget");
-      await putRecord("settings", nextSettings, { share: sharedSettingChanged });
+      await putRecord("settings", nextSettings);
       state.settings = nextSettings;
-      announceChange({ share: sharedSettingChanged });
-      renderQuickTarget();
+      announceChange();
       elements.autoMorning.checked = state.settings.autoMorning;
       elements.autoEvening.checked = state.settings.autoEvening;
       return true;
@@ -3423,51 +3744,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       console.error(error);
       showToast("Modification non enregistrée");
       renderAll();
-      return false;
-    }
-  }
-
-  async function addQuickTask(label) {
-    const cleanLabel = label.trim().slice(0, 180);
-    if (!cleanLabel) return;
-    const now = new Date().toISOString();
-    const section = ["maintenance", "bring"].includes(state.settings.quickTarget)
-      ? state.settings.quickTarget
-      : "daily";
-    const department = section === "daily" && state.settings.quickTarget.startsWith("salle")
-      ? "salle"
-      : section === "daily"
-        ? "cuisine"
-        : null;
-    const dueTomorrow = state.settings.quickTarget.endsWith("Tomorrow");
-    const task = {
-      id: makeId("task"),
-      label: cleanLabel,
-      dueDate: dueTomorrow ? tomorrowKey() : todayKey(),
-      section,
-      department,
-      kitchenType: null,
-      moment: "any",
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-      position: Date.now(),
-      manualPosition: null,
-      templateId: null,
-      occurrenceKey: null,
-      estimateMinutes: section === "bring" ? null : state.quickEstimateMinutes,
-    };
-    try {
-      await putRecord("tasks", task);
-      state.tasks.push(task);
-      state.quickEstimateMinutes = null;
-      announceChange();
-      renderAll();
-      if (section === "maintenance") setMaintenanceOpen(true);
-      return true;
-    } catch (error) {
-      console.error(error);
-      showToast("Tâche non enregistrée");
       return false;
     }
   }
@@ -3520,12 +3796,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       : reopenedHistoryEntry(task, changedAt);
     try {
       await putTaskWithHistory(nextTask, historyEntry);
-      state.tasks = state.tasks.map((item) => (item.id === id ? nextTask : item));
+      state.tasks = state.tasks.map((item) =>
+        item.id === id ? nextTask : item,
+      );
       state.history = mergeCompletionHistory(state.history, [historyEntry]);
       announceChange();
       renderAll();
       requestAnimationFrame(() => {
-        document.querySelector(`[data-task-id="${cssEscape(id)}"] .check-button`)?.focus();
+        document
+          .querySelector(`[data-task-id="${cssEscape(id)}"] .check-button`)
+          ?.focus();
       });
     } catch (error) {
       console.error(error);
@@ -3534,31 +3814,64 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function updateEditorDestination() {
-    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
+    const selectedList = elements.editTaskForm.querySelector(
+      'input[name="task-list"]:checked',
+    );
     elements.taskListFieldset.hidden = false;
-    const isCuisineList = selectedList?.value?.startsWith("cuisine");
-    elements.kitchenTypeFieldset.hidden = true;
-    elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
+    elements.momentFieldset.hidden = ["bring", "maintenance"].includes(
+      selectedList?.value,
+    );
     elements.editEstimate.hidden = selectedList?.value === "bring";
+  }
+
+  function selectEditorTaskList(taskList) {
+    const selectedList = elements.editTaskForm.querySelector(
+      `input[name="task-list"][value="${taskList}"]`,
+    );
+    if (selectedList) selectedList.checked = true;
+  }
+
+  function openTaskCreator(taskList = "cuisineToday") {
+    const destination = TASK_LIST_OPTIONS.includes(taskList)
+      ? taskList
+      : "cuisineToday";
+    state.activeTaskId = null;
+    state.editorTaskList = destination;
+    elements.taskDialog.querySelector("#taskDialogTitle").textContent =
+      "Ajouter une tâche";
+    elements.editTaskLabel.value = "";
+    selectEditorTaskList(destination);
+    elements.editTaskForm.querySelector(
+      'input[name="moment"][value="any"]',
+    ).checked = true;
+    state.editEstimateMinutes = null;
+    elements.deleteTask.hidden = true;
+    updateEstimateControls();
+    updateEditorDestination();
+    elements.taskDialog.showModal();
+    requestAnimationFrame(() => elements.editTaskLabel.focus());
   }
 
   function openTaskEditor(id) {
     const task = state.tasks.find((item) => item.id === id);
     if (!task) return;
     state.activeTaskId = id;
+    state.editorTaskList = null;
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
       task.section === "bring" ? "Modifier — Achat évolutif" : "Modifier";
     elements.editTaskLabel.value = task.label;
-    elements.editKitchenType.value = normalizeKitchenType(task.kitchenType, task.label);
     const taskList = taskListForTask(task);
-    const selectedList = elements.editTaskForm.querySelector(
-      `input[name="task-list"][value="${taskList}"]`,
+    selectEditorTaskList(taskList);
+    const moment = ["morning", "evening"].includes(task.moment)
+      ? task.moment
+      : "any";
+    const selectedMoment = elements.editTaskForm.querySelector(
+      `input[name="moment"][value="${moment}"]`,
     );
-    if (selectedList) selectedList.checked = true;
-    const moment = ["morning", "evening"].includes(task.moment) ? task.moment : "any";
-    const selectedMoment = elements.editTaskForm.querySelector(`input[name="moment"][value="${moment}"]`);
     if (selectedMoment) selectedMoment.checked = true;
-    state.editEstimateMinutes = task.section === "bring" ? null : task.estimateMinutes;
+    state.editEstimateMinutes =
+      task.section === "bring" ? null : task.estimateMinutes;
+    elements.deleteTask.hidden = false;
     updateEstimateControls();
     updateEditorDestination();
     elements.taskDialog.showModal();
@@ -3566,41 +3879,58 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function saveTaskFromEditor() {
-    const task = state.tasks.find((item) => item.id === state.activeTaskId);
+    const task = state.activeTaskId
+      ? state.tasks.find((item) => item.id === state.activeTaskId)
+      : null;
     const cleanLabel = elements.editTaskLabel.value.trim().slice(0, 180);
-    if (!task || !cleanLabel) return;
-    const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
-    const selectedMoment = elements.editTaskForm.querySelector('input[name="moment"]:checked');
-    const taskList = QUICK_TARGET_ORDER.includes(selectedList?.value)
+    if ((!task && !state.editorTaskList) || !cleanLabel) return;
+    const selectedList = elements.editTaskForm.querySelector(
+      'input[name="task-list"]:checked',
+    );
+    const selectedMoment = elements.editTaskForm.querySelector(
+      'input[name="moment"]:checked',
+    );
+    const taskList = TASK_LIST_OPTIONS.includes(selectedList?.value)
       ? selectedList.value
       : "cuisineToday";
-    const isDaily = taskList.startsWith("cuisine") || taskList.startsWith("salle");
-    const department = isDaily && taskList.startsWith("salle") ? "salle" : "cuisine";
-    const previousTaskList = taskListForTask(task);
-    const nextTask = {
-      ...task,
+    const isDaily = taskList === "cuisineToday";
+    const previousTaskList = task ? taskListForTask(task) : taskList;
+    const now = new Date().toISOString();
+    const nextTask = normalizeTask({
+      ...(task || {}),
+      id: task?.id || makeId("task"),
       label: cleanLabel,
-      dueDate: taskList.endsWith("Tomorrow") ? tomorrowKey() : todayKey(),
+      dueDate: todayKey(),
       section: isDaily ? "daily" : taskList,
-      department: isDaily ? department : null,
-      kitchenType: isDaily && department === "cuisine"
-        ? normalizeKitchenType(elements.editKitchenType.value, cleanLabel)
-        : null,
+      department: isDaily ? "cuisine" : null,
       moment: isDaily ? selectedMoment?.value || "any" : "any",
       estimateMinutes: taskList === "bring" ? null : state.editEstimateMinutes,
-      manualPosition: previousTaskList === taskList ? task.manualPosition : null,
-      updatedAt: new Date().toISOString(),
-    };
+      completedAt: task?.completedAt || null,
+      createdAt: task?.createdAt || now,
+      updatedAt: now,
+      position: task?.position || Date.now(),
+      manualPosition:
+        task && previousTaskList === taskList ? task.manualPosition : null,
+      templateId: task?.templateId || null,
+      occurrenceKey: task?.occurrenceKey || null,
+    });
     try {
       await putRecord("tasks", nextTask);
-      state.tasks = state.tasks.map((item) => (item.id === task.id ? nextTask : item));
+      state.tasks = task
+        ? state.tasks.map((item) => (item.id === task.id ? nextTask : item))
+        : [...state.tasks, nextTask];
       announceChange();
       elements.taskDialog.close();
       state.activeTaskId = null;
+      state.editorTaskList = null;
       renderAll();
       if (taskList === "maintenance") setMaintenanceOpen(true);
       requestAnimationFrame(() => {
-        document.querySelector(`[data-task-id="${cssEscape(task.id)}"] .task-main`)?.focus();
+        document
+          .querySelector(
+            `[data-task-id="${cssEscape(nextTask.id)}"] .task-main`,
+          )
+          ?.focus();
       });
     } catch (error) {
       console.error(error);
@@ -3617,7 +3947,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       state.activeTaskId = null;
       state.tasks = state.tasks.filter((item) => item.id !== task.id);
       if (occurrence) {
-        state.occurrences = state.occurrences.filter((item) => item.id !== occurrence.id);
+        state.occurrences = state.occurrences.filter(
+          (item) => item.id !== occurrence.id,
+        );
         state.occurrences.push(occurrence);
       }
       announceChange();
@@ -3627,12 +3959,18 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           await restoreTaskWithOccurrence(task);
           state.tasks.push(task);
           if (task.occurrenceKey) {
-            state.occurrences = state.occurrences.filter((item) => item.id !== task.occurrenceKey);
+            state.occurrences = state.occurrences.filter(
+              (item) => item.id !== task.occurrenceKey,
+            );
           }
           announceChange();
           renderAll();
           requestAnimationFrame(() => {
-            document.querySelector(`[data-task-id="${cssEscape(task.id)}"] .task-main`)?.focus();
+            document
+              .querySelector(
+                `[data-task-id="${cssEscape(task.id)}"] .task-main`,
+              )
+              ?.focus();
           });
         } catch (error) {
           console.error(error);
@@ -3663,7 +4001,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       state.templates.push(template);
       announceChange();
       renderTemplates(routine);
-      const automatic = routine === "morning" ? state.settings.autoMorning : state.settings.autoEvening;
+      const automatic =
+        routine === "morning"
+          ? state.settings.autoMorning
+          : state.settings.autoEvening;
       if (automatic) await generateRoutine(routine, { silent: true });
       return true;
     } catch (error) {
@@ -3690,7 +4031,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           renderTemplates(template.routine);
           elements.settingsDialog.showModal();
           requestAnimationFrame(() => {
-            document.querySelector(`[data-template-id="${cssEscape(template.id)}"] .template-delete`)?.focus();
+            document
+              .querySelector(
+                `[data-template-id="${cssEscape(template.id)}"] .template-delete`,
+              )
+              ?.focus();
           });
         } catch (error) {
           console.error(error);
@@ -3711,17 +4056,23 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!templates.length) {
       if (!silent) {
         openSettingsForRoutine(routine);
-        showToast(`Ajoute les étapes du ${routine === "morning" ? "matin" : "soir"}`);
+        showToast(
+          `Ajoute les étapes du ${routine === "morning" ? "matin" : "soir"}`,
+        );
       }
       return 0;
     }
 
     const date = todayKey();
-    const existingKeys = new Set(state.tasks.map((task) => task.occurrenceKey).filter(Boolean));
-    const dismissedKeys = new Set(state.occurrences.map((occurrence) => occurrence.id));
+    const existingKeys = new Set(
+      state.tasks.map((task) => task.occurrenceKey).filter(Boolean),
+    );
+    const dismissedKeys = new Set(
+      state.occurrences.map((occurrence) => occurrence.id),
+    );
     const firstManualPosition = Math.min(
       0,
-      ...tasksForToday("cuisine")
+      ...tasksForToday()
         .map((task) => task.manualPosition)
         .filter((position) => Number.isFinite(position)),
     );
@@ -3731,7 +4082,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
     for (const [index, template] of templates.entries()) {
       const occurrenceKey = `${template.id}:${date}`;
-      if (existingKeys.has(occurrenceKey) || (silent && dismissedKeys.has(occurrenceKey))) continue;
+      if (
+        existingKeys.has(occurrenceKey) ||
+        (silent && dismissedKeys.has(occurrenceKey))
+      )
+        continue;
       const timestamp = new Date(Date.now() + index).toISOString();
       const task = {
         id: `routine-${template.id}-${date}`,
@@ -3744,7 +4099,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         createdAt: timestamp,
         updatedAt: timestamp,
         position: Date.now() + index,
-        manualPosition: routine === "morning" ? morningStartPosition + index : null,
+        manualPosition:
+          routine === "morning" ? morningStartPosition + index : null,
         templateId: template.id,
         occurrenceKey,
         estimateMinutes: null,
@@ -3774,16 +4130,24 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (needsRefresh) await loadState({ runAutomatic: false });
     else renderAll();
     if (!silent) {
-      showToast(created ? `${created} tâche${created > 1 ? "s" : ""} ajoutée${created > 1 ? "s" : ""}` : "Checklist déjà prête");
+      showToast(
+        created
+          ? `${created} tâche${created > 1 ? "s" : ""} ajoutée${created > 1 ? "s" : ""}`
+          : "Checklist déjà prête",
+      );
       elements.settingsDialog.open && elements.settingsDialog.close();
-      document.querySelector("#cuisineTodayTitle")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .querySelector("#cuisineTodayTitle")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     return created;
   }
 
   async function runAutomaticRoutines() {
-    if (state.settings.autoMorning) await generateRoutine("morning", { silent: true });
-    if (state.settings.autoEvening) await generateRoutine("evening", { silent: true });
+    if (state.settings.autoMorning)
+      await generateRoutine("morning", { silent: true });
+    if (state.settings.autoEvening)
+      await generateRoutine("evening", { silent: true });
   }
 
   function openSettingsForRoutine(routine) {
@@ -3820,17 +4184,22 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         }
       : null;
     elements.toast.classList.add("is-visible");
-    if (supportsPopover && !elements.toast.matches(":popover-open")) elements.toast.showPopover();
+    if (supportsPopover && !elements.toast.matches(":popover-open"))
+      elements.toast.showPopover();
     if (action) requestAnimationFrame(() => elements.toastAction.focus());
     else toastTimer = window.setTimeout(hideToast, 2800);
   }
 
   function hideToast() {
     elements.toast.classList.remove("is-visible");
-    if (typeof elements.toast.hidePopover === "function" && elements.toast.matches(":popover-open")) {
+    if (
+      typeof elements.toast.hidePopover === "function" &&
+      elements.toast.matches(":popover-open")
+    ) {
       elements.toast.hidePopover();
     }
-    if (elements.toast.parentElement !== document.body) document.body.append(elements.toast);
+    if (elements.toast.parentElement !== document.body)
+      document.body.append(elements.toast);
   }
 
   function exportData() {
@@ -3843,7 +4212,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       settings: state.settings,
       occurrences: state.occurrences,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -3859,7 +4230,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!file) return;
     try {
       const payload = JSON.parse(await file.text());
-      if (![1, 2, 3, 4].includes(payload?.version) || !Array.isArray(payload.tasks) || !Array.isArray(payload.templates)) {
+      if (
+        ![1, 2, 3, 4].includes(payload?.version) ||
+        !Array.isArray(payload.tasks) ||
+        !Array.isArray(payload.templates)
+      ) {
         throw new Error("Format non reconnu");
       }
 
@@ -3872,10 +4247,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       );
       const nextState = {
         tasks: payload.tasks.map(normalizeTask).filter((task) => task.label),
-        history: payload.version >= 3
-          ? importedHistory
-          : mergeCompletionHistory(state.history, importedHistory),
-        templates: payload.templates.map(normalizeTemplate).filter((template) => template.label),
+        history:
+          payload.version >= 3
+            ? importedHistory
+            : mergeCompletionHistory(state.history, importedHistory),
+        templates: payload.templates
+          .map(normalizeTemplate)
+          .filter((template) => template.label),
         occurrences: occurrenceRecords.map(normalizeOccurrence).filter(Boolean),
         settings: normalizeSettings(payload.settings),
       };
@@ -3886,7 +4264,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         occurrences: [...state.occurrences],
         settings: { ...state.settings },
       };
-      const confirmed = window.confirm("Remplacer les tâches actuelles par cette sauvegarde ?");
+      const confirmed = window.confirm(
+        "Remplacer les tâches actuelles par cette sauvegarde ?",
+      );
       if (!confirmed) return;
       await replaceAllDataWithMutations(nextState, previousState);
       await loadState({ runAutomatic: false });
@@ -3897,7 +4277,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
           await replaceAllDataWithMutations(previousState, nextState);
           await loadState({ runAutomatic: false });
           announceChange();
-          requestAnimationFrame(() => elements.quickInput.focus());
+          requestAnimationFrame(() => elements.emptyAddCuisineToday.focus());
         } catch (error) {
           console.error(error);
           showToast("Restauration impossible");
@@ -3912,7 +4292,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function clearCompletedTasks() {
-    const completed = state.tasks.filter((task) => task.completedAt && task.section !== "weeklyPrep");
+    const completed = state.tasks.filter(
+      (task) => task.completedAt && task.section !== "weeklyPrep",
+    );
     if (!completed.length) {
       showToast("Aucune tâche terminée");
       return;
@@ -3925,33 +4307,42 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const tombstones = await deleteCompletedRecords(completed);
       const removedIds = new Set(completed.map((task) => task.id));
       const tombstoneMap = new Map(
-        [...state.occurrences, ...tombstones].map((occurrence) => [occurrence.id, occurrence]),
+        [...state.occurrences, ...tombstones].map((occurrence) => [
+          occurrence.id,
+          occurrence,
+        ]),
       );
       state.tasks = state.tasks.filter((task) => !removedIds.has(task.id));
       state.occurrences = [...tombstoneMap.values()];
       announceChange();
       renderAll();
       if (elements.settingsDialog.open) elements.settingsDialog.close();
-      showToast("Tâches retirées · historique conservé", "Annuler", async () => {
-        try {
-          await restoreCompletedRecords(completed);
-          const currentTaskMap = new Map(state.tasks.map((task) => [task.id, task]));
-          for (const task of completed) currentTaskMap.set(task.id, task);
-          state.tasks = [...currentTaskMap.values()];
-          const restoredOccurrenceIds = new Set(
-            completed.map((task) => task.occurrenceKey).filter(Boolean),
-          );
-          state.occurrences = state.occurrences.filter(
-            (occurrence) => !restoredOccurrenceIds.has(occurrence.id),
-          );
-          announceChange();
-          renderAll();
-          requestAnimationFrame(() => elements.quickInput.focus());
-        } catch (error) {
-          console.error(error);
-          showToast("Restauration impossible");
-        }
-      });
+      showToast(
+        "Tâches retirées · historique conservé",
+        "Annuler",
+        async () => {
+          try {
+            await restoreCompletedRecords(completed);
+            const currentTaskMap = new Map(
+              state.tasks.map((task) => [task.id, task]),
+            );
+            for (const task of completed) currentTaskMap.set(task.id, task);
+            state.tasks = [...currentTaskMap.values()];
+            const restoredOccurrenceIds = new Set(
+              completed.map((task) => task.occurrenceKey).filter(Boolean),
+            );
+            state.occurrences = state.occurrences.filter(
+              (occurrence) => !restoredOccurrenceIds.has(occurrence.id),
+            );
+            announceChange();
+            renderAll();
+            requestAnimationFrame(() => elements.emptyAddCuisineToday.focus());
+          } catch (error) {
+            console.error(error);
+            showToast("Restauration impossible");
+          }
+        },
+      );
     } catch (error) {
       console.error(error);
       showToast("Suppression non enregistrée");
@@ -3962,20 +4353,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (event.target === dialog) dialog.close();
   }
 
-  function selectQuickTargetAndFocus(quickTarget) {
-    // iOS only opens the keyboard when focus happens synchronously during the tap.
-    // Update the in-memory target first so an immediate submission uses the right list.
-    state.settings.quickTarget = quickTarget;
-    renderQuickTarget();
-    elements.quickInput.focus();
-    void updateSettings({ quickTarget });
-  }
-
   function gestureTouch(touchList) {
     if (reorderGesture?.inputType !== "touch") return null;
-    return Array.from(touchList).find(
-      (touch) => touch.identifier === reorderGesture.pointerId,
-    ) || null;
+    return (
+      Array.from(touchList).find(
+        (touch) => touch.identifier === reorderGesture.pointerId,
+      ) || null
+    );
   }
 
   function handleAdditionalTaskTouch(event) {
@@ -4041,23 +4425,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
     window.addEventListener("blur", () => cancelTaskReorder());
 
-    elements.quickAddForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const label = elements.quickInput.value;
-      if (!label.trim()) return;
-      const saved = await addQuickTask(label);
-      if (saved) elements.quickInput.value = "";
-      elements.quickInput.focus();
-    });
-
-    elements.quickTarget.addEventListener("click", () => {
-      const currentIndex = QUICK_TARGET_ORDER.indexOf(state.settings.quickTarget);
-      const quickTarget = QUICK_TARGET_ORDER[(currentIndex + 1) % QUICK_TARGET_ORDER.length];
-      selectQuickTargetAndFocus(quickTarget);
-    });
-
-    elements.quickEstimate.addEventListener("click", () => openDurationPicker("quick"));
-
     elements.bringAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const label = elements.bringInput.value;
@@ -4072,7 +4439,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
 
     elements.weeklyPrepToggle.addEventListener("click", () => {
-      const isOpen = elements.weeklyPrepToggle.getAttribute("aria-expanded") === "true";
+      const isOpen =
+        elements.weeklyPrepToggle.getAttribute("aria-expanded") === "true";
       elements.weeklyPrepToggle.setAttribute("aria-expanded", String(!isOpen));
       elements.weeklyPrepPanel.hidden = isOpen;
     });
@@ -4080,30 +4448,25 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.weeklyPrepForm.addEventListener("submit", saveWeeklyPrepItem);
     elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
     elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
-    elements.weeklyPrepDishes.addEventListener("click", handleWeeklyPrepDishClick);
+    elements.weeklyPrepDishes.addEventListener(
+      "click",
+      handleWeeklyPrepDishClick,
+    );
 
     elements.emptyAddCuisineToday.addEventListener("click", () => {
-      selectQuickTargetAndFocus("cuisineToday");
-    });
-
-    elements.emptyAddCuisineTomorrow.addEventListener("click", () => {
-      selectQuickTargetAndFocus("cuisineTomorrow");
-    });
-
-    elements.emptyAddSalleToday.addEventListener("click", () => {
-      selectQuickTargetAndFocus("salleToday");
-    });
-
-    elements.emptyAddSalleTomorrow.addEventListener("click", () => {
-      selectQuickTargetAndFocus("salleTomorrow");
+      openTaskCreator("cuisineToday");
     });
 
     elements.emptyAddMaintenance.addEventListener("click", () => {
-      selectQuickTargetAndFocus("maintenance");
+      openTaskCreator("maintenance");
     });
 
-    elements.addMorningToday.addEventListener("click", () => generateRoutine("morning"));
-    elements.addEveningToday.addEventListener("click", () => generateRoutine("evening"));
+    elements.addMorningToday.addEventListener("click", () =>
+      generateRoutine("morning"),
+    );
+    elements.addEveningToday.addEventListener("click", () =>
+      generateRoutine("evening"),
+    );
 
     elements.openSettings.addEventListener("click", () => {
       showSettingsHome();
@@ -4111,9 +4474,15 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.settingsContent.scrollTop = 0;
     });
     elements.openHistory.addEventListener("click", showHistoryView);
-    elements.backToSettings.addEventListener("click", () => showSettingsHome({ restoreFocus: true }));
-    elements.closeSettings.addEventListener("click", () => elements.settingsDialog.close());
-    elements.settingsDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.settingsDialog, event));
+    elements.backToSettings.addEventListener("click", () =>
+      showSettingsHome({ restoreFocus: true }),
+    );
+    elements.closeSettings.addEventListener("click", () =>
+      elements.settingsDialog.close(),
+    );
+    elements.settingsDialog.addEventListener("click", (event) =>
+      closeDialogOnBackdrop(elements.settingsDialog, event),
+    );
     elements.settingsDialog.addEventListener("close", () => showSettingsHome());
 
     for (const form of document.querySelectorAll("[data-template-form]")) {
@@ -4145,27 +4514,44 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       event.preventDefault();
       await saveTaskFromEditor();
     });
-    for (const input of elements.editTaskForm.querySelectorAll('input[name="task-list"]')) {
+    for (const input of elements.editTaskForm.querySelectorAll(
+      'input[name="task-list"]',
+    )) {
       input.addEventListener("change", updateEditorDestination);
     }
-    elements.editEstimate.addEventListener("click", () => openDurationPicker("edit"));
-    elements.closeTaskDialog.addEventListener("click", () => elements.taskDialog.close());
-    elements.taskDialog.addEventListener("click", (event) => closeDialogOnBackdrop(elements.taskDialog, event));
+    elements.editEstimate.addEventListener("click", openDurationPicker);
+    elements.closeTaskDialog.addEventListener("click", () =>
+      elements.taskDialog.close(),
+    );
+    elements.taskDialog.addEventListener("click", (event) =>
+      closeDialogOnBackdrop(elements.taskDialog, event),
+    );
     elements.taskDialog.addEventListener("close", () => {
       state.activeTaskId = null;
+      state.editorTaskList = null;
       state.editEstimateMinutes = null;
     });
     elements.deleteTask.addEventListener("click", deleteActiveTask);
 
-    for (const button of elements.durationDialog.querySelectorAll("[data-duration-minutes]")) {
-      button.addEventListener("click", () => setSelectedEstimate(button.dataset.durationMinutes));
+    for (const button of elements.durationDialog.querySelectorAll(
+      "[data-duration-minutes]",
+    )) {
+      button.addEventListener("click", () =>
+        setSelectedEstimate(button.dataset.durationMinutes),
+      );
     }
-    elements.clearDuration.addEventListener("click", () => setSelectedEstimate(null));
+    elements.clearDuration.addEventListener("click", () =>
+      setSelectedEstimate(null),
+    );
     elements.customDurationForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      const minutes = normalizeEstimateMinutes(elements.customDurationInput.value);
+      const minutes = normalizeEstimateMinutes(
+        elements.customDurationInput.value,
+      );
       if (!minutes) {
-        elements.customDurationInput.setCustomValidity("Choisis une durée entre 1 et 720 minutes");
+        elements.customDurationInput.setCustomValidity(
+          "Choisis une durée entre 1 et 720 minutes",
+        );
         elements.customDurationInput.reportValidity();
         return;
       }
@@ -4175,26 +4561,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.customDurationInput.addEventListener("input", () =>
       elements.customDurationInput.setCustomValidity(""),
     );
-    elements.closeDurationDialog.addEventListener("click", () => elements.durationDialog.close());
+    elements.closeDurationDialog.addEventListener("click", () =>
+      elements.durationDialog.close(),
+    );
     elements.durationDialog.addEventListener("click", (event) =>
       closeDialogOnBackdrop(elements.durationDialog, event),
     );
     elements.durationDialog.addEventListener("close", () => {
-      const target = state.durationTarget;
-      state.durationTarget = null;
-      if (target === "edit" && elements.taskDialog.open) elements.editEstimate.focus();
-      else if (target === "quick") elements.quickEstimate.focus();
+      if (elements.taskDialog.open) elements.editEstimate.focus();
     });
 
     elements.exportData.addEventListener("click", exportData);
-    elements.importDataButton.addEventListener("click", () => elements.importData.click());
-    elements.importData.addEventListener("change", () => importData(elements.importData.files?.[0]));
+    elements.importDataButton.addEventListener("click", () =>
+      elements.importData.click(),
+    );
+    elements.importData.addEventListener("change", () =>
+      importData(elements.importData.files?.[0]),
+    );
     elements.clearCompleted.addEventListener("click", clearCompletedTasks);
     elements.toastDismiss.addEventListener("click", () => {
       hideToast();
       if (elements.taskDialog.open) elements.closeTaskDialog.focus();
       else if (elements.settingsDialog.open) elements.closeSettings.focus();
-      else elements.quickInput.focus();
+      else elements.emptyAddCuisineToday.focus();
     });
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -4261,8 +4650,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (taskReorderLocked()) {
         pendingLocalRefresh = true;
         if (carriesMutation) pendingRemoteRefresh = true;
-      }
-      else {
+      } else {
         void loadState({ runAutomatic: false }).then(() => {
           // A concurrent tab may have committed an outbox entry immediately
           // before this tab replaced its local projection. Reconcile promptly;
@@ -4275,7 +4663,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function prepareInstallControl() {
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigator.standalone;
     if (isIos && !isStandalone) elements.installApp.hidden = false;
   }
 
@@ -4283,7 +4673,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (!("serviceWorker" in navigator)) return;
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("./sw.js?v=17", {
+        const registration = await navigator.serviceWorker.register("./sw.js", {
           updateViaCache: "none",
         });
         await registration.update();
@@ -4317,7 +4707,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       return;
     }
     await initializeSharedState();
-    await ensureWeeklyPrepStarterItems();
     await runAutomaticRoutines();
     renderAll();
 
