@@ -2435,3 +2435,10 @@ dialog::backdrop {
   .weekly-prep-dish-summary { font-size: .68rem; }
   .weekly-prep-dish-open-label { padding: 6px 8px; font-size: .66rem; }
 }
+
+
+.weekly-prep-open { width: 100%; min-height: 44px; margin: 0 0 12px; }
+.weekly-prep-form[hidden] { display: none; }
+@media (max-width: 680px) {
+  .weekly-prep-open { margin-bottom: 10px; }
+}
