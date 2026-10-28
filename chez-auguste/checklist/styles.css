@@ -2331,3 +2331,23 @@ dialog::backdrop {
   .weekly-prep-dish-copy strong { font-size: 0.76rem; }
   .weekly-prep-dish-copy span, .weekly-prep-dish-badge { font-size: 0.68rem; }
 }
+
+
+/* Compact, quiet reminder summary on mobile */
+.weekly-prep-dish-reminder { background: #f7f2f1; border-color: #eadfdf; box-shadow: none; }
+.weekly-prep-dish-reminder > summary { min-height: 46px; padding: 9px 12px; font-size: 0.84rem; }
+.weekly-prep-dish-reminder > summary::after {
+  width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 24px;
+  border-radius: 50%; background: #efe3e3; font-size: 0.95rem;
+}
+.weekly-prep-dish-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weekly-prep-intro { align-items: center; }
+.weekly-prep-note { max-width: 540px; font-size: 0.76rem; }
+@media (max-width: 680px) {
+  .weekly-prep-intro { gap: 8px; margin-bottom: 10px; }
+  .weekly-prep-note { font-size: 0.72rem; line-height: 1.25; }
+  .weekly-prep-dish-reminder { margin-bottom: 10px; }
+  .weekly-prep-dish-reminder > summary { min-height: 42px; padding: 7px 10px; font-size: 0.78rem; }
+  .weekly-prep-dish-summary { font-size: 0.66rem; }
+  .service-board-kicker { display: none; }
+}
