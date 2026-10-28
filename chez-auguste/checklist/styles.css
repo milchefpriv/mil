@@ -2261,3 +2261,16 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 }
+
+
+.weekly-prep-dish-reminder { margin: 0 0 14px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 14px; background: #fbf8f4; }
+.weekly-prep-dish-reminder h3 { margin: 0 0 9px; font-size: 0.9rem; }
+.weekly-prep-dishes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.weekly-prep-dishes-empty { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.weekly-prep-dish-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); }
+.weekly-prep-dish-copy { display: grid; gap: 3px; min-width: 0; }
+.weekly-prep-dish-copy strong { overflow-wrap: anywhere; font-size: 0.82rem; }
+.weekly-prep-dish-copy span { color: var(--muted); font-size: 0.72rem; }
+.weekly-prep-dish-badge { flex: 0 0 auto; color: #8c652f; font-size: 0.72rem; font-weight: 750; }
+.weekly-prep-dish-status.is-complete { border-color: #b9d3be; background: #f3faf4; }
+.weekly-prep-dish-status.is-complete .weekly-prep-dish-badge { color: #28713c; }
