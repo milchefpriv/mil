@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-28-weekly-prep-disclosure-card-design-v2";
+  const APP_BUILD_ID = "2026-10-28-weekly-prep-category-persistence-v3";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = ["cuisineToday", "maintenance", "bring"];
   const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
@@ -2897,7 +2897,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     "weekly-prep-stew": "cuisson",
     "weekly-prep-potatoes": "cuisson",
     "weekly-prep-eggs": "decoupe",
-    "weekly-prep-fries": "cuisson",
+    "weekly-prep-fries": "decoupe",
     "weekly-prep-creme-brulee": "cuisson",
     "weekly-prep-panna-cotta": "cuisson",
     "weekly-prep-cornichons": "decoupe",
@@ -2983,8 +2983,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       const existing = state.tasks.find((task) => task.id === id);
       if (existing) {
         const position = WEEKLY_PREP_ORDER.indexOf(id) + 1;
-        if (existing.prepCategory !== category || existing.position !== position) {
-          existing.prepCategory = category;
+        if (existing.position !== position) {
           existing.position = position;
           existing.updatedAt = now;
           await putRecord("tasks", existing);
