@@ -15,7 +15,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=21" />
+    <link rel="stylesheet" href="./styles.css?v=22" />
     <script type="module" src="./app.js?v=27"></script>
   </head>
   <body>
@@ -54,9 +54,16 @@
             </div>
           </div>
           <details class="weekly-prep-dish-reminder" id="weeklyPrepDishReminder">
-            <summary>
-              <span>Carte</span>
-              <span class="weekly-prep-dish-summary" id="weeklyPrepDishSummary"></span>
+            <summary aria-label="Ouvrir le rappel de la carte et voir l’avancement des plats">
+              <span class="weekly-prep-dish-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 4.75h12a1.25 1.25 0 0 1 1.25 1.25v13H4.75V6A1.25 1.25 0 0 1 6 4.75Z"></path><path d="M8 8h8M8 11.5h8M8 15h5"></path></svg>
+              </span>
+              <span class="weekly-prep-dish-info">
+                <strong>Carte de la semaine</strong>
+                <span class="weekly-prep-dish-summary" id="weeklyPrepDishSummary"></span>
+              </span>
+              <span class="weekly-prep-dish-open-label">Voir les plats</span>
+              <span class="weekly-prep-dish-chevron" aria-hidden="true">›</span>
             </summary>
             <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
           </details>
