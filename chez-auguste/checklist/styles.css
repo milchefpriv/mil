@@ -2378,3 +2378,70 @@ dialog::backdrop {
     font-size: 0.68rem;
   }
 }
+
+
+/* Compact weekly reminders for kitchen tablets. */
+.weekly-prep-section {
+  margin: 10px 0;
+}
+.weekly-prep-panel {
+  padding: 10px;
+}
+.weekly-prep-dishes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+}
+.weekly-prep-dish-status {
+  min-height: 46px;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 10px;
+}
+.weekly-prep-dish-copy {
+  gap: 1px;
+}
+.weekly-prep-dish-copy strong {
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+.weekly-prep-dish-copy span,
+.weekly-prep-dish-badge {
+  font-size: 0.67rem;
+}
+.weekly-prep-dish-badge {
+  padding: 4px 7px;
+}
+.weekly-prep-completed-group {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.weekly-prep-completed-group > summary {
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  background: var(--paper);
+  font-size: 0.78rem;
+  font-weight: 740;
+  cursor: pointer;
+}
+.weekly-prep-completed-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 6px;
+}
+@media (max-width: 680px) {
+  .weekly-prep-dishes,
+  .weekly-prep-completed-list {
+    grid-template-columns: 1fr;
+  }
+  .weekly-prep-completed-group > summary {
+    min-height: 42px;
+  }
+  .weekly-prep-dish-status {
+    min-height: 48px;
+  }
+}
