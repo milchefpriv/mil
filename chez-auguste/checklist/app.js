@@ -97,7 +97,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepRefillDay: document.querySelector("#weeklyPrepRefillDay"),
     weeklyPrepSubmit: document.querySelector("#weeklyPrepSubmit"),
     weeklyPrepCancel: document.querySelector("#weeklyPrepCancel"),
-    weeklyPrepReset: document.querySelector("#weeklyPrepReset"),
     quickAddForm: document.querySelector("#quickAddForm"),
     quickInput: document.querySelector("#quickInput"),
     quickTarget: document.querySelector("#quickTarget"),
@@ -3292,29 +3291,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function resetWeeklyPrepWeek() {
-    const tasks = weeklyPrepTasks().filter((task) => task.completedAt);
-    if (!tasks.length) {
-      showToast("Aucune préparation terminée à réouvrir");
-      return;
-    }
-    const count = tasks.length;
-    if (!window.confirm("Réouvrir les " + count + " préparation" + (count > 1 ? "s" : "") + " terminée" + (count > 1 ? "s" : "") + " ?")) return;
-    const now = new Date().toISOString();
-    try {
-      const updates = tasks.map((task) => ({ ...task, completedAt: null, updatedAt: now }));
-      await Promise.all(updates.map((task) => putRecord("tasks", task)));
-      const updatedById = new Map(updates.map((task) => [task.id, task]));
-      state.tasks = state.tasks.map((task) => updatedById.get(task.id) || task);
-      announceChange();
-      renderAll();
-      showToast("Préparations réouvertes");
-    } catch (error) {
-      console.error(error);
-      showToast("Réinitialisation non enregistrée");
-    }
-  }
-
   function renderAll() {
     const cuisineTodayTasks = tasksForToday("cuisine");
     const cuisineTomorrowTasks = tasksForTomorrow("cuisine");
@@ -4104,7 +4080,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
     elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
     elements.weeklyPrepDishes.addEventListener("click", handleWeeklyPrepDishClick);
-    elements.weeklyPrepReset.addEventListener("click", resetWeeklyPrepWeek);
 
     elements.emptyAddCuisineToday.addEventListener("click", () => {
       selectQuickTargetAndFocus("cuisineToday");
