@@ -2351,3 +2351,39 @@ dialog::backdrop {
   .weekly-prep-dish-summary { font-size: 0.66rem; }
   .service-board-kicker { display: none; }
 }
+
+
+.weekly-prep-dish-dialog-note { margin-bottom: -4px; }
+.weekly-prep-dish-actions { display: grid; gap: 12px; }
+.weekly-prep-dish-action-group {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.weekly-prep-dish-action-group h3 {
+  margin: 0;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--line);
+  color: var(--prep-accent, var(--ink));
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.weekly-prep-dish-action-group[data-prep-category="cuisson"] { --prep-accent: #bd741f; }
+.weekly-prep-dish-action-group[data-prep-category="decoupe"] { --prep-accent: #398653; }
+.weekly-prep-dish-action-group[data-prep-category="preparation"] { --prep-accent: #3979bd; }
+.weekly-prep-dish-action-group ul { display: grid; gap: 0; margin: 0; padding: 0 11px; list-style: none; }
+.weekly-prep-dish-action {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.weekly-prep-dish-action:first-child { border-top: 0; }
+.weekly-prep-dish-action-state { color: #966c35; font-size: 0.72rem; font-weight: 750; }
+.weekly-prep-dish-action.is-complete .weekly-prep-dish-action-state { color: #28713c; }
+.weekly-prep-dish-action-copy { display: grid; gap: 3px; min-width: 0; }
+.weekly-prep-dish-action-copy strong { font-size: 0.84rem; overflow-wrap: anywhere; }
+.weekly-prep-dish-action-copy small { color: var(--muted); font-size: 0.72rem; }
