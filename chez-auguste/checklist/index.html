@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=17" />
-    <script type="module" src="./app.js?v=23"></script>
+    <link rel="stylesheet" href="./styles.css?v=18" />
+    <script type="module" src="./app.js?v=24"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -142,10 +142,14 @@
           <div class="weekly-prep-intro">
             <div>
               <p class="eyebrow" id="weeklyPrepWeek"></p>
-              <p class="weekly-prep-note">Prévoir les quantités, le plat concerné et le moment du réassort.</p>
+              <p class="weekly-prep-note">Reliez chaque action à un ou plusieurs plats de la carte. Un plat est validé lorsque toutes ses actions sont cochées.</p>
             </div>
             <button class="secondary-button weekly-prep-reset" id="weeklyPrepReset" type="button">Réouvrir les terminées</button>
           </div>
+          <section class="weekly-prep-dish-reminder" aria-labelledby="weeklyPrepDishesTitle">
+            <h3 id="weeklyPrepDishesTitle">Rappel de la carte</h3>
+            <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
+          </section>
           <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
             <input id="weeklyPrepEditId" type="hidden" />
             <label class="weekly-prep-field">
@@ -159,8 +163,9 @@
               <input id="weeklyPrepLabel" type="text" maxlength="180" placeholder="Ex. Mayonnaise" required />
             </label>
             <label class="weekly-prep-field">
-              <span>Pour quel plat ?</span>
-              <input id="weeklyPrepDish" type="text" maxlength="120" placeholder="Ex. Œufs mimosa" />
+              <span>Plat(s) concerné(s)</span>
+              <input id="weeklyPrepDish" type="text" maxlength="120" placeholder="Ex. Œufs mimosa ; Terrine" />
+              <small>Séparez plusieurs plats avec un point-virgule.</small>
             </label>
             <label class="weekly-prep-field">
               <span>Quantité</span>
