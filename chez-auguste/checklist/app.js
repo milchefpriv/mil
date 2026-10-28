@@ -3328,6 +3328,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         (incomplete ? incomplete + " à terminer" : "tout validé")
       : "Aucun plat lié";
     const fragment = document.createDocumentFragment();
+    const completedItems = [];
     if (!dishes.length) {
       const empty = document.createElement("p");
       empty.className = "weekly-prep-dishes-empty";
@@ -3374,7 +3375,20 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       status.textContent = isComplete ? "✓ Validé" : "En cours";
       item.append(copy, status);
       listItem.append(item);
-      fragment.append(listItem);
+      if (isComplete) completedItems.push(listItem);
+      else fragment.append(listItem);
+    }
+    if (completedItems.length) {
+      const completedGroup = document.createElement("details");
+      completedGroup.className = "weekly-prep-completed-group";
+      const summary = document.createElement("summary");
+      summary.textContent = "Terminés (" + completedItems.length + ")";
+      const completedList = document.createElement("div");
+      completedList.className = "weekly-prep-completed-list";
+      completedList.setAttribute("role", "list");
+      completedList.append(...completedItems);
+      completedGroup.append(summary, completedList);
+      fragment.append(completedGroup);
     }
     elements.weeklyPrepDishes.replaceChildren(fragment);
   }
