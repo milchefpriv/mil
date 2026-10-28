@@ -84,6 +84,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepProgress: document.querySelector("#weeklyPrepProgress"),
     weeklyPrepLists: document.querySelector("#weeklyPrepLists"),
     weeklyPrepDishes: document.querySelector("#weeklyPrepDishes"),
+    weeklyPrepDishSummary: document.querySelector("#weeklyPrepDishSummary"),
+    weeklyPrepDishDialog: document.querySelector("#weeklyPrepDishDialog"),
+    weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
+    weeklyPrepDishMissing: document.querySelector("#weeklyPrepDishMissing"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
@@ -3035,6 +3039,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function renderWeeklyPrepDishes(tasks) {
     const dishes = weeklyPrepDishProgress(tasks);
+    const incomplete = dishes.filter((dish) => dish.tasks.some((task) => !task.completedAt)).length;
+    elements.weeklyPrepDishSummary.textContent = dishes.length
+      ? dishes.length + " plats · " + (incomplete ? incomplete + " à terminer" : "tout validé")
+      : "Aucun plat lié";
     const fragment = document.createDocumentFragment();
     if (!dishes.length) {
       const empty = document.createElement("p");
@@ -3045,11 +3053,13 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     for (const dish of dishes) {
       const completed = dish.tasks.filter((task) => Boolean(task.completedAt)).length;
       const isComplete = completed === dish.tasks.length;
-      const item = document.createElement("article");
+      const item = document.createElement("button");
+      item.type = "button";
       item.className = "weekly-prep-dish-status";
       item.classList.toggle("is-complete", isComplete);
+      item.dataset.dishKey = weeklyPrepDishKey(dish.name);
       item.setAttribute("role", "listitem");
-      item.setAttribute("aria-label", dish.name + " — " + completed + " action(s) cochée(s) sur " + dish.tasks.length + (isComplete ? " — validé" : " — en cours"));
+      item.setAttribute("aria-label", dish.name + " — " + completed + " action(s) cochée(s) sur " + dish.tasks.length + (isComplete ? " — validé" : " — en cours; toucher pour voir les actions restantes"));
       const copy = document.createElement("div");
       copy.className = "weekly-prep-dish-copy";
       const name = document.createElement("strong");
@@ -3158,6 +3168,29 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       fragment.append(group);
     }
     elements.weeklyPrepLists.replaceChildren(fragment);
+  }
+
+  function handleWeeklyPrepDishClick(event) {
+    const button = event.target.closest("[data-dish-key]");
+    if (!button) return;
+    const dish = weeklyPrepDishProgress(weeklyPrepTasks()).find((item) => weeklyPrepDishKey(item.name) === button.dataset.dishKey);
+    if (!dish) return;
+    elements.weeklyPrepDishDialogTitle.textContent = dish.name;
+    const missing = dish.tasks.filter((task) => !task.completedAt);
+    const fragment = document.createDocumentFragment();
+    if (missing.length) {
+      for (const task of missing) {
+        const li = document.createElement("li");
+        li.textContent = task.label;
+        fragment.append(li);
+      }
+    } else {
+      const li = document.createElement("li");
+      li.textContent = "Toutes les actions sont cochées.";
+      fragment.append(li);
+    }
+    elements.weeklyPrepDishMissing.replaceChildren(fragment);
+    elements.weeklyPrepDishDialog.showModal();
   }
 
   async function saveWeeklyPrepItem(event) {
@@ -4046,6 +4079,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     elements.weeklyPrepForm.addEventListener("submit", saveWeeklyPrepItem);
     elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
     elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
+    elements.weeklyPrepDishes.addEventListener("click", handleWeeklyPrepDishClick);
     elements.weeklyPrepReset.addEventListener("click", resetWeeklyPrepWeek);
 
     elements.emptyAddCuisineToday.addEventListener("click", () => {
