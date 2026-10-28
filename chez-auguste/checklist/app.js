@@ -3013,11 +3013,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function weeklyPrepDishNames(value) {
-    return [...new Set(String(value || "").split(/[;\\n]+/).map((name) => name.trim()).filter(Boolean))];
+    return [...new Set(String(value || "").split(/[;\n]+/).map((name) => name.trim()).filter(Boolean))];
   }
 
   function weeklyPrepDishKey(value) {
-    return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/\\s+/g, " ").trim();
+    return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/\s+/g, " ").trim();
   }
 
   function weeklyPrepDishProgress(tasks) {
