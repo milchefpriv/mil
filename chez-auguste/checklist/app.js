@@ -87,7 +87,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepDishSummary: document.querySelector("#weeklyPrepDishSummary"),
     weeklyPrepDishDialog: document.querySelector("#weeklyPrepDishDialog"),
     weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
-    weeklyPrepDishMissing: document.querySelector("#weeklyPrepDishMissing"),
+    weeklyPrepDishActions: document.querySelector("#weeklyPrepDishActions"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
@@ -3176,20 +3176,44 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const dish = weeklyPrepDishProgress(weeklyPrepTasks()).find((item) => weeklyPrepDishKey(item.name) === button.dataset.dishKey);
     if (!dish) return;
     elements.weeklyPrepDishDialogTitle.textContent = dish.name;
-    const missing = dish.tasks.filter((task) => !task.completedAt);
     const fragment = document.createDocumentFragment();
-    if (missing.length) {
-      for (const task of missing) {
-        const li = document.createElement("li");
-        li.textContent = task.label;
-        fragment.append(li);
+    for (const [category, title] of WEEKLY_PREP_CATEGORIES) {
+      const actions = dish.tasks.filter((task) => task.prepCategory === category);
+      if (!actions.length) continue;
+      const group = document.createElement("section");
+      group.className = "weekly-prep-dish-action-group";
+      group.dataset.prepCategory = category;
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const list = document.createElement("ul");
+      for (const task of actions) {
+        const isComplete = Boolean(task.completedAt);
+        const item = document.createElement("li");
+        item.className = "weekly-prep-dish-action";
+        item.classList.toggle("is-complete", isComplete);
+        const state = document.createElement("span");
+        state.className = "weekly-prep-dish-action-state";
+        state.textContent = isComplete ? "✓ Faite" : "À faire";
+        const copy = document.createElement("span");
+        copy.className = "weekly-prep-dish-action-copy";
+        const label = document.createElement("strong");
+        label.textContent = task.label;
+        copy.append(label);
+        const detailParts = [];
+        if (task.prepQuantity) detailParts.push(task.prepQuantity);
+        if (task.refillDay) detailParts.push("À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"));
+        if (detailParts.length) {
+          const detail = document.createElement("small");
+          detail.textContent = detailParts.join(" · ");
+          copy.append(detail);
+        }
+        item.append(state, copy);
+        list.append(item);
       }
-    } else {
-      const li = document.createElement("li");
-      li.textContent = "Toutes les actions sont cochées.";
-      fragment.append(li);
+      group.append(heading, list);
+      fragment.append(group);
     }
-    elements.weeklyPrepDishMissing.replaceChildren(fragment);
+    elements.weeklyPrepDishActions.replaceChildren(fragment);
     elements.weeklyPrepDishDialog.showModal();
   }
 
