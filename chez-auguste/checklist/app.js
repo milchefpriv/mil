@@ -3305,8 +3305,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       month: "long",
     }).format(new Date());
 
-    renderTaskList(elements.cuisineTodayList, cuisineTodayTasks, { kitchenGroups: true });
-    renderTaskList(elements.cuisineTomorrowList, cuisineTomorrowTasks, { kitchenGroups: true });
+    renderTaskList(elements.cuisineTodayList, cuisineTodayTasks);
+    renderTaskList(elements.cuisineTomorrowList, cuisineTomorrowTasks);
     renderTaskList(elements.salleTodayList, salleTodayTasks);
     renderTaskList(elements.salleTomorrowList, salleTomorrowTasks);
     renderTaskList(elements.bringList, bringTasks, { isBring: true });
@@ -3335,7 +3335,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function renderQuickTarget() {
     const targets = {
-      cuisineToday: ["Cuisine · Auj.", "Ajouter à Cuisine aujourd’hui. Appuyer pour changer de liste"],
+      cuisineToday: ["Générale · Auj.", "Ajouter à la checklist générale aujourd’hui. Appuyer pour changer de liste"],
       maintenance: ["Innovation", "Ajouter à Entretien / innovation. Appuyer pour changer de liste"],
       bring: ["Courses", "Ajouter à la liste de courses. Appuyer pour changer de liste"],
     };
@@ -3343,7 +3343,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const [label, ariaLabel] = targets[state.settings.quickTarget];
     elements.quickTarget.textContent = label;
     elements.quickTarget.setAttribute("aria-label", ariaLabel);
-    elements.quickKitchenType.hidden = !state.settings.quickTarget.startsWith("cuisine");
+    elements.quickKitchenType.hidden = true;
     elements.quickEstimate.hidden = state.settings.quickTarget === "bring";
   }
 
@@ -3445,7 +3445,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       dueDate: dueTomorrow ? tomorrowKey() : todayKey(),
       section,
       department,
-      kitchenType: department === "cuisine" ? normalizeKitchenType(elements.quickKitchenType.value) : null,
+      kitchenType: null,
       moment: "any",
       completedAt: null,
       createdAt: now,
@@ -3536,7 +3536,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const selectedList = elements.editTaskForm.querySelector('input[name="task-list"]:checked');
     elements.taskListFieldset.hidden = false;
     const isCuisineList = selectedList?.value?.startsWith("cuisine");
-    elements.kitchenTypeFieldset.hidden = !isCuisineList;
+    elements.kitchenTypeFieldset.hidden = true;
     elements.momentFieldset.hidden = ["bring", "maintenance"].includes(selectedList?.value);
     elements.editEstimate.hidden = selectedList?.value === "bring";
   }
