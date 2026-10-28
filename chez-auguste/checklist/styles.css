@@ -2274,3 +2274,60 @@ dialog::backdrop {
 .weekly-prep-dish-badge { flex: 0 0 auto; color: #8c652f; font-size: 0.72rem; font-weight: 750; }
 .weekly-prep-dish-status.is-complete { border-color: #b9d3be; background: #f3faf4; }
 .weekly-prep-dish-status.is-complete .weekly-prep-dish-badge { color: #28713c; }
+
+
+.weekly-prep-dish-reminder {
+  margin: 0 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fbf8f4;
+}
+
+.weekly-prep-dish-reminder > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 13px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.weekly-prep-dish-reminder > summary::-webkit-details-marker { display: none; }
+.weekly-prep-dish-reminder > summary::after { content: "+"; color: var(--muted); font-size: 1.1rem; }
+.weekly-prep-dish-reminder[open] > summary::after { content: "−"; }
+.weekly-prep-dish-summary { margin-left: auto; color: var(--muted); font-size: 0.75rem; font-weight: 600; text-align: right; }
+.weekly-prep-dishes { padding: 0 10px 10px; }
+.weekly-prep-dish-status { width: 100%; min-height: 64px; padding: 8px 10px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.weekly-prep-dish-status:focus-visible { outline: 3px solid #741e2b; outline-offset: 2px; }
+
+.weekly-prep-dish-dialog {
+  width: min(92vw, 440px);
+  max-width: 440px;
+  padding: 18px;
+  border: 0;
+  border-radius: 18px;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 24%);
+}
+
+.weekly-prep-dish-dialog::backdrop { background: rgb(25 18 18 / 42%); }
+.weekly-prep-dish-dialog form { display: grid; gap: 14px; }
+.weekly-prep-dish-dialog header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.weekly-prep-dish-dialog h2 { margin: 0; font-size: 1.2rem; }
+.weekly-prep-dish-dialog .eyebrow { margin: 0 0 4px; color: var(--muted); }
+.weekly-prep-dish-dialog-note { margin: 0; color: var(--muted); font-size: 0.84rem; }
+.weekly-prep-dish-dialog ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
+.weekly-prep-dish-dialog li { padding-left: 3px; }
+.weekly-prep-dish-dialog-close { min-height: 42px; }
+
+@media (max-width: 680px) {
+  .weekly-prep-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .weekly-prep-dish-status { min-height: 90px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; }
+  .weekly-prep-dish-copy strong { font-size: 0.76rem; }
+  .weekly-prep-dish-copy span, .weekly-prep-dish-badge { font-size: 0.68rem; }
+}
