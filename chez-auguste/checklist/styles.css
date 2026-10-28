@@ -2438,3 +2438,147 @@ dialog::backdrop {
 
 
 .weekly-prep-form-title { margin: 4px 0 10px; color: var(--ink); font-size: 0.95rem; }
+
+
+/* Volet de saisie placé après les check-lists */
+.weekly-prep-add-disclosure {
+  margin: 16px 0 20px;
+  overflow: hidden;
+  border: 1px solid #eadbde;
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: 0 5px 16px rgb(73 25 34 / 5%);
+}
+.weekly-prep-add-disclosure > summary {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 17px;
+  cursor: pointer;
+  list-style: none;
+}
+.weekly-prep-add-disclosure > summary::-webkit-details-marker { display: none; }
+.weekly-prep-add-disclosure > summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.weekly-prep-add-copy { display: grid; gap: 4px; min-width: 0; }
+.weekly-prep-add-copy strong { color: var(--brand); font-size: .96rem; }
+.weekly-prep-add-copy > span { color: var(--muted); font-size: .76rem; }
+.weekly-prep-add-chevron {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand);
+  background: var(--brand-soft);
+  transition: transform 160ms ease;
+}
+.weekly-prep-add-chevron svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.weekly-prep-add-disclosure[open] > summary { border-bottom: 1px solid var(--line); }
+.weekly-prep-add-disclosure[open] .weekly-prep-add-chevron { transform: rotate(180deg); }
+.weekly-prep-add-disclosure .weekly-prep-form {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper);
+}
+@media (max-width: 680px) {
+  .weekly-prep-add-disclosure { margin: 12px 0 16px; border-radius: 15px; }
+  .weekly-prep-add-disclosure > summary { min-height: 62px; padding: 11px 13px; }
+  .weekly-prep-add-copy strong { font-size: .9rem; }
+  .weekly-prep-add-copy > span { font-size: .7rem; }
+}
+
+/* Rappel de carte compact, avec une liste lisible sur téléphone */
+.weekly-prep-dish-reminder {
+  margin: 0 0 14px;
+  overflow: hidden;
+  border: 1px solid #eadbde;
+  border-radius: 17px;
+  background: var(--paper);
+  box-shadow: 0 5px 16px rgb(73 25 34 / 5%);
+}
+.weekly-prep-dish-reminder > summary {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 30px;
+  min-height: 70px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: none;
+}
+.weekly-prep-dish-reminder > summary:hover { border-color: transparent; background: #fcf9f9; box-shadow: none; }
+.weekly-prep-dish-reminder > summary:active { transform: none; }
+.weekly-prep-dish-icon { width: 42px; height: 42px; color: var(--brand); background: var(--brand-soft); }
+.weekly-prep-dish-info { gap: 3px; }
+.weekly-prep-dish-info strong { font-size: .96rem; }
+.weekly-prep-dish-summary { margin: 0; font-size: .78rem; white-space: normal; }
+.weekly-prep-dish-chevron {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 1.1rem;
+  transition: transform 160ms ease;
+}
+.weekly-prep-dish-reminder[open] > summary { border-bottom: 1px solid var(--line); border-radius: 0; }
+.weekly-prep-dish-reminder[open] > summary .weekly-prep-dish-chevron { transform: rotate(90deg); }
+.weekly-prep-dish-reminder[open] .weekly-prep-dishes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  padding: 10px;
+  border: 0;
+  border-radius: 0;
+  background: #fbf8f4;
+}
+.weekly-prep-dish-status {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+.weekly-prep-dish-copy { gap: 3px; }
+.weekly-prep-dish-copy strong { font-size: .86rem; line-height: 1.25; }
+.weekly-prep-dish-copy span, .weekly-prep-dish-badge { font-size: .72rem; }
+.weekly-prep-dish-badge { padding: 5px 8px; border-radius: 999px; background: #f7f1e8; }
+.weekly-prep-dish-status.is-complete { border-color: #c6ddca; background: #f5faf5; }
+.weekly-prep-dish-status.is-complete .weekly-prep-dish-badge { background: #e8f4ea; }
+@media (max-width: 680px) {
+  .weekly-prep-dish-reminder { margin-bottom: 12px; border-radius: 15px; }
+  .weekly-prep-dish-reminder > summary { grid-template-columns: 38px minmax(0, 1fr) 28px; min-height: 62px; gap: 9px; padding: 9px 10px; }
+  .weekly-prep-dish-icon { width: 38px; height: 38px; }
+  .weekly-prep-dish-info strong { font-size: .87rem; }
+  .weekly-prep-dish-summary { font-size: .7rem; }
+  .weekly-prep-dishes { grid-template-columns: 1fr; }
+  .weekly-prep-dish-status { min-height: 52px; padding: 8px 10px; }
+  .weekly-prep-dish-copy strong { font-size: .82rem; }
+  .weekly-prep-dish-copy span, .weekly-prep-dish-badge { font-size: .68rem; }
+}
