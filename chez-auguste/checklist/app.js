@@ -89,7 +89,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
     weeklyPrepDishActions: document.querySelector("#weeklyPrepDishActions"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
-    weeklyPrepOpenForm: document.querySelector("#weeklyPrepOpenForm"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
     weeklyPrepLabel: document.querySelector("#weeklyPrepLabel"),
@@ -3078,10 +3077,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function resetWeeklyPrepForm() {
     elements.weeklyPrepForm.reset();
-    elements.weeklyPrepForm.hidden = true;
-    elements.weeklyPrepOpenForm.hidden = false;
     elements.weeklyPrepEditId.value = "";
-    elements.weeklyPrepSubmit.textContent = "Ajouter l’action";
+    elements.weeklyPrepSubmit.textContent = "Ajouter une préparation";
     elements.weeklyPrepCancel.hidden = true;
   }
 
@@ -3276,8 +3273,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         elements.weeklyPrepDish.value = task.prepDish || "";
         elements.weeklyPrepQuantity.value = task.prepQuantity || "";
         elements.weeklyPrepRefillDay.value = task.refillDay || "";
-        elements.weeklyPrepForm.hidden = false;
-        elements.weeklyPrepOpenForm.hidden = true;
         elements.weeklyPrepSubmit.textContent = "Enregistrer";
         elements.weeklyPrepCancel.hidden = false;
         elements.weeklyPrepLabel.focus();
@@ -4081,12 +4076,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       elements.weeklyPrepPanel.hidden = isOpen;
     });
 
-    elements.weeklyPrepOpenForm.addEventListener("click", () => {
-      elements.weeklyPrepForm.hidden = false;
-      elements.weeklyPrepOpenForm.hidden = true;
-      elements.weeklyPrepCategory.focus();
-      elements.weeklyPrepForm.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
     elements.weeklyPrepForm.addEventListener("submit", saveWeeklyPrepItem);
     elements.weeklyPrepCancel.addEventListener("click", resetWeeklyPrepForm);
     elements.weeklyPrepLists.addEventListener("click", handleWeeklyPrepAction);
