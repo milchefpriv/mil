@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-28-weekly-prep-dish-validation-v1";
+  const APP_BUILD_ID = "2026-10-28-weekly-prep-disclosure-card-design-v2";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = ["cuisineToday", "maintenance", "bring"];
   const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
@@ -89,6 +89,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepDishDialogTitle: document.querySelector("#weeklyPrepDishDialogTitle"),
     weeklyPrepDishActions: document.querySelector("#weeklyPrepDishActions"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
+    weeklyPrepAddDisclosure: document.querySelector("#weeklyPrepAddDisclosure"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
     weeklyPrepLabel: document.querySelector("#weeklyPrepLabel"),
@@ -3274,6 +3275,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         elements.weeklyPrepQuantity.value = task.prepQuantity || "";
         elements.weeklyPrepRefillDay.value = task.refillDay || "";
         elements.weeklyPrepSubmit.textContent = "Enregistrer";
+        elements.weeklyPrepAddDisclosure.open = true;
         elements.weeklyPrepCancel.hidden = false;
         elements.weeklyPrepLabel.focus();
         elements.weeklyPrepForm.scrollIntoView({ behavior: "smooth", block: "center" });
