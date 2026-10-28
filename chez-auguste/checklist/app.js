@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-19-checklist-no-salle-tomorrow-v1";
+  const APP_BUILD_ID = "2026-10-28-weekly-prep-dish-validation-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const QUICK_TARGET_ORDER = ["cuisineToday", "maintenance", "bring"];
   const KITCHEN_TYPE_ORDER = ["cuisson", "decoupe", "preparation"];
@@ -83,6 +83,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepWeek: document.querySelector("#weeklyPrepWeek"),
     weeklyPrepProgress: document.querySelector("#weeklyPrepProgress"),
     weeklyPrepLists: document.querySelector("#weeklyPrepLists"),
+    weeklyPrepDishes: document.querySelector("#weeklyPrepDishes"),
     weeklyPrepForm: document.querySelector("#weeklyPrepForm"),
     weeklyPrepEditId: document.querySelector("#weeklyPrepEditId"),
     weeklyPrepCategory: document.querySelector("#weeklyPrepCategory"),
@@ -3011,6 +3012,60 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     return sortTasks(state.tasks.filter((task) => task.section === "weeklyPrep"));
   }
 
+  function weeklyPrepDishNames(value) {
+    return [...new Set(String(value || "").split(/[;\\n]+/).map((name) => name.trim()).filter(Boolean))];
+  }
+
+  function weeklyPrepDishKey(value) {
+    return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/\\s+/g, " ").trim();
+  }
+
+  function weeklyPrepDishProgress(tasks) {
+    const dishes = new Map();
+    for (const task of tasks) {
+      for (const name of weeklyPrepDishNames(task.prepDish)) {
+        const key = weeklyPrepDishKey(name);
+        if (!key) continue;
+        if (!dishes.has(key)) dishes.set(key, { name, tasks: [] });
+        dishes.get(key).tasks.push(task);
+      }
+    }
+    return [...dishes.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  }
+
+  function renderWeeklyPrepDishes(tasks) {
+    const dishes = weeklyPrepDishProgress(tasks);
+    const fragment = document.createDocumentFragment();
+    if (!dishes.length) {
+      const empty = document.createElement("p");
+      empty.className = "weekly-prep-dishes-empty";
+      empty.textContent = "Ajoutez le nom d’un plat aux actions pour suivre son avancement.";
+      fragment.append(empty);
+    }
+    for (const dish of dishes) {
+      const completed = dish.tasks.filter((task) => Boolean(task.completedAt)).length;
+      const isComplete = completed === dish.tasks.length;
+      const item = document.createElement("article");
+      item.className = "weekly-prep-dish-status";
+      item.classList.toggle("is-complete", isComplete);
+      item.setAttribute("role", "listitem");
+      item.setAttribute("aria-label", dish.name + " — " + completed + " action(s) cochée(s) sur " + dish.tasks.length + (isComplete ? " — validé" : " — en cours"));
+      const copy = document.createElement("div");
+      copy.className = "weekly-prep-dish-copy";
+      const name = document.createElement("strong");
+      name.textContent = dish.name;
+      const count = document.createElement("span");
+      count.textContent = completed + "/" + dish.tasks.length + (dish.tasks.length > 1 ? " actions cochées" : " action cochée");
+      copy.append(name, count);
+      const status = document.createElement("span");
+      status.className = "weekly-prep-dish-badge";
+      status.textContent = isComplete ? "✓ Validé" : "En cours";
+      item.append(copy, status);
+      fragment.append(item);
+    }
+    elements.weeklyPrepDishes.replaceChildren(fragment);
+  }
+
   function resetWeeklyPrepForm() {
     elements.weeklyPrepForm.reset();
     elements.weeklyPrepEditId.value = "";
@@ -3024,7 +3079,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     const monday = dateFromKey(mondayKey());
     const dateFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" });
     elements.weeklyPrepWeek.textContent = "Semaine du " + dateFormatter.format(monday) + " · services du mardi au samedi";
-    elements.weeklyPrepProgress.textContent = tasks.length ? completed + "/" + tasks.length : "";
+    elements.weeklyPrepProgress.textContent = tasks.length ? completed + "/" + tasks.length + " actions" : "";
+    renderWeeklyPrepDishes(tasks);
     const fragment = document.createDocumentFragment();
 
     for (const [category, title, guide] of WEEKLY_PREP_CATEGORIES) {
@@ -3071,7 +3127,8 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         label.textContent = task.label;
         details.append(label);
         const metaParts = [];
-        if (task.prepDish) metaParts.push(task.prepDish);
+        const linkedDishes = weeklyPrepDishNames(task.prepDish);
+        if (linkedDishes.length) metaParts.push(linkedDishes.join(", "));
         if (task.prepQuantity) metaParts.push(task.prepQuantity);
         if (task.refillDay) metaParts.push("À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"));
         if (metaParts.length) {
@@ -3155,7 +3212,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         state.tasks = state.tasks.map((item) => item.id === task.id ? nextTask : item);
       } else if (button.dataset.prepAction === "edit") {
         elements.weeklyPrepEditId.value = task.id;
-        elements.weeklyPrepCategory.value = task.prepCategory || "bases";
+        elements.weeklyPrepCategory.value = task.prepCategory || "preparation";
         elements.weeklyPrepLabel.value = task.label;
         elements.weeklyPrepDish.value = task.prepDish || "";
         elements.weeklyPrepQuantity.value = task.prepQuantity || "";
