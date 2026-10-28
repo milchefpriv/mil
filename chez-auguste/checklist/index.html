@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=19" />
-    <script type="module" src="./app.js?v=25"></script>
+    <link rel="stylesheet" href="./styles.css?v=20" />
+    <script type="module" src="./app.js?v=26"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -39,7 +39,7 @@
       <section class="weekly-prep-section" aria-labelledby="weeklyPrepHeading">
         <h2 class="collapsible-heading" id="weeklyPrepHeading">
           <button class="collapsible-toggle" id="weeklyPrepToggle" type="button" aria-expanded="true" aria-controls="weeklyPrepPanel">
-            <span>Prépa de la semaine</span>
+            <span>Rappels</span>
             <span class="collapsible-toggle-end">
               <span class="day-progress" id="weeklyPrepProgress" aria-live="polite"></span>
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg>
@@ -50,13 +50,13 @@
           <div class="weekly-prep-intro">
             <div>
               <p class="eyebrow" id="weeklyPrepWeek"></p>
-              <p class="weekly-prep-note">Reliez chaque action à un ou plusieurs plats de la carte. Un plat est validé lorsque toutes ses actions sont cochées.</p>
+              <p class="weekly-prep-note">Les plats se valident quand toutes leurs actions sont cochées.</p>
             </div>
             <button class="secondary-button weekly-prep-reset" id="weeklyPrepReset" type="button">Réouvrir les terminées</button>
           </div>
           <details class="weekly-prep-dish-reminder" id="weeklyPrepDishReminder">
             <summary>
-              <span>Rappel de la carte</span>
+              <span>Carte</span>
               <span class="weekly-prep-dish-summary" id="weeklyPrepDishSummary"></span>
             </summary>
             <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
@@ -103,10 +103,10 @@
           <section class="service-board service-board-cuisine" data-area="cuisine" aria-labelledby="cuisineBoardTitle">
             <header class="service-board-header">
               <div>
-                <span class="service-board-kicker">Équipe</span>
-                <h2 id="cuisineBoardTitle">Cuisine</h2>
+                <span class="service-board-kicker">Checklist</span>
+                <h2 id="cuisineBoardTitle">Générale</h2>
               </div>
-              <span class="service-board-badge" aria-hidden="true">C</span>
+              <span class="service-board-badge" aria-hidden="true" hidden>C</span>
             </header>
 
             <div class="service-board-days">
@@ -230,7 +230,7 @@
     <form class="quick-add" id="quickAddForm" autocomplete="off">
       <div class="quick-add-inner">
         <button class="target-button" id="quickTarget" type="button" aria-label="Changer la liste">
-          Cuisine · Aujourd’hui
+          Générale · Aujourd’hui
         </button>
         <label class="sr-only" for="quickKitchenType">Section cuisine</label>
         <select class="kitchen-type-select" id="quickKitchenType" aria-label="Section cuisine">
@@ -369,7 +369,7 @@
         <fieldset class="list-fieldset" id="taskListFieldset">
           <legend>Liste</legend>
           <div class="segmented-control list-control">
-            <label><input type="radio" name="task-list" value="cuisineToday" /><span>Cuisine · Aujourd’hui</span></label>
+            <label><input type="radio" name="task-list" value="cuisineToday" /><span>Générale · Aujourd’hui</span></label>
             <label><input type="radio" name="task-list" value="maintenance" /><span>Entretien / innovation</span></label>
             <label><input type="radio" name="task-list" value="bring" /><span>Courses</span></label>
           </div>
