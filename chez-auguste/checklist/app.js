@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-28-project-cleanup-v4";
+  const APP_BUILD_ID = "2026-10-28-project-cleanup-v5";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const TASK_LIST_OPTIONS = ["cuisineToday", "maintenance", "bring"];
   const REORDER_HOLD_DELAY = 450;
@@ -3120,7 +3120,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   function historyContext(entry) {
     if (entry.section === "bring") return "Achat évolutif";
     if (entry.section === "maintenance") return "Entretien / innovation";
-    const parts = [entry.department === "salle" ? "Salle" : "Cuisine"];
+    const parts = ["Générale"];
     if (entry.moment === "morning") parts.push("Matin");
     if (entry.moment === "evening") parts.push("Soir");
     return parts.join(" · ");
