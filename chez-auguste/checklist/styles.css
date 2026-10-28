@@ -2437,8 +2437,4 @@ dialog::backdrop {
 }
 
 
-.weekly-prep-open { width: 100%; min-height: 44px; margin: 0 0 12px; }
-.weekly-prep-form[hidden] { display: none; }
-@media (max-width: 680px) {
-  .weekly-prep-open { margin-bottom: 10px; }
-}
+.weekly-prep-form-title { margin: 4px 0 10px; color: var(--ink); font-size: 0.95rem; }
