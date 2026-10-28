@@ -15,8 +15,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=23" />
-    <script type="module" src="./app.js?v=28"></script>
+    <link rel="stylesheet" href="./styles.css?v=24" />
+    <script type="module" src="./app.js?v=29"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -67,8 +67,8 @@
             </summary>
             <div class="weekly-prep-dishes" id="weeklyPrepDishes" role="list" aria-live="polite"></div>
           </details>
-          <button class="primary-button weekly-prep-open" id="weeklyPrepOpenForm" type="button">Ajouter une préparation</button>
-          <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off" hidden>
+          <h3 class="weekly-prep-form-title">Ajouter une préparation</h3>
+          <form class="weekly-prep-form" id="weeklyPrepForm" autocomplete="off">
             <input id="weeklyPrepEditId" type="hidden" />
             <label class="weekly-prep-field">
               <span>Étape de travail</span>
@@ -97,7 +97,7 @@
               </select>
             </label>
             <div class="weekly-prep-form-actions">
-              <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter l’action</button>
+              <button class="primary-button" id="weeklyPrepSubmit" type="submit">Ajouter une préparation</button>
               <button class="plain-action" id="weeklyPrepCancel" type="button" hidden>Annuler la modification</button>
             </div>
           </form>
@@ -227,7 +227,7 @@
             enterkeyhint="done"
             placeholder="Ajouter un achat…"
           />
-          <button type="submit" aria-label="Ajouter à la liste de courses">
+          <button type="submit" aria-label="Ajouter à Achat évolutif">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
           </button>
         </form>
