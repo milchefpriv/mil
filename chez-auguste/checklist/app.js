@@ -89,7 +89,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     weeklyPrepLabel: document.querySelector("#weeklyPrepLabel"),
     weeklyPrepDish: document.querySelector("#weeklyPrepDish"),
     weeklyPrepQuantity: document.querySelector("#weeklyPrepQuantity"),
-    weeklyPrepRefillDay: document.querySelector("#weeklyPrepRefillDay"),
     weeklyPrepSubmit: document.querySelector("#weeklyPrepSubmit"),
     weeklyPrepCancel: document.querySelector("#weeklyPrepCancel"),
     emptyAddCuisineToday: document.querySelector("#emptyAddCuisineToday"),
@@ -2038,13 +2037,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         section === "weeklyPrep" && typeof task?.prepQuantity === "string"
           ? task.prepQuantity.trim().slice(0, 80)
           : null,
-      refillDay:
-        section === "weeklyPrep" &&
-        ["", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"].includes(
-          task?.refillDay,
-        )
-          ? task.refillDay
-          : "",
       _syncRevision: syncRevision(task?._syncRevision),
     };
   }
@@ -3468,10 +3460,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         const linkedDishes = weeklyPrepDishNames(task.prepDish);
         if (linkedDishes.length) metaParts.push(linkedDishes.join(", "));
         if (task.prepQuantity) metaParts.push(task.prepQuantity);
-        if (task.refillDay)
-          metaParts.push(
-            "À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"),
-          );
         if (metaParts.length) {
           const meta = document.createElement("span");
           meta.className = "weekly-prep-meta";
@@ -3537,10 +3525,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         copy.append(label);
         const detailParts = [];
         if (task.prepQuantity) detailParts.push(task.prepQuantity);
-        if (task.refillDay)
-          detailParts.push(
-            "À refaire " + task.refillDay.toLocaleLowerCase("fr-FR"),
-          );
         if (detailParts.length) {
           const detail = document.createElement("small");
           detail.textContent = detailParts.join(" · ");
@@ -3575,7 +3559,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       prepCategory: elements.weeklyPrepCategory.value,
       prepDish: elements.weeklyPrepDish.value.trim(),
       prepQuantity: elements.weeklyPrepQuantity.value.trim(),
-      refillDay: elements.weeklyPrepRefillDay.value,
       dueDate: todayKey(),
       completedAt: existing?.completedAt || null,
       createdAt: existing?.createdAt || now,
@@ -3625,7 +3608,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         elements.weeklyPrepLabel.value = task.label;
         elements.weeklyPrepDish.value = task.prepDish || "";
         elements.weeklyPrepQuantity.value = task.prepQuantity || "";
-        elements.weeklyPrepRefillDay.value = task.refillDay || "";
         elements.weeklyPrepSubmit.textContent = "Enregistrer";
         elements.weeklyPrepAddDisclosure.open = true;
         elements.weeklyPrepCancel.hidden = false;
