@@ -3257,7 +3257,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     ],
     [
       "preparation",
-      "Mise en place",
+      "Préparation",
       "Terminer les sauces, le conditionnement et les montages.",
     ],
   ];
@@ -3434,98 +3434,56 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         group.append(empty);
       }
 
-      const dishGroups = new Map();
       for (const task of groupTasks) {
+        const row = document.createElement("article");
+        row.className = "weekly-prep-item";
+        row.dataset.prepId = task.id;
+        row.classList.toggle("is-complete", Boolean(task.completedAt));
+
+        const check = document.createElement("button");
+        check.type = "button";
+        check.className = "weekly-prep-check";
+        check.dataset.prepAction = "toggle";
+        check.setAttribute(
+          "aria-label",
+          (task.completedAt ? "Réouvrir : " : "Terminer : ") + task.label,
+        );
+        check.setAttribute("aria-pressed", String(Boolean(task.completedAt)));
+        check.textContent = task.completedAt ? "✓" : "";
+
+        const details = document.createElement("div");
+        details.className = "weekly-prep-details";
+        const label = document.createElement("strong");
+        label.textContent = task.label;
+        details.append(label);
+        const metaParts = [];
         const linkedDishes = weeklyPrepDishNames(task.prepDish);
-        const groupLabel =
-          linkedDishes.length === 1
-            ? linkedDishes[0]
-            : linkedDishes.length > 1
-              ? "Plusieurs plats"
-              : "Autres préparations";
-        const groupKey =
-          linkedDishes.length === 1
-            ? "dish:" + weeklyPrepDishKey(linkedDishes[0])
-            : linkedDishes.length > 1
-              ? "shared-dishes"
-              : "unassigned";
-        if (!dishGroups.has(groupKey)) {
-          dishGroups.set(groupKey, { label: groupLabel, tasks: [] });
+        if (linkedDishes.length) metaParts.push(linkedDishes.join(", "));
+        if (task.prepQuantity) metaParts.push(task.prepQuantity);
+        if (metaParts.length) {
+          const meta = document.createElement("span");
+          meta.className = "weekly-prep-meta";
+          meta.textContent = metaParts.join(" · ");
+          details.append(meta);
         }
-        dishGroups.get(groupKey).tasks.push(task);
-      }
 
-      if (!groupTasks.length) {
-        const empty = document.createElement("p");
-        empty.className = "weekly-prep-empty";
-        empty.textContent = "Aucune préparation ajoutée.";
-        group.append(empty);
-      }
-
-      for (const dishGroup of dishGroups.values()) {
-        const subgroup = document.createElement("section");
-        subgroup.className = "weekly-prep-dish-subgroup";
-        const subgroupHeading = document.createElement("h4");
-        subgroupHeading.className = "weekly-prep-dish-subheading";
-        subgroupHeading.textContent = dishGroup.label;
-        const subgroupCount = document.createElement("span");
-        subgroupCount.textContent = String(dishGroup.tasks.length);
-        subgroupHeading.append(subgroupCount);
-        subgroup.append(subgroupHeading);
-
-        for (const task of dishGroup.tasks) {
-          const row = document.createElement("article");
-          row.className = "weekly-prep-item";
-          row.dataset.prepId = task.id;
-          row.classList.toggle("is-complete", Boolean(task.completedAt));
-
-          const check = document.createElement("button");
-          check.type = "button";
-          check.className = "weekly-prep-check";
-          check.dataset.prepAction = "toggle";
-          check.setAttribute(
-            "aria-label",
-            (task.completedAt ? "Réouvrir : " : "Terminer : ") + task.label,
-          );
-          check.setAttribute("aria-pressed", String(Boolean(task.completedAt)));
-          check.textContent = task.completedAt ? "✓" : "";
-
-          const details = document.createElement("div");
-          details.className = "weekly-prep-details";
-          const label = document.createElement("strong");
-          label.textContent = task.label;
-          details.append(label);
-          const metaParts = [];
-          if (weeklyPrepDishNames(task.prepDish).length > 1) {
-            metaParts.push(weeklyPrepDishNames(task.prepDish).join(", "));
-          }
-          if (task.prepQuantity) metaParts.push(task.prepQuantity);
-          if (metaParts.length) {
-            const meta = document.createElement("span");
-            meta.className = "weekly-prep-meta";
-            meta.textContent = metaParts.join(" · ");
-            details.append(meta);
-          }
-
-          const actions = document.createElement("div");
-          actions.className = "weekly-prep-actions";
-          for (const [action, text, labelText] of [
-            ["edit", "Modifier", "Modifier " + task.label],
-            ["delete", "×", "Supprimer " + task.label],
-          ]) {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className =
-              action === "delete" ? "weekly-prep-delete" : "weekly-prep-edit";
-            button.dataset.prepAction = action;
-            button.setAttribute("aria-label", labelText);
-            button.textContent = text;
-            actions.append(button);
-          }
-          row.append(check, details, actions);
-          subgroup.append(row);
+        const actions = document.createElement("div");
+        actions.className = "weekly-prep-actions";
+        for (const [action, text, labelText] of [
+          ["edit", "Modifier", "Modifier " + task.label],
+          ["delete", "×", "Supprimer " + task.label],
+        ]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            action === "delete" ? "weekly-prep-delete" : "weekly-prep-edit";
+          button.dataset.prepAction = action;
+          button.setAttribute("aria-label", labelText);
+          button.textContent = text;
+          actions.append(button);
         }
-        group.append(subgroup);
+        row.append(check, details, actions);
+        group.append(row);
       }
       fragment.append(group);
     }
