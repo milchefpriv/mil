@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-11-06-clear-conflicts-v1";
+  const APP_BUILD_ID = "2026-11-06-data-menu-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const TASK_LIST_OPTIONS = ["cuisineToday", "maintenance", "bring"];
   const REORDER_HOLD_DELAY = 450;
@@ -4141,10 +4141,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   async function runAutomaticRoutines() {
-    if (state.settings.autoMorning)
-      await generateRoutine("morning", { silent: true });
-    if (state.settings.autoEvening)
-      await generateRoutine("evening", { silent: true });
+    // Les checklists matin/soir sont retirées de l’interface.
   }
 
   function openSettingsForRoutine(routine) {
