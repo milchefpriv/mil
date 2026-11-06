@@ -4705,9 +4705,16 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         for (const mutation of request.result || []) {
           if (mutation?.conflict) outbox.delete(mutation.id);
         }
+        const completedAt = new Date().toISOString();
         transaction.objectStore("meta").put({
           id: migrationId,
-          completedAt: new Date().toISOString(),
+          completedAt,
+        });
+        transaction.objectStore("meta").put({
+          id: LEGACY_MIGRATION_KEY,
+          checkedAt: completedAt,
+          recovered: 0,
+          build: APP_BUILD_ID,
         });
       };
       request.onerror = () => transaction.abort();
