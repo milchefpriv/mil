@@ -7,7 +7,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-10-28-project-cleanup-v5";
+  const APP_BUILD_ID = "2026-11-06-clear-conflicts-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const TASK_LIST_OPTIONS = ["cuisineToday", "maintenance", "bring"];
   const REORDER_HOLD_DELAY = 450;
@@ -1706,6 +1706,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     };
     elements.syncStatus.textContent = labels[status] || labels.synced;
     elements.syncStatus.dataset.state = status;
+    elements.syncStatus.hidden = status === "conflict";
     if (elements.syncStatusDetail) {
       elements.syncStatusDetail.textContent = conflictCount
         ? `${conflictCount} modification${conflictCount > 1 ? "s sont" : " est"} conservée${conflictCount > 1 ? "s" : ""} sans écraser la version d’un autre appareil.`
@@ -4690,11 +4691,42 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     scheduleSharedSave(0);
   }
 
+  async function clearProtectedConflictsOnce() {
+    const migrationId = "clear-protected-checklist-conflicts-v1";
+    const database = await getDatabase();
+    if (!database || (await getMetaRecord(migrationId))) return;
+
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(["outbox", "meta"], "readwrite");
+      const outbox = transaction.objectStore("outbox");
+      const request = outbox.getAll();
+
+      request.onsuccess = () => {
+        for (const mutation of request.result || []) {
+          if (mutation?.conflict) outbox.delete(mutation.id);
+        }
+        transaction.objectStore("meta").put({
+          id: migrationId,
+          completedAt: new Date().toISOString(),
+        });
+      };
+      request.onerror = () => transaction.abort();
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () =>
+        reject(
+          transaction.error ||
+            new Error("Nettoyage des conflits de synchronisation annulé"),
+        );
+    });
+  }
+
   async function openApplication() {
     if (appStarted) return;
     appStarted = true;
     durableStorageAvailable = Boolean(await getDatabase());
     if (durableStorageAvailable) await migrateFallbackIfNeeded();
+    await clearProtectedConflictsOnce();
     await loadState({ runAutomatic: false });
     if (!durableStorageAvailable) {
       await updateSyncStatus("storage");
