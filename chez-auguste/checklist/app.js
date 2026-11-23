@@ -7,9 +7,58 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   const DB_VERSION = 3;
   const FALLBACK_KEY = "auguste-checklist-fallback-v1";
   const CHANNEL_NAME = "auguste-checklist-sync";
-  const APP_BUILD_ID = "2026-11-06-data-menu-v1";
+  const APP_BUILD_ID = "2026-11-23-shopping-list-v1";
   const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
   const TASK_LIST_OPTIONS = ["cuisineToday", "maintenance", "bring"];
+  const SHOPPING_CATEGORIES = [
+    { id: "legumerie", label: "Légumerie" },
+    { id: "frais", label: "Produits frais" },
+    { id: "epicerie", label: "Épicerie" },
+    { id: "surgeles", label: "Surgelés" },
+    { id: "viandes-poissons", label: "Viandes & poissons" },
+    { id: "emballages", label: "Emballages" },
+    { id: "entretien", label: "Entretien" },
+    { id: "autres", label: "Autres" },
+  ];
+  const SHOPPING_CATEGORY_IDS = new Set(
+    SHOPPING_CATEGORIES.map((category) => category.id),
+  );
+  const DEFAULT_SHOPPING_ITEMS = [
+    ["bring-foodflow-ff-000172", "Pommes de terre Agria", "legumerie"],
+    ["bring-foodflow-ff-000086", "Patates douces", "legumerie"],
+    ["bring-foodflow-ff-000201", "Poireaux", "legumerie"],
+    ["bring-foodflow-ff-000198", "Oignons jaunes", "legumerie"],
+    ["bring-foodflow-ff-000200", "Oignons rouges", "legumerie"],
+    ["bring-foodflow-ff-000001", "Citrons jaunes", "legumerie"],
+    ["bring-foodflow-ff-000111", "Jeunes pousses", "legumerie"],
+    ["bring-foodflow-ff-000209", "Cerfeuil", "legumerie"],
+    ["bring-foodflow-ff-000222", "Persil plat", "legumerie"],
+    ["bring-foodflow-ff-002138", "Crème liquide 35 %", "frais"],
+    ["bring-foodflow-ff-000293", "Lait entier UHT", "frais"],
+    ["bring-foodflow-ff-000288", "Beurre doux", "frais"],
+    ["bring-foodflow-ff-000284", "Jaunes d’œufs 1 L", "frais"],
+    ["bring-foodflow-ff-000286", "Œufs durs écalés", "frais"],
+    ["bring-foodflow-ff-001877", "Sauce Worcestershire", "epicerie"],
+    ["bring-foodflow-ff-001892", "Sucre cristal", "epicerie"],
+    ["bring-foodflow-ff-002764", "Mélange 5 baies", "epicerie"],
+    ["bring-foodflow-ff-001787", "Huile de tournesol", "epicerie"],
+    ["bring-foodflow-ff-001716", "Cornichons", "epicerie"],
+    ["bring-foodflow-ff-001886", "Vinaigre de Xérès", "epicerie"],
+    ["bring-foodflow-ff-001851", "Moutarde de Dijon", "epicerie"],
+    ["bring-foodflow-ff-000771", "Moutarde à l’ancienne", "epicerie"],
+    ["bring-foodflow-ff-001799", "Croûtons nature", "epicerie"],
+    ["bring-foodflow-fgel-000076", "Ravioles du Dauphiné", "surgeles"],
+    ["bring-foodflow-fgel-000044", "Purée de pommes de terre Lutosa", "surgeles"],
+    ["bring-foodflow-fgel-000017", "Pavés de saumon surgelés", "viandes-poissons"],
+    ["bring-foodflow-ff-002007", "Filets de hareng", "viandes-poissons"],
+    ["bring-foodflow-ff-003150", "Terrine de sanglier", "viandes-poissons"],
+    ["bring-foodflow-ff-002156", "Pots salade 780 ml", "emballages"],
+    ["bring-foodflow-ff-002159", "Couvercles pots salade", "emballages"],
+    ["bring-foodflow-ff-002150", "Gobelets carton 10 cl", "emballages"],
+    ["bring-foodflow-ff-001938", "Lavettes antibactériennes", "entretien"],
+    ["bring-foodflow-ff-001276", "Bobines essuie-tout", "entretien"],
+    ["bring-foodflow-ff-002330", "Gants nitrile noirs L", "entretien"],
+  ];
   const REORDER_HOLD_DELAY = 450;
   const REORDER_MOVE_TOLERANCE = 9;
   const REORDER_EDGE_ZONE = 96;
@@ -56,19 +105,27 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     id: "preferences",
     autoMorning: false,
     autoEvening: false,
+    shoppingCatalogSeeded: false,
   };
 
   const elements = {
     currentDate: document.querySelector("#currentDate"),
     cuisineTodayList: document.querySelector("#cuisineTodayList"),
-    bringList: document.querySelector("#bringList"),
-    bringAddForm: document.querySelector("#bringAddForm"),
-    bringInput: document.querySelector("#bringInput"),
+    shoppingCategories: document.querySelector("#shoppingCategories"),
+    shoppingProgress: document.querySelector("#shoppingProgress"),
+    shoppingNeededToggle: document.querySelector("#shoppingNeededToggle"),
+    shoppingAddDisclosure: document.querySelector("#shoppingAddDisclosure"),
+    shoppingForm: document.querySelector("#shoppingForm"),
+    shoppingEditId: document.querySelector("#shoppingEditId"),
+    shoppingLabel: document.querySelector("#shoppingLabel"),
+    shoppingCategory: document.querySelector("#shoppingCategory"),
+    shoppingSubmit: document.querySelector("#shoppingSubmit"),
+    shoppingDelete: document.querySelector("#shoppingDelete"),
+    shoppingCancel: document.querySelector("#shoppingCancel"),
     maintenanceToggle: document.querySelector("#maintenanceToggle"),
     maintenancePanel: document.querySelector("#maintenancePanel"),
     maintenanceList: document.querySelector("#maintenanceList"),
     cuisineTodayProgress: document.querySelector("#cuisineTodayProgress"),
-    bringProgress: document.querySelector("#bringProgress"),
     maintenanceProgress: document.querySelector("#maintenanceProgress"),
     weeklyPrepToggle: document.querySelector("#weeklyPrepToggle"),
     weeklyPrepPanel: document.querySelector("#weeklyPrepPanel"),
@@ -149,6 +206,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     editEstimateMinutes: null,
     lastDateKey: "",
     maintenanceOpen: false,
+    shoppingNeededOnly: false,
   };
 
   let deferredInstallPrompt = null;
@@ -403,6 +461,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         id: "preferences",
         autoMorning: Boolean(record?.autoMorning),
         autoEvening: Boolean(record?.autoEvening),
+        shoppingCatalogSeeded: Boolean(record?.shoppingCatalogSeeded),
         updatedAt: record?.updatedAt || new Date().toISOString(),
       };
     }
@@ -1383,7 +1442,9 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     if (storeName === "settings") {
       return (
         Boolean(first?.autoMorning) === Boolean(second?.autoMorning) &&
-        Boolean(first?.autoEvening) === Boolean(second?.autoEvening)
+        Boolean(first?.autoEvening) === Boolean(second?.autoEvening) &&
+        Boolean(first?.shoppingCatalogSeeded) ===
+          Boolean(second?.shoppingCatalogSeeded)
       );
     }
     return (
@@ -1969,6 +2030,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       id: "preferences",
       autoMorning: Boolean(record?.autoMorning),
       autoEvening: Boolean(record?.autoEvening),
+      shoppingCatalogSeeded: Boolean(record?.shoppingCatalogSeeded),
       updatedAt:
         typeof record?.updatedAt === "string" ? record.updatedAt : undefined,
       _syncRevision: syncRevision(record?._syncRevision),
@@ -2038,6 +2100,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
         section === "weeklyPrep" && typeof task?.prepQuantity === "string"
           ? task.prepQuantity.trim().slice(0, 80)
           : null,
+      shoppingCategory:
+        section === "bring" && SHOPPING_CATEGORY_IDS.has(task?.shoppingCategory)
+          ? task.shoppingCategory
+          : section === "bring"
+            ? "autres"
+            : null,
       _syncRevision: syncRevision(task?._syncRevision),
     };
   }
@@ -2125,7 +2193,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function completionHistoryEntry(task) {
-    if (!task?.completedAt) return null;
+    if (!task?.completedAt || task.section === "bring") return null;
     return normalizeHistoryEntry({
       taskId: task.id,
       label: task.label,
@@ -3111,7 +3179,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function historyContext(entry) {
-    if (entry.section === "bring") return "Achat évolutif";
+    if (entry.section === "bring") return "Liste de courses";
     if (entry.section === "maintenance") return "Entretien / innovation";
     const parts = ["Générale"];
     if (entry.moment === "morning") parts.push("Matin");
@@ -3638,7 +3706,6 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   function renderAll() {
     const todayTasks = tasksForToday();
-    const bringTasks = tasksForBring();
     const maintenanceTasks = tasksForMaintenance();
 
     elements.currentDate.textContent = new Intl.DateTimeFormat("fr-FR", {
@@ -3648,11 +3715,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }).format(new Date());
 
     renderTaskList(elements.cuisineTodayList, todayTasks);
-    renderTaskList(elements.bringList, bringTasks, { isBring: true });
     renderTaskList(elements.maintenanceList, maintenanceTasks);
+    renderShoppingList();
     renderWeeklyPrep();
     elements.cuisineTodayProgress.textContent = progressText(todayTasks);
-    elements.bringProgress.textContent = progressText(bringTasks);
     elements.maintenanceProgress.textContent = progressText(maintenanceTasks);
     elements.emptyAddCuisineToday.hidden = false;
     elements.emptyAddMaintenance.hidden = false;
@@ -3745,37 +3811,314 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     }
   }
 
-  async function addBringTask(label) {
-    const cleanLabel = label.trim().slice(0, 180);
-    if (!cleanLabel) return false;
-    const now = new Date().toISOString();
-    const task = {
-      id: makeId("bring"),
-      label: cleanLabel,
+  function makeShoppingTask({
+    id = makeId("bring"),
+    label,
+    category = "autres",
+    completedAt = null,
+    createdAt = new Date().toISOString(),
+    position = Date.now(),
+    syncRevision = 0,
+  }) {
+    return normalizeTask({
+      id,
+      label,
       dueDate: todayKey(),
       section: "bring",
       department: null,
       moment: "any",
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-      position: Date.now(),
+      completedAt,
+      createdAt,
+      updatedAt: new Date().toISOString(),
+      position,
       manualPosition: null,
       templateId: null,
       occurrenceKey: null,
       estimateMinutes: null,
-    };
+      shoppingCategory: category,
+      _syncRevision: syncRevision,
+    });
+  }
+
+  async function ensureShoppingCatalog() {
+    if (state.settings.shoppingCatalogSeeded) return;
+    const existingItems = tasksForBring();
+    const existingLabels = new Set(
+      existingItems.map((task) => task.label.toLocaleLowerCase("fr-FR")),
+    );
+    const defaultCategoryByLabel = new Map(
+      DEFAULT_SHOPPING_ITEMS.map(([, label, category]) => [
+        label.toLocaleLowerCase("fr-FR"),
+        category,
+      ]),
+    );
+    const now = new Date().toISOString();
+    // L'ancienne liste utilisait « coché » pour dire acheté. La liste
+    // persistante utilise désormais « coché » pour dire à commander.
+    const migratedItems = existingItems.map((task) =>
+      normalizeTask({
+        ...task,
+        completedAt: task.completedAt ? null : now,
+        shoppingCategory:
+          defaultCategoryByLabel.get(task.label.toLocaleLowerCase("fr-FR")) ||
+          task.shoppingCategory,
+        updatedAt: now,
+      }),
+    );
+    const additions = DEFAULT_SHOPPING_ITEMS.filter(
+      ([, label]) => !existingLabels.has(label.toLocaleLowerCase("fr-FR")),
+    ).map(([id, label, category], index) =>
+      makeShoppingTask({
+        id,
+        label,
+        category,
+        createdAt: now,
+        position: index + 1,
+      }),
+    );
+
+    try {
+      for (const task of migratedItems) await putRecord("tasks", task);
+      for (const task of additions) await putRecord("tasks", task);
+      const migratedById = new Map(
+        migratedItems.map((task) => [task.id, task]),
+      );
+      state.tasks = state.tasks.map(
+        (task) => migratedById.get(task.id) || task,
+      );
+      state.tasks.push(...additions);
+      const nextSettings = normalizeSettings({
+        ...state.settings,
+        shoppingCatalogSeeded: true,
+        updatedAt: new Date().toISOString(),
+      });
+      await putRecord("settings", nextSettings);
+      state.settings = nextSettings;
+      announceChange();
+    } catch (error) {
+      console.error("Impossible d’initialiser la liste de courses.", error);
+      showToast("Liste de courses incomplète");
+    }
+  }
+
+  function resetShoppingEditor({ close = false } = {}) {
+    elements.shoppingEditId.value = "";
+    elements.shoppingLabel.value = "";
+    elements.shoppingCategory.value = "legumerie";
+    elements.shoppingSubmit.textContent = "Ajouter";
+    elements.shoppingDelete.hidden = true;
+    elements.shoppingCancel.hidden = true;
+    if (close) elements.shoppingAddDisclosure.open = false;
+  }
+
+  function openShoppingEditor(id) {
+    const task = state.tasks.find(
+      (item) => item.id === id && item.section === "bring",
+    );
+    if (!task) return;
+    elements.shoppingEditId.value = task.id;
+    elements.shoppingLabel.value = task.label;
+    elements.shoppingCategory.value = task.shoppingCategory || "autres";
+    elements.shoppingSubmit.textContent = "Enregistrer";
+    elements.shoppingDelete.hidden = false;
+    elements.shoppingCancel.hidden = false;
+    elements.shoppingAddDisclosure.open = true;
+    requestAnimationFrame(() => {
+      elements.shoppingAddDisclosure.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      elements.shoppingLabel.focus();
+      elements.shoppingLabel.select();
+    });
+  }
+
+  async function saveShoppingItem() {
+    const cleanLabel = elements.shoppingLabel.value.trim().slice(0, 180);
+    if (!cleanLabel) return false;
+    const editId = elements.shoppingEditId.value;
+    const existing = editId
+      ? state.tasks.find(
+          (item) => item.id === editId && item.section === "bring",
+        )
+      : null;
+    const task = makeShoppingTask({
+      id: existing?.id || makeId("bring"),
+      label: cleanLabel,
+      category: SHOPPING_CATEGORY_IDS.has(elements.shoppingCategory.value)
+        ? elements.shoppingCategory.value
+        : "autres",
+      completedAt: existing?.completedAt || null,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      position: existing?.position || Date.now(),
+      syncRevision: existing?._syncRevision,
+    });
     try {
       await putRecord("tasks", task);
-      state.tasks.push(task);
+      state.tasks = existing
+        ? state.tasks.map((item) => (item.id === existing.id ? task : item))
+        : [...state.tasks, task];
       announceChange();
+      resetShoppingEditor({ close: true });
       renderAll();
+      showToast(existing ? "Produit modifié" : "Produit ajouté");
       return true;
     } catch (error) {
       console.error(error);
-      showToast("Élément non enregistré");
+      showToast("Produit non enregistré");
       return false;
     }
+  }
+
+  async function toggleShoppingItem(id) {
+    const task = state.tasks.find(
+      (item) => item.id === id && item.section === "bring",
+    );
+    if (!task) return;
+    const changedAt = new Date().toISOString();
+    const nextTask = normalizeTask({
+      ...task,
+      completedAt: task.completedAt ? null : changedAt,
+      updatedAt: changedAt,
+    });
+    try {
+      await putRecord("tasks", nextTask);
+      state.tasks = state.tasks.map((item) =>
+        item.id === id ? nextTask : item,
+      );
+      announceChange();
+      renderAll();
+      requestAnimationFrame(() => {
+        document
+          .querySelector(
+            `[data-shopping-id="${cssEscape(id)}"] .shopping-item-toggle`,
+          )
+          ?.focus();
+      });
+    } catch (error) {
+      console.error(error);
+      showToast("Modification non enregistrée");
+    }
+  }
+
+  async function deleteShoppingItem() {
+    const task = state.tasks.find(
+      (item) =>
+        item.id === elements.shoppingEditId.value && item.section === "bring",
+    );
+    if (!task) return;
+    if (!window.confirm(`Supprimer « ${task.label} » de la liste ?`)) return;
+    try {
+      await deleteRecord("tasks", task.id, task);
+      state.tasks = state.tasks.filter((item) => item.id !== task.id);
+      announceChange();
+      resetShoppingEditor({ close: true });
+      renderAll();
+      showToast("Produit supprimé");
+    } catch (error) {
+      console.error(error);
+      showToast("Suppression non enregistrée");
+    }
+  }
+
+  function renderShoppingList() {
+    const allItems = tasksForBring();
+    const neededCount = allItems.filter((task) => task.completedAt).length;
+    elements.shoppingProgress.textContent = neededCount
+      ? `${neededCount} à commander`
+      : "Rien à commander";
+    elements.shoppingNeededToggle.textContent = state.shoppingNeededOnly
+      ? "Voir tous les produits"
+      : "Voir à commander";
+    elements.shoppingNeededToggle.setAttribute(
+      "aria-pressed",
+      String(state.shoppingNeededOnly),
+    );
+
+    const visibleItems = state.shoppingNeededOnly
+      ? allItems.filter((task) => task.completedAt)
+      : allItems;
+    const fragment = document.createDocumentFragment();
+
+    for (const category of SHOPPING_CATEGORIES) {
+      const categoryItems = visibleItems
+        .filter((task) => task.shoppingCategory === category.id)
+        .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+      if (!categoryItems.length) continue;
+
+      const categoryCard = document.createElement("article");
+      categoryCard.className = "shopping-category";
+      categoryCard.dataset.shoppingCategory = category.id;
+      categoryCard.setAttribute("role", "listitem");
+
+      const categoryHeader = document.createElement("header");
+      const title = document.createElement("h3");
+      title.textContent = category.label;
+      const count = document.createElement("span");
+      const categoryNeeded = categoryItems.filter(
+        (task) => task.completedAt,
+      ).length;
+      count.textContent = categoryNeeded
+        ? `${categoryNeeded} à commander`
+        : `${categoryItems.length} produit${categoryItems.length > 1 ? "s" : ""}`;
+      categoryHeader.append(title, count);
+
+      const list = document.createElement("div");
+      list.className = "shopping-item-list";
+      for (const task of categoryItems) {
+        const row = document.createElement("div");
+        row.className = "shopping-item";
+        row.classList.toggle("is-needed", Boolean(task.completedAt));
+        row.dataset.shoppingId = task.id;
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "shopping-item-toggle";
+        toggle.setAttribute("aria-pressed", String(Boolean(task.completedAt)));
+        toggle.setAttribute(
+          "aria-label",
+          task.completedAt
+            ? `${task.label} est à commander. Retirer de la commande`
+            : `${task.label} manque. Ajouter à la commande`,
+        );
+        const check = document.createElement("span");
+        check.className = "shopping-item-check";
+        check.setAttribute("aria-hidden", "true");
+        check.textContent = task.completedAt ? "✓" : "";
+        const copy = document.createElement("span");
+        copy.className = "shopping-item-copy";
+        const label = document.createElement("strong");
+        label.textContent = task.label;
+        const status = document.createElement("small");
+        status.textContent = task.completedAt ? "À commander" : "En stock";
+        copy.append(label, status);
+        toggle.append(check, copy);
+        toggle.addEventListener("click", () => toggleShoppingItem(task.id));
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "shopping-item-edit";
+        edit.setAttribute("aria-label", `Modifier ${task.label}`);
+        edit.textContent = "•••";
+        edit.addEventListener("click", () => openShoppingEditor(task.id));
+
+        row.append(toggle, edit);
+        list.append(row);
+      }
+
+      categoryCard.append(categoryHeader, list);
+      fragment.append(categoryCard);
+    }
+
+    if (!fragment.childNodes.length) {
+      const empty = document.createElement("div");
+      empty.className = "shopping-empty";
+      empty.innerHTML = state.shoppingNeededOnly
+        ? "<strong>Tout est en stock</strong><span>Aucun produit à commander.</span>"
+        : "<strong>Aucun produit</strong><span>Ajoutez votre premier produit ci-dessous.</span>";
+      fragment.append(empty);
+    }
+    elements.shoppingCategories.replaceChildren(fragment);
   }
 
   async function toggleTask(id) {
@@ -3855,7 +4198,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     state.activeTaskId = id;
     state.editorTaskList = null;
     elements.taskDialog.querySelector("#taskDialogTitle").textContent =
-      task.section === "bring" ? "Modifier — Achat évolutif" : "Modifier";
+      task.section === "bring" ? "Modifier — Liste de courses" : "Modifier";
     elements.editTaskLabel.value = task.label;
     const taskList = taskListForTask(task);
     selectEditorTaskList(taskList);
@@ -4264,12 +4607,14 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       if (!confirmed) return;
       await replaceAllDataWithMutations(nextState, previousState);
       await loadState({ runAutomatic: false });
+      await ensureShoppingCatalog();
       announceChange();
       elements.settingsDialog.close();
       showToast("Sauvegarde restaurée", "Annuler", async () => {
         try {
           await replaceAllDataWithMutations(previousState, nextState);
           await loadState({ runAutomatic: false });
+          await ensureShoppingCatalog();
           announceChange();
           requestAnimationFrame(() => elements.emptyAddCuisineToday.focus());
         } catch (error) {
@@ -4287,7 +4632,10 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
 
   async function clearCompletedTasks() {
     const completed = state.tasks.filter(
-      (task) => task.completedAt && task.section !== "weeklyPrep",
+      (task) =>
+        task.completedAt &&
+        task.section !== "weeklyPrep" &&
+        task.section !== "bring",
     );
     if (!completed.length) {
       showToast("Aucune tâche terminée");
@@ -4419,13 +4767,21 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     });
     window.addEventListener("blur", () => cancelTaskReorder());
 
-    elements.bringAddForm.addEventListener("submit", async (event) => {
+    elements.shoppingForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const label = elements.bringInput.value;
-      if (!label.trim()) return;
-      const saved = await addBringTask(label);
-      if (saved) elements.bringInput.value = "";
-      elements.bringInput.focus();
+      await saveShoppingItem();
+    });
+    elements.shoppingCancel.addEventListener("click", () =>
+      resetShoppingEditor({ close: true }),
+    );
+    elements.shoppingDelete.addEventListener("click", deleteShoppingItem);
+    elements.shoppingNeededToggle.addEventListener("click", () => {
+      state.shoppingNeededOnly = !state.shoppingNeededOnly;
+      renderShoppingList();
+    });
+    elements.shoppingAddDisclosure.addEventListener("toggle", () => {
+      if (!elements.shoppingAddDisclosure.open && elements.shoppingEditId.value)
+        resetShoppingEditor();
     });
 
     elements.maintenanceToggle.addEventListener("click", () => {
@@ -4739,6 +5095,7 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
       return;
     }
     await initializeSharedState();
+    await ensureShoppingCatalog();
     await runAutomaticRoutines();
     renderAll();
 

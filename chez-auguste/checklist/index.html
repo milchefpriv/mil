@@ -18,8 +18,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="../app-icon-180.png" />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=27" />
-    <script type="module" src="./app.js?v=36"></script>
+    <link rel="stylesheet" href="./styles.css?v=28" />
+    <script type="module" src="./app.js?v=37"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -192,6 +192,95 @@
         </div>
       </section>
 
+      <section class="shopping-board" aria-labelledby="shoppingHeading">
+        <header class="shopping-board-header">
+          <div>
+            <p class="eyebrow">Commandes</p>
+            <h2 id="shoppingHeading">Liste de courses</h2>
+            <p class="shopping-board-note">
+              Touchez un produit dès qu’il manque. Il restera à commander
+              jusqu’à ce que vous le décochiez.
+            </p>
+          </div>
+          <div class="shopping-board-status">
+            <span id="shoppingProgress" aria-live="polite"></span>
+            <button
+              class="shopping-filter-button"
+              id="shoppingNeededToggle"
+              type="button"
+              aria-pressed="false"
+            >
+              Voir à commander
+            </button>
+          </div>
+        </header>
+
+        <div
+          class="shopping-categories"
+          id="shoppingCategories"
+          role="list"
+        ></div>
+
+        <details class="shopping-add-disclosure" id="shoppingAddDisclosure">
+          <summary>
+            <span>
+              <strong>Ajouter un produit</strong>
+              <small>Nom et rayon</small>
+            </span>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m7 9 5 5 5-5"></path>
+            </svg>
+          </summary>
+          <form class="shopping-form" id="shoppingForm" autocomplete="off">
+            <input id="shoppingEditId" type="hidden" />
+            <label>
+              <span>Produit</span>
+              <input
+                id="shoppingLabel"
+                type="text"
+                maxlength="180"
+                placeholder="Ex. Carottes"
+                required
+              />
+            </label>
+            <label>
+              <span>Rayon</span>
+              <select id="shoppingCategory">
+                <option value="legumerie">Légumerie</option>
+                <option value="frais">Produits frais</option>
+                <option value="epicerie">Épicerie</option>
+                <option value="surgeles">Surgelés</option>
+                <option value="viandes-poissons">Viandes & poissons</option>
+                <option value="emballages">Emballages</option>
+                <option value="entretien">Entretien</option>
+                <option value="autres">Autres</option>
+              </select>
+            </label>
+            <div class="shopping-form-actions">
+              <button class="primary-button" id="shoppingSubmit" type="submit">
+                Ajouter
+              </button>
+              <button
+                class="shopping-delete-button"
+                id="shoppingDelete"
+                type="button"
+                hidden
+              >
+                Supprimer
+              </button>
+              <button
+                class="plain-action"
+                id="shoppingCancel"
+                type="button"
+                hidden
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        </details>
+      </section>
+
       <div class="days-grid">
         <div class="service-boards">
           <section
@@ -274,34 +363,6 @@
         </section>
       </div>
 
-      <aside class="bring-note" aria-labelledby="bringTitle">
-        <header class="bring-note-header">
-          <h2 id="bringTitle">Achat évolutif</h2>
-          <span
-            class="bring-count"
-            id="bringProgress"
-            aria-live="polite"
-          ></span>
-        </header>
-        <div class="task-list bring-list" id="bringList" role="list"></div>
-        <form class="bring-add" id="bringAddForm" autocomplete="off">
-          <label class="sr-only" for="bringInput"
-            >Ajouter un achat à la liste</label
-          >
-          <input
-            id="bringInput"
-            type="text"
-            maxlength="180"
-            enterkeyhint="done"
-            placeholder="Ajouter un achat…"
-          />
-          <button type="submit" aria-label="Ajouter à Achat évolutif">
-            <svg aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </button>
-        </form>
-      </aside>
     </main>
 
     <dialog
@@ -522,7 +583,7 @@
             >
             <label
               ><input type="radio" name="task-list" value="bring" /><span
-                >Achat évolutif</span
+                >Liste de courses</span
               ></label
             >
           </div>

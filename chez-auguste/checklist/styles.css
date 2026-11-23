@@ -2445,3 +2445,420 @@ dialog::backdrop {
     min-height: 48px;
   }
 }
+
+/* Liste de courses pensée pour une utilisation rapide sur tablette. */
+.shopping-board {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  border-radius: 28px;
+  background: linear-gradient(
+    145deg,
+    var(--paper) 0%,
+    color-mix(in srgb, var(--paper) 92%, var(--brand-soft)) 100%
+  );
+  box-shadow: 0 14px 42px rgba(52, 31, 36, 0.07);
+}
+
+.shopping-board-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 4px 2px 15px;
+}
+
+.shopping-board-header .eyebrow {
+  margin: 0 0 4px;
+  color: var(--brand);
+}
+
+.shopping-board-header h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  letter-spacing: -0.035em;
+}
+
+.shopping-board-note {
+  max-width: 620px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.shopping-board-status {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 8px;
+}
+
+.shopping-board-status > span {
+  min-height: 30px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.shopping-filter-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+  border-radius: 13px;
+  color: var(--brand);
+  background: var(--paper);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.shopping-filter-button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--brand);
+}
+
+.shopping-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  align-items: start;
+  gap: 10px;
+}
+
+.shopping-category {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.shopping-category > header {
+  display: flex;
+  min-height: 47px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 82%, var(--soft));
+}
+
+.shopping-category > header h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.shopping-category > header span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 740;
+}
+
+.shopping-category[data-shopping-category="legumerie"] > header {
+  box-shadow: inset 4px 0 #47815c;
+}
+
+.shopping-category[data-shopping-category="frais"] > header {
+  box-shadow: inset 4px 0 #4e7fa5;
+}
+
+.shopping-category[data-shopping-category="epicerie"] > header {
+  box-shadow: inset 4px 0 #bb7a2d;
+}
+
+.shopping-category[data-shopping-category="surgeles"] > header {
+  box-shadow: inset 4px 0 #6d72b5;
+}
+
+.shopping-category[data-shopping-category="viandes-poissons"] > header {
+  box-shadow: inset 4px 0 #a5454e;
+}
+
+.shopping-category[data-shopping-category="emballages"] > header {
+  box-shadow: inset 4px 0 #7c6f62;
+}
+
+.shopping-category[data-shopping-category="entretien"] > header {
+  box-shadow: inset 4px 0 #378493;
+}
+
+.shopping-item-list {
+  display: grid;
+}
+
+.shopping-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  min-height: 58px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.shopping-item:first-child {
+  border-top: 0;
+}
+
+.shopping-item.is-needed {
+  background: color-mix(in srgb, var(--paper) 78%, var(--brand-soft));
+}
+
+.shopping-item-toggle {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shopping-item-toggle:active {
+  background: color-mix(in srgb, var(--brand-soft) 65%, transparent);
+}
+
+.shopping-item-check {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 2px solid #999194;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--paper);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.shopping-item.is-needed .shopping-item-check {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+
+.shopping-item-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.shopping-item-copy strong {
+  font-size: 0.94rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.shopping-item-copy small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 670;
+}
+
+.shopping-item.is-needed .shopping-item-copy strong,
+.shopping-item.is-needed .shopping-item-copy small {
+  color: var(--brand);
+}
+
+.shopping-item-edit {
+  width: 48px;
+  min-height: 48px;
+  align-self: stretch;
+  border: 0;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.shopping-item-edit:active {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.shopping-empty {
+  grid-column: 1 / -1;
+  min-height: 110px;
+  padding: 24px;
+  border: 1px dashed color-mix(in srgb, var(--brand) 25%, var(--line));
+  border-radius: 16px;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  color: var(--muted);
+  background: var(--paper);
+  text-align: center;
+}
+
+.shopping-empty strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.shopping-empty span {
+  font-size: 0.84rem;
+}
+
+.shopping-add-disclosure {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.shopping-add-disclosure > summary {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.shopping-add-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.shopping-add-disclosure > summary span {
+  display: grid;
+  gap: 2px;
+}
+
+.shopping-add-disclosure > summary strong {
+  font-size: 0.92rem;
+}
+
+.shopping-add-disclosure > summary small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.shopping-add-disclosure > summary svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 160ms ease;
+}
+
+.shopping-add-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.shopping-add-disclosure[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.shopping-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(210px, 0.8fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+}
+
+.shopping-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.shopping-form input,
+.shopping-form select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--control-line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.shopping-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-form-actions .primary-button,
+.shopping-form-actions .plain-action,
+.shopping-delete-button {
+  min-height: 48px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.shopping-form-actions .primary-button {
+  padding: 0 16px;
+  border: 1px solid var(--solid-brand);
+  border-radius: 12px;
+  color: #fff;
+  background: var(--solid-brand);
+  font-size: 0.86rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.shopping-form input:focus-visible,
+.shopping-form select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.shopping-delete-button {
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--line));
+  border-radius: 12px;
+  color: var(--danger);
+  background: var(--paper);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .shopping-board {
+    padding: 12px;
+    border-radius: 22px;
+  }
+
+  .shopping-board-header {
+    display: grid;
+  }
+
+  .shopping-board-status {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    justify-items: start;
+  }
+
+  .shopping-categories,
+  .shopping-form {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-form-actions {
+    flex-wrap: wrap;
+  }
+}
