@@ -18,11 +18,11 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
     { id: "viandes-poissons", label: "Viandes & poissons" },
     { id: "emballages", label: "Emballages" },
     { id: "entretien", label: "Entretien" },
-    { id: "autres", label: "Autres" },
   ];
-  const SHOPPING_CATEGORY_IDS = new Set(
-    SHOPPING_CATEGORIES.map((category) => category.id),
-  );
+  const SHOPPING_CATEGORY_IDS = new Set([
+    ...SHOPPING_CATEGORIES.map((category) => category.id),
+    "autres", // Keep existing records valid while hiding the section.
+  ]);
   const DEFAULT_SHOPPING_ITEMS = [
     ["bring-foodflow-ff-000172", "Pommes de terre Agria", "legumerie"],
     ["bring-foodflow-ff-000086", "Patates douces", "legumerie"],
@@ -4022,7 +4022,12 @@ import { t as createClient } from "../assets/supabase-D_AYc1Jo.js";
   }
 
   function renderShoppingList() {
-    const allItems = tasksForBring();
+    const visibleCategoryIds = new Set(
+      SHOPPING_CATEGORIES.map((category) => category.id),
+    );
+    const allItems = tasksForBring().filter((task) =>
+      visibleCategoryIds.has(task.shoppingCategory),
+    );
     const neededCount = allItems.filter((task) => task.completedAt).length;
     elements.shoppingProgress.textContent = neededCount
       ? `${neededCount} à commander`
